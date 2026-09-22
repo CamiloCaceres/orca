@@ -37,10 +37,11 @@ export function useWorkspaceTabTranscriptMerge({
   workspaceTabItems: WorkspaceTabPaletteItem[]
   openTabItems: OpenTabPaletteItem[]
 } {
+  // Host-less worktrees are local even while a runtime is focused; runtime-owned ones carry an owner id.
   const isLocalWorktree = useCallback(
     (worktree: Worktree) =>
       !worktree.runtimeOwnerEnvironmentId &&
-      resolveWorktreeFilterHostId(worktree, filterModel.repoById, filterModel.defaultHostId) ===
+      resolveWorktreeFilterHostId(worktree, filterModel.repoById, LOCAL_EXECUTION_HOST_ID) ===
         LOCAL_EXECUTION_HOST_ID,
     [filterModel]
   )

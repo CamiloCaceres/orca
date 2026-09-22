@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { LOCAL_EXECUTION_HOST_ID } from '../../../shared/execution-host'
+import { SESSION_SEARCH_LIMIT_MAX } from '../../../shared/ai-vault-search-limit'
 import { resolveAiVaultSearchSettings } from '../../../shared/ai-vault-search-settings'
 import {
   aiVaultSearchNeedsLocalConsent,
@@ -9,8 +10,8 @@ import { resolvePaletteTranscriptMatches } from './worktree-jump-palette-transcr
 import type { WorktreeJumpPaletteLocalState } from './use-worktree-jump-palette-local-state'
 import type { WorktreeJumpPaletteStoreState } from './use-worktree-jump-palette-store-state'
 
-// Only hits that map to an open pane survive, so a short page is enough.
-const TRANSCRIPT_MATCH_LIMIT = 20
+// The index ranks every recorded session; only open ones survive, so take the largest page.
+const TRANSCRIPT_MATCH_LIMIT = SESSION_SEARCH_LIMIT_MAX
 // Shorter than the sidebar's: the palette already defers the query once.
 const TRANSCRIPT_MATCH_DEBOUNCE_MS = 120
 

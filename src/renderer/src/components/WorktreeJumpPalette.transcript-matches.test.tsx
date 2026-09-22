@@ -132,7 +132,10 @@ function paneState(): Partial<AppState> {
   }
 }
 
-async function renderPalette(indexEnabled: boolean): Promise<void> {
+async function renderPalette(
+  indexEnabled: boolean,
+  activeRuntimeEnvironmentId: string | null = null
+): Promise<void> {
   useAppStore.setState({
     activeModal: 'worktree-palette',
     activeWorktreeId: null,
@@ -144,7 +147,8 @@ async function renderPalette(indexEnabled: boolean): Promise<void> {
     lastVisitedAtByWorktreeId: {},
     settings: {
       ...getDefaultSettings('/home/test'),
-      aiVaultSearch: { enabled: indexEnabled, historyDays: null }
+      aiVaultSearch: { enabled: indexEnabled, historyDays: null },
+      activeRuntimeEnvironmentId
     },
     ...makeRecentTabState(paneState())
   })
@@ -215,11 +219,20 @@ describe('WorktreeJumpPalette transcript matches', () => {
     await settleSearch()
 
     expect(searchSessions).toHaveBeenCalledExactlyOnceWith(
-      { query: 'zebra', limit: 20, cursor: undefined },
+      { query: 'zebra', limit: 100, cursor: undefined },
       'local'
     )
     expect(tabRowIds()).toEqual(['tab-alpha'])
     expect(snippets()).toEqual(['the zebra crossing'])
+  })
+
+  it('keeps local chats while a runtime environment is focused', async () => {
+    answer([hit('s-alpha', 'the [[zebra]] crossing')])
+    await renderPalette(true, 'runtime-env')
+    await type('zebra')
+    await settleSearch()
+
+    expect(tabRowIds()).toEqual(['tab-alpha'])
   })
 
   it('shows a chat matched by title and transcript once, with the snippet', async () => {
