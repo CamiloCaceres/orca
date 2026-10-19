@@ -11855,7 +11855,8 @@
             "eventsSubscribe": "在工作树创建或移除以及智能体状态更改时获得通知",
             "settingsOwn": "读取和更改插件自己的设置"
           },
-          "decisionFailed": "无法保存权限决定。请重试。"
+          "decisionFailed": "无法保存权限决定。请重试。",
+          "whatChanged": "变更内容"
         },
         "PluginConsentProvenance": {
           "official": "Official",

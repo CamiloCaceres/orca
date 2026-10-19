@@ -30,6 +30,7 @@ export function PluginRemoveDialog({
     <Dialog open={Boolean(plugin)} onOpenChange={(open) => !open && !busy && onCancel()}>
       <DialogContent
         surface="security"
+        size="compact"
         onOpenAutoFocus={(event) => {
           event.preventDefault()
           cancelRef.current?.focus()

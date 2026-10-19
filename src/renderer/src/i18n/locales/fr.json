@@ -11954,7 +11954,8 @@
             "eventsSubscribe": "Être notifié quand des worktrees sont créés ou supprimés et quand le statut d'un agent change",
             "settingsOwn": "Lire et modifier les paramètres propres au plugin"
           },
-          "decisionFailed": "Impossible d'enregistrer la décision d'autorisation. Réessayez."
+          "decisionFailed": "Impossible d'enregistrer la décision d'autorisation. Réessayez.",
+          "whatChanged": "Ce qui a changé"
         },
         "PluginConsentProvenance": {
           "official": "Officiel",

@@ -11855,7 +11855,8 @@
             "eventsSubscribe": "워크트리가 생성되거나 제거되고 에이전트 상태가 변경될 때 알림 받기",
             "settingsOwn": "플러그인 자체 설정 읽기 및 변경"
           },
-          "decisionFailed": "권한 결정을 저장할 수 없습니다. 다시 시도하세요."
+          "decisionFailed": "권한 결정을 저장할 수 없습니다. 다시 시도하세요.",
+          "whatChanged": "변경 사항"
         },
         "PluginConsentProvenance": {
           "official": "공식",

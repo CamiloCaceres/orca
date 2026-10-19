@@ -11855,7 +11855,8 @@
             "eventsSubscribe": "ワークツリーが作成または削除され、Agent ステータスが変更されたときに通知を受ける",
             "settingsOwn": "プラグインの独自設定を読み取りおよび変更"
           },
-          "decisionFailed": "権限の選択を保存できませんでした。再試行してください。"
+          "decisionFailed": "権限の選択を保存できませんでした。再試行してください。",
+          "whatChanged": "変更点"
         },
         "PluginConsentProvenance": {
           "official": "公式",

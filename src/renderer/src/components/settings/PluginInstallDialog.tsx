@@ -79,7 +79,7 @@ export function PluginInstallDialog({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !installing && onOpenChange(nextOpen)}>
-      <DialogContent surface="security" scrollable className="sm:max-w-lg">
+      <DialogContent surface="security" scrollable className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>
             {translate('auto.components.settings.PluginInstallDialog.title', 'Install plugin')}

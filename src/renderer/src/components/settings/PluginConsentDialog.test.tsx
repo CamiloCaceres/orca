@@ -240,6 +240,12 @@ describe('PluginConsentDialog', () => {
     const onDecision = vi.fn().mockResolvedValue(undefined)
     await renderConsent({ ...plugin, needsReconsent: true }, onDecision)
     expect(document.body.textContent).toContain('This plugin changed since you approved it')
+    // The change note sits under its own heading after the permissions, not above the warning.
+    const headings = Array.from(
+      document.querySelectorAll('[role="dialog"] h3'),
+      (h) => h.textContent
+    )
+    expect(headings.at(-1)).toBe('What changed')
     const enable = Array.from(document.querySelectorAll('button')).find(
       (button) => button.textContent?.trim() === 'Enable plugin'
     )

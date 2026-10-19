@@ -12134,7 +12134,8 @@
             "eventsSubscribe": "Get notified when worktrees are created or removed and when agent status changes",
             "settingsOwn": "Read and change the plugin's own settings"
           },
-          "decisionFailed": "Could not save the permission decision. Try again."
+          "decisionFailed": "Could not save the permission decision. Try again.",
+          "whatChanged": "What changed"
         },
         "PluginConsentProvenance": {
           "official": "Official",
