@@ -277,6 +277,6 @@ export function registerPluginHandlers(
     return listPluginsForClients(pluginService)
   })
   if (marketplaceServices) {
-    registerPluginMarketplaceHandlers(pluginService, marketplaceServices)
+    registerPluginMarketplaceHandlers(pluginService, marketplaceServices, () => store.getSettings())
   }
 }
