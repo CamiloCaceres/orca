@@ -12042,7 +12042,8 @@
           "remove": "제거",
           "disableLabel": "{{value0}} 비활성화",
           "enableLabel": "{{value0}} 활성화",
-          "invalidPluginError": "플러그인 매니페스트 또는 설치된 파일이 유효하지 않습니다. 플러그인을 수정한 후 새로고침하세요."
+          "invalidPluginError": "플러그인 매니페스트 또는 설치된 파일이 유효하지 않습니다. 플러그인을 수정한 후 새로고침하세요.",
+          "languageCoverage": "{{value0}} {{value1}}% 번역됨"
         },
         "PluginVmRecipeConsentPreview": {
           "create": "생성",

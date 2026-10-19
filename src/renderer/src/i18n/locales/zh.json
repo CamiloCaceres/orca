@@ -12042,7 +12042,8 @@
           "remove": "移除",
           "disableLabel": "禁用 {{value0}}",
           "enableLabel": "启用 {{value0}}",
-          "invalidPluginError": "插件清单或安装的文件无效。请修复插件，然后刷新。"
+          "invalidPluginError": "插件清单或安装的文件无效。请修复插件，然后刷新。",
+          "languageCoverage": "{{value0}} 已翻译 {{value1}}%"
         },
         "PluginVmRecipeConsentPreview": {
           "create": "创建",

@@ -12141,7 +12141,8 @@
           "remove": "Supprimer",
           "disableLabel": "Désactiver {{value0}}",
           "enableLabel": "Activer {{value0}}",
-          "invalidPluginError": "Le manifeste du plugin ou les fichiers installés sont non valides. Corrigez le plugin, puis actualisez."
+          "invalidPluginError": "Le manifeste du plugin ou les fichiers installés sont non valides. Corrigez le plugin, puis actualisez.",
+          "languageCoverage": "{{value0}} traduit à {{value1}} %"
         },
         "PluginVmRecipeConsentPreview": {
           "create": "Créer",

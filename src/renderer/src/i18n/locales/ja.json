@@ -12042,7 +12042,8 @@
           "remove": "削除",
           "disableLabel": "{{value0}}を無効にする",
           "enableLabel": "{{value0}}を有効にする",
-          "invalidPluginError": "プラグインマニフェストまたはインストールされたファイルが無効です。プラグインを修正してから更新してください。"
+          "invalidPluginError": "プラグインマニフェストまたはインストールされたファイルが無効です。プラグインを修正してから更新してください。",
+          "languageCoverage": "{{value0}} {{value1}}% 翻訳済み"
         },
         "PluginVmRecipeConsentPreview": {
           "create": "作成",

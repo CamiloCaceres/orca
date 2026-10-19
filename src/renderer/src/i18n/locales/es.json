@@ -12037,7 +12037,8 @@
           "remove": "Eliminar",
           "disableLabel": "Desactivar {{value0}}",
           "enableLabel": "Activar {{value0}}",
-          "invalidPluginError": "El manifiesto o los archivos instalados del plugin no son válidos. Corrige el plugin y actualiza."
+          "invalidPluginError": "El manifiesto o los archivos instalados del plugin no son válidos. Corrige el plugin y actualiza.",
+          "languageCoverage": "{{value0}} traducido al {{value1}}%"
         },
         "PluginVmRecipeConsentPreview": {
           "create": "Crear",

@@ -12321,7 +12321,8 @@
           "remove": "Remove",
           "disableLabel": "Disable {{value0}}",
           "enableLabel": "Enable {{value0}}",
-          "invalidPluginError": "The plugin manifest or installed files are invalid. Fix the plugin, then refresh."
+          "invalidPluginError": "The plugin manifest or installed files are invalid. Fix the plugin, then refresh.",
+          "languageCoverage": "{{value0}} {{value1}}% translated"
         },
         "PluginVmRecipeConsentPreview": {
           "create": "Create",

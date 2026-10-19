@@ -201,7 +201,8 @@ describe('plugin language-pack artifacts', () => {
         resourceLanguage: pluginLanguageResourceId(id),
         pluginKey: `maximum-${index}`,
         locale: 'en',
-        catalog
+        catalog,
+        coverage: 100
       }
     })
 
