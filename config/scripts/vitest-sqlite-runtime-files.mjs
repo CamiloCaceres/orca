@@ -66,6 +66,7 @@ export const SQLITE_RUNTIME_INCLUDE = [
   'src/main/codex/codex-structured-journal-subagent-readers.test.ts',
   'src/main/codex/codex-structured-journal-translation-turn-lifecycle.test.ts',
   'src/main/codex/codex-structured-journal-turn-settles-once-journal.test.ts',
+  'src/main/codex/codex-structured-thread-catch-up.test.ts',
   'src/main/ipc/repos/folder-workspace-attachment-handlers.test.ts',
   'src/main/ipc/ssh/ssh-host-server-on-connect-wiring.test.ts',
   'src/main/native-chat/agent-session-attachments/agent-session-attachment-claims.test.ts',
