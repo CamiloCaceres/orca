@@ -11960,7 +11960,15 @@
           "close": "閉じる",
           "cancel": "キャンセル",
           "update": "プラグインを更新",
-          "install": "プラグインをインストール"
+          "install": "プラグインをインストール",
+          "themesOne": "アプリテーマ 1 件",
+          "themes": "アプリテーマ {{value0}} 件",
+          "terminalThemesOne": "ターミナルテーマ 1 件",
+          "terminalThemes": "ターミナルテーマ {{value0}} 件",
+          "iconThemesOne": "アイコンテーマ 1 件",
+          "iconThemes": "アイコンテーマ {{value0}} 件",
+          "syntaxesOne": "構文 1 件",
+          "syntaxes": "構文 {{value0}} 件"
         },
         "PluginMarketplaceSourceDialog": {
           "addFailed": "このマーケットプレイスを追加できませんでした。URL、ref、Git のアクセス権を確認してください。",

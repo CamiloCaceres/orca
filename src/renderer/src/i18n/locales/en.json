@@ -12239,7 +12239,15 @@
           "close": "Close",
           "cancel": "Cancel",
           "update": "Update plugin",
-          "install": "Install plugin"
+          "install": "Install plugin",
+          "themesOne": "1 app theme",
+          "themes": "{{value0}} app themes",
+          "terminalThemesOne": "1 terminal theme",
+          "terminalThemes": "{{value0}} terminal themes",
+          "iconThemesOne": "1 icon theme",
+          "iconThemes": "{{value0}} icon themes",
+          "syntaxesOne": "1 syntax",
+          "syntaxes": "{{value0}} syntaxes"
         },
         "PluginMarketplaceSourceDialog": {
           "addFailed": "Couldn't add this marketplace. Check the URL, ref, and Git access.",
