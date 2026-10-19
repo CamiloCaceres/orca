@@ -263,7 +263,7 @@ export class AgentSessionJournal {
 
   submissions = (): AgentJournalSubmission[] => [...this.state.submissions.values()]
 
-  epochOpening = () => this.state.epochOpening
+  historyOrigin = () => this.state.historyOrigin
 
   submission = (clientMessageId: string) => this.state.submissions.get(clientMessageId)
 

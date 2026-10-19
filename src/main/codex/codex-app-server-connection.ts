@@ -34,7 +34,7 @@ export { ROOT_ONLY_GRACEFUL_EXIT_MS as GRACEFUL_EXIT_MS } from '../provider-proc
 
 export type CodexAppServerLaunch = ProviderProcessLaunch
 
-const DEFAULT_REQUEST_TIMEOUT_MS = 30_000
+export const DEFAULT_CODEX_REQUEST_TIMEOUT_MS = 30_000
 
 /** Builds the transport so an owner can record its process before initialization. */
 async function connectCodexAppServer(
@@ -159,7 +159,7 @@ async function connectCodexAppServer(
       return Promise.reject(buildExitError())
     }
     const id = nextRequestId++
-    const timeoutMs = options.timeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS
+    const timeoutMs = options.timeoutMs ?? DEFAULT_CODEX_REQUEST_TIMEOUT_MS
     return new Promise<unknown>((resolve, reject) => {
       // Why: per request, not per session — a chat session outlives every call,
       // so only the individual call can carry a deadline.

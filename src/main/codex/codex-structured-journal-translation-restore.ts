@@ -72,6 +72,8 @@ export function codexRestoreFits(turns: readonly unknown[], extraOperations = 0)
 export function restoreCodexJournalThread(input: {
   threadId: string
   thread: Record<string, unknown>
+  /** The isolated recorder bounds actual translated mutations instead of the old raw fallback. */
+  historyImport?: true
   currentTurnIds: Map<string, Set<string>>
   ordinals: CodexTurnOrdinals
   handleItem: (event: CodexHistoryItemEvent) => CodexJournalTranslationAdmission
@@ -82,7 +84,7 @@ export function restoreCodexJournalThread(input: {
   flush: () => void
 }): CodexJournalTranslationAdmission {
   const turns = Array.isArray(input.thread.turns) ? input.thread.turns : []
-  if (!codexRestoreFits(turns)) {
+  if (!input.historyImport && !codexRestoreFits(turns)) {
     return { accepted: false, reason: 'backpressure' }
   }
   for (const rawTurn of turns) {

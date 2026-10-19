@@ -121,7 +121,8 @@ export async function openCodexStructuredSession(
         threadId: opened.threadId,
         sessionId,
         sink: input.events,
-        translator,
+        signal: openInput.signal,
+        assertCurrent: current,
         ...(deps.requestTimeoutMs !== undefined ? { timeoutMs: deps.requestTimeoutMs } : {}),
         ...(deps.logger ? { logger: deps.logger } : {})
       }),

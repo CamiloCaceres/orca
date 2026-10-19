@@ -24,7 +24,7 @@ export type StructuredAgentSessionRevisionJournal = Pick<
 /** What a provider reads at open to tell its own saved history from what the chat already holds. */
 export type StructuredAgentSessionHistoryJournal = Pick<
   AgentSessionJournal,
-  'visitItems' | 'submissions' | 'epochOpening'
+  'epoch' | 'visitItems' | 'visitItemsWithLinkage' | 'submissions' | 'historyOrigin'
 >
 
 /** Rows already journaled and who produced each, read by a producer that has to agree with them. */
