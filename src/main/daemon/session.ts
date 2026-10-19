@@ -236,22 +236,18 @@ export class Session {
     if (this._disposed) {
       return null
     }
-    const releasedHeldBytes =
+    const heldBytes =
       includeSnapshot && opts.teardownSnapshot === true ? this.prepareForFinalSnapshot() : ''
-    return this.output.takePendingOutput(includeSnapshot, releasedHeldBytes, () =>
-      this.getSnapshot()
-    )
+    return this.output.takePendingOutput(includeSnapshot, heldBytes, () => this.getSnapshot())
   }
 
-  getCwd(): string | null {
-    return this.output.getCwd()
-  }
+  getCwd = (): string | null => this.output.getCwd()
 
   inspectChildProcesses(fresh?: boolean, ignoreDetached?: boolean): ChildProcessVerdictRead {
     return this.subprocess.inspectChildProcesses?.(fresh, ignoreDetached) ?? 'unverifiable'
   }
 
-  getForegroundProcess(options?: { rawFallback?: boolean }): string | null {
+  getForegroundProcess(options?: { rawFallback?: boolean; cachedOnly?: boolean }): string | null {
     return this.subprocess.getForegroundProcess(options)
   }
 
@@ -358,6 +354,10 @@ export class Session {
   }
 
   private handleSubprocessExit(code: number, cause?: TerminalExitCause): void {
+    // Teardown intent belongs to this Session, including when exit beats the control reply.
+    if (this.termination.isTerminating) {
+      cause = { kind: 'operator_close' }
+    }
     this.termination.markPhysicalExit()
     if (this._disposed) {
       return

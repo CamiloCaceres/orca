@@ -29,6 +29,18 @@ describe('PtyProcessListAdmission', () => {
     expect(admitted.foregroundProcessEvidence).not.toBe(evidence)
   })
 
+  it('preserves optional cached process names and accepts inventories from older hosts', () => {
+    const base = { id: 'pty-1', cwd: '/repo', title: 'shell' }
+    expect(new PtyProcessListAdmission().admit({ ...base, foregroundProcess: 'codex' })).toEqual({
+      ...base,
+      foregroundProcess: 'codex'
+    })
+    expect(new PtyProcessListAdmission().admit(base)).toEqual(base)
+    const malformed = { ...base, foregroundProcess: 'codex' }
+    Reflect.set(malformed, 'foregroundProcess', 42)
+    expect(() => new PtyProcessListAdmission().admit(malformed)).toThrow('invalid_pty_process_list')
+  })
+
   it('rejects malformed foreground evidence instead of stripping it', () => {
     expect(() =>
       new PtyProcessListAdmission().admit({

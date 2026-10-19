@@ -17,6 +17,11 @@ export type PtySessionListScope = { connectionId: string | null }
  */
 export type PtyListedSession = {
   id: string
+  incarnationId?: string
+  fencedTermination?: boolean
+  rootProcessId?: number
+  /** Recently observed process name; inventory reads never initiate process inspection. */
+  foregroundProcess?: string
   cwd: string
   title: string
   worktreeId?: string
@@ -36,3 +41,5 @@ export function mayDestroyWithoutOwnerEvidence(session: {
 }): boolean {
   return session.agentOwnership === 'absent'
 }
+
+export type PtySessionLifecycle = { id: string; incarnationId?: string; hostId?: string }

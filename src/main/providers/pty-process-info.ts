@@ -7,6 +7,8 @@ export type PtyProcessInfo = {
   incarnationId?: PtyIncarnationId
   /** Root process owned by this exact PTY incarnation, when the provider can prove it. */
   rootProcessId?: number
+  /** Recently observed process name; inventory reads never initiate process inspection. */
+  foregroundProcess?: string
   cwd: string
   title: string
   /** Owning worktree when the provider can report it authoritatively. */

@@ -81,11 +81,15 @@ export async function startLateExitHarness() {
     rememberSyntheticKillExit(session, id, incarnationId)
   session.sendModelRestoreNeededMarker = () => false
   let killHandler: Parameters<PtyIpcSurface['handle']>[1] | undefined
+  let fencedKillHandler: Parameters<PtyIpcSurface['handle']>[1] | undefined
   setLocalPtyProvider(harness.adapter)
   bindProviderListeners(session)
   setPtyHostBindings({
     ipc: {
       handle: (channel, handler) => {
+        if (channel === 'pty:killFenced') {
+          fencedKillHandler = handler
+        }
         if (channel === 'pty:kill') {
           killHandler = handler
         }
@@ -166,6 +170,12 @@ export async function startLateExitHarness() {
       }
       // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: the installed renderer-kill handler ignores its Electron event argument.
       await killHandler({} as never, { id: PTY_ID })
+    },
+    killFenced: async (request: unknown): Promise<unknown> => {
+      if (!fencedKillHandler) {
+        throw new Error('Fenced handler missing')
+      }
+      return Reflect.apply(fencedKillHandler, null, [{}, request])
     },
     stopAndWait: () => {
       const deps = {

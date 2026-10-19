@@ -53,6 +53,7 @@ export class PtyProcessListAdmission {
     const idBytes = retainedStringBytes(value.id)
     const cwdBytes = retainedStringBytes(value.cwd)
     const titleBytes = retainedStringBytes(value.title)
+    const foregroundProcessBytes = retainedOptionalStringBytes(value.foregroundProcess)
     const worktreeIdBytes = retainedOptionalStringBytes(value.worktreeId)
     const terminalHandleBytes = retainedOptionalStringBytes(value.terminalHandle)
     const wslDistroBytes =
@@ -67,6 +68,7 @@ export class PtyProcessListAdmission {
       idBytes === null ||
       cwdBytes === null ||
       titleBytes === null ||
+      foregroundProcessBytes === null ||
       worktreeIdBytes === null ||
       terminalHandleBytes === null ||
       wslDistroBytes === null ||
@@ -101,6 +103,7 @@ export class PtyProcessListAdmission {
       idBytes +
       cwdBytes +
       titleBytes +
+      foregroundProcessBytes +
       worktreeIdBytes +
       terminalHandleBytes +
       wslDistroBytes +
@@ -121,6 +124,9 @@ export class PtyProcessListAdmission {
       id: value.id,
       cwd: value.cwd,
       title: value.title,
+      ...(value.foregroundProcess !== undefined
+        ? { foregroundProcess: value.foregroundProcess }
+        : {}),
       ...(value.incarnationId !== undefined ? { incarnationId: value.incarnationId } : {}),
       ...(value.rootProcessId !== undefined ? { rootProcessId: value.rootProcessId } : {}),
       ...(value.worktreeId !== undefined ? { worktreeId: value.worktreeId } : {}),

@@ -20819,5 +20819,36 @@
       "unavailable": "This workspace is protected or unavailable."
     },
     "rowActions": "Actions for {{name}}"
+  },
+  "resourceManager": {
+    "pty": {
+      "search": "Search terminals",
+      "searchPlaceholder": "Search terminals…",
+      "bindingFilter": "Tab filter",
+      "all": "All",
+      "bound": "Has tab",
+      "unbound": "No tab",
+      "showing": "Showing {{shown}} of {{total}}",
+      "noMatches": "No matching terminals",
+      "clearFilters": "Clear filters",
+      "unavailable": "Unavailable",
+      "ownerPresent": "Present",
+      "ownerAbsent": "Absent",
+      "ownerUnknown": "Unknown",
+      "sessionId": "Session ID",
+      "incarnation": "Incarnation",
+      "workspace": "Workspace",
+      "cwd": "Last-reported cwd",
+      "binding": "Tab",
+      "agentOwnership": "Agent ownership evidence",
+      "observationTime": "Observation time",
+      "pid": "PID",
+      "idCopied": "Session ID copied",
+      "copyFailed": "Could not copy session ID",
+      "detailsNamed": "Details for {{terminal}}",
+      "goToTerminal": "Go to terminal",
+      "actionsNamed": "Actions for {{terminal}}",
+      "copyId": "Copy session ID"
+    }
   }
 }

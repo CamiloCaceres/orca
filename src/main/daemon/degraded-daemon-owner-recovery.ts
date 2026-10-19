@@ -1,5 +1,6 @@
 import type {
   IPtyProvider,
+  PtyProcessInfo,
   PtySpawnOptions,
   PtySpawnResult
 } from '../providers/pty-provider-contract'
@@ -11,7 +12,7 @@ export class DegradedDaemonOwnerRecovery {
   private readonly livenessResolver: DaemonSessionOwnerResolver<DaemonPtyAdapter>
 
   constructor(
-    providers: readonly IPtyProvider[],
+    private readonly providers: readonly IPtyProvider[],
     private readonly daemonAdapters: readonly DaemonPtyAdapter[],
     routes: Map<string, IPtyProvider>,
     private readonly spawnFresh: (opts: PtySpawnOptions) => Promise<PtySpawnResult>
@@ -19,6 +20,9 @@ export class DegradedDaemonOwnerRecovery {
     this.attachResolver = new DaemonSessionOwnerResolver(providers, routes)
     this.livenessResolver = new DaemonSessionOwnerResolver(daemonAdapters, routes)
   }
+
+  resolveFencedOwner = (id: string, incarnationId: string) =>
+    this.attachResolver.resolveTermination(id, incarnationId)
 
   spawn = async (opts: PtySpawnOptions): Promise<PtySpawnResult> => {
     return opts.attachOnly && opts.sessionId
@@ -30,6 +34,17 @@ export class DegradedDaemonOwnerRecovery {
     await this.livenessResolver.probe(sessionId)
 
   discoverRoutes = async (): Promise<void> => await this.attachResolver.discoverRoutes()
+
+  async listProcesses(opts?: { deadlineMs?: number }): Promise<PtyProcessInfo[]> {
+    const epoch = this.attachResolver.inventoryEpoch
+    const entries = await Promise.all(
+      this.providers.map(async (provider) => ({
+        provider,
+        processes: await provider.listProcesses(opts)
+      }))
+    )
+    return this.attachResolver.reconcileListedProcesses(entries, epoch)
+  }
 
   async reconcileOnStartup(validWorktreeIds: Set<string>): Promise<{
     alive: string[]

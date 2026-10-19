@@ -1,3 +1,5 @@
+import type { ResourceViewAdmission } from '../../../../shared/resource-view-admission'
+import { assertResourceViewVisible } from '../../../window/resource-view-admission'
 import { isRemoteRuntimePtyId } from '../../../../shared/remote-runtime-pty-id'
 import { getPtyIpc } from '../../pty-host-bindings'
 import { inspectPtyProviderProcessForRenderer } from '../../../providers/pty-process-inspection'
@@ -47,7 +49,12 @@ export function installPtyInspectIpcHandlers(deps: {
 
   ipcMain.handle(
     'pty:listSessions',
-    async (_event, scope?: PtySessionListScope): Promise<PtyListedSession[]> => {
+    async (
+      event,
+      scope?: PtySessionListScope,
+      viewAdmission?: ResourceViewAdmission
+    ): Promise<PtyListedSession[]> => {
+      assertResourceViewVisible(event, viewAdmission)
       if (scope !== undefined) {
         if (
           !scope ||
@@ -61,6 +68,7 @@ export function installPtyInspectIpcHandlers(deps: {
           await getLocalPtyProviderStartupPromise()
         }
       }
+      assertResourceViewVisible(event, viewAdmission)
       const deduped = new Map<string, PtyListedSession>()
       const admission = new PtyProcessListAdmission()
       await visitPtyProcessListingsInBatches(
@@ -72,10 +80,12 @@ export function installPtyInspectIpcHandlers(deps: {
                 hostId: getConnectionExecutionHostId(scope.connectionId)
               }
             ],
-        ({ provider, hostId }) =>
-          hostId === LOCAL_EXECUTION_HOST_ID || scope !== undefined
+        ({ provider, hostId }) => {
+          assertResourceViewVisible(event, viewAdmission)
+          return hostId === LOCAL_EXECUTION_HOST_ID || scope !== undefined
             ? provider.listProcesses()
-            : provider.listProcesses().catch(() => []),
+            : provider.listProcesses().catch(() => [])
+        },
         ({ provider, hostId }, sessions) => {
           for (const rawSession of sessions) {
             const session = admission.admit(rawSession)
@@ -85,6 +95,16 @@ export function installPtyInspectIpcHandlers(deps: {
               id: session.id,
               cwd: session.cwd,
               title: session.title,
+              ...(session.foregroundProcess
+                ? { foregroundProcess: session.foregroundProcess }
+                : {}),
+              ...(session.rootProcessId !== undefined && session.rootProcessId > 0
+                ? { rootProcessId: session.rootProcessId }
+                : {}),
+              ...(session.incarnationId ? { incarnationId: session.incarnationId } : {}),
+              fencedTermination:
+                hostId === LOCAL_EXECUTION_HOST_ID &&
+                provider.supportsFencedTermination?.(session.id) === true,
               ...(session.worktreeId !== undefined ? { worktreeId: session.worktreeId } : {}),
               ...(session.exiting === true ? { exiting: true as const } : {}),
               // Why: the renderer's binding map is empty during restore, so ownership is the only
