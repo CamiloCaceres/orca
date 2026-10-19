@@ -42,7 +42,7 @@ export function PluginRemoveDialog({
           <DialogDescription>
             {translate(
               'auto.components.settings.PluginRemoveDialog.description',
-              'This removes {{value0}} and its stored plugin data from this computer. You can install it again later.',
+              'Removes {{value0}} and its data from this computer.',
               { value0: plugin?.name ?? '' }
             )}
           </DialogDescription>

@@ -205,21 +205,21 @@ export function PluginConsentDialog({
                 {plugin.hasWorker
                   ? translate(
                       'auto.components.settings.PluginConsentDialog.warning',
-                      "These permissions limit how the plugin uses Orca's API. Its worker still runs as a normal process on your computer with full access to your files, network, and other processes."
+                      'Its worker runs as a normal process with full access to your files, network, and other processes.'
                     )
                   : hasInstructionalContent(plugin)
                     ? translate(
                         'auto.components.settings.PluginConsentDialog.instructionalWarning',
-                        'This plugin has no worker process. Its instructional content can still cause actions when you or an agent use it. Review the instructions and commands below before enabling it.'
+                        'Its commands and instructions can take actions when you or an agent use them.'
                       )
                     : plugin.capabilities.length > 0 || plugin.panels.length > 0
                       ? translate(
                           'auto.components.settings.PluginConsentDialog.panelWarning',
-                          "These permissions limit how the plugin uses Orca's API. This plugin has no background worker."
+                          'No background worker. These permissions limit what it can do in Orca.'
                         )
                       : translate(
                           'auto.components.settings.PluginConsentDialog.declarativeWarning',
-                          "This plugin contributes validated content only. It does not run a background worker or receive access to Orca's API."
+                          "Content only: no code, no background worker, and no access to Orca's API."
                         )}
               </span>
             </div>

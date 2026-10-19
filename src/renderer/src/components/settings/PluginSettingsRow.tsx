@@ -265,7 +265,7 @@ export function PluginSettingsRow({
                   ? invalidPluginErrorMessage(plugin.error)
                   : translate(
                       'auto.components.settings.PluginSettingsRow.runtimeError',
-                      'The plugin stopped after an activation or worker error.'
+                      'Stopped after an error. View logs for details.'
                     )}
                 {plugin.restarts > 0
                   ? translate(

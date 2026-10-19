@@ -234,7 +234,7 @@ export function PluginMarketplacePreviewDialog({
                 <span>
                   {translate(
                     'auto.components.settings.PluginMarketplacePreviewDialog.workerWarning',
-                    "Capabilities limit how this plugin uses Orca's API. Its worker still runs as a normal process on this computer with full access to your files, network, and other processes."
+                    'Its worker runs as a normal process with full access to your files, network, and other processes.'
                   )}
                 </span>
               </div>

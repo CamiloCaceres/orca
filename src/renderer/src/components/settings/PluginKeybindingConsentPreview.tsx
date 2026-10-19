@@ -75,7 +75,7 @@ export function PluginKeybindingConsentPreview({
                     )
                   : translate(
                       'auto.components.settings.PluginKeybindingConsentPreview.global',
-                      'Runs in the app without requiring an active workspace.'
+                      'Works anywhere in Orca.'
                     )}
               </p>
               {shadowed.length > 0 ? (
