@@ -14,6 +14,7 @@ import type { CodexDispatchEchoes } from './codex-structured-dispatch-echo'
 import type { CodexJournalTranslator } from './codex-structured-journal-translation'
 import { codexProviderHandleLink } from './codex-structured-owner-identity'
 import { openCodexThread } from './codex-structured-thread-open'
+import { catchUpCodexThread } from './codex-structured-thread-catch-up'
 import { withCodexVisualsThreadConfig } from './codex-structured-visuals'
 import { NATIVE_CHAT_SCRATCH_DIR_ENV } from '../native-chat/native-chat-visuals-delivery'
 import {
@@ -107,6 +108,27 @@ export async function openCodexStructuredSession(
       'Codex thread history exceeds the bounded restore queue; history was not partially imported.'
     )
   }
+  if (
+    translator &&
+    input.events &&
+    launch.resumeThreadId !== null &&
+    !opened.supersededThreadId &&
+    !threadReturnedTurns(opened.thread)
+  ) {
+    await waitForPromiseWithSignal(
+      catchUpCodexThread({
+        connection,
+        threadId: opened.threadId,
+        sessionId,
+        sink: input.events,
+        translator,
+        ...(deps.requestTimeoutMs !== undefined ? { timeoutMs: deps.requestTimeoutMs } : {}),
+        ...(deps.logger ? { logger: deps.logger } : {})
+      }),
+      openInput.signal
+    )
+    current()
+  }
   const catalogAccess = codexAcquireCatalogAccess(deps, launch)
   const session: CodexSession = {
     account: start.account,
@@ -168,4 +190,9 @@ export async function openCodexStructuredSession(
     }),
     reportedOptions: reportedCodexSessionOptions(session)
   }
+}
+
+/** An older Codex may still answer a resume with the whole thread, which the restore above took. */
+function threadReturnedTurns(thread: Record<string, unknown> | undefined): boolean {
+  return Array.isArray(thread?.turns) && thread.turns.length > 0
 }

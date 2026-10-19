@@ -18580,6 +18580,8 @@
         "plan": "계획",
         "historyRepaired": "이 채팅 기록의 일부를 불러올 수 없습니다.",
         "historyItemTooLarge": "채팅의 이 부분은 너무 커서 표시할 수 없습니다.",
+        "continuedOutside": "이 채팅 밖에서 이어졌습니다.",
+        "continuedOutsideRewound": "이 채팅 밖에서 이어졌습니다. 위의 이전 답변은 더 이상 이 대화 기록에 없습니다.",
         "stoppedBeforeStart": "수동으로 중지됨",
         "dismiss": "닫기",
         "copyError": "오류 복사",

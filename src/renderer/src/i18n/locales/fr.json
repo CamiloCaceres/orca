@@ -18649,6 +18649,8 @@
         "plan": "Plan",
         "historyRepaired": "Une partie de l'historique de ce chat n'a pas pu être chargée.",
         "historyItemTooLarge": "Cette partie du chat était trop volumineuse pour être affichée.",
+        "continuedOutside": "Poursuivi en dehors de ce chat.",
+        "continuedOutsideRewound": "Poursuivi en dehors de ce chat. Les réponses précédentes ne font plus partie de l'historique de cette conversation.",
         "stoppedBeforeStart": "Arrêté manuellement",
         "dismiss": "Ignorer",
         "copyError": "Copier l'erreur",

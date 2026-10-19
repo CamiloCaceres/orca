@@ -27,7 +27,11 @@ import { JournalDerivedTurnScope } from './journal-derived-turn-scope'
 import { removeJournalItem, statedOrDerivedTurnScope, upsertJournalItem } from './journal-item-fold'
 import { journalItemRevisionIsStale } from './journal-item-revision'
 import { observeJournalProviderActivity } from './journal-provider-activity'
-import { isJournalStopOrResumeRow, type JournalRow } from './journal-row-schema'
+import {
+  isJournalStopOrResumeRow,
+  type AgentJournalEpochReason,
+  type JournalRow
+} from './journal-row-schema'
 import { acceptSubmissionFromProviderItem, applyJournalSubmission } from './journal-submission-fold'
 import { applyJournalDispatchRow } from './journal-dispatch-reducer'
 import { isWriteFailureSubmission } from '../../../shared/structured-agent-session-dispatch-rejection'
@@ -77,7 +81,11 @@ export type JournalReducerState = {
   queuePauseMarks: JournalQueuePauseMarks
   /** Host-only: each handed-over send's stopped-message history, from its latest `pending` row. */
   stoppedHistoryCarried: Map<string, readonly string[]>
+  /** Why the current epoch opened and when; null until its epoch row is applied. */
+  epochOpening: JournalEpochOpening | null
 }
+
+export type JournalEpochOpening = { reason: AgentJournalEpochReason; openedAt: number }
 
 export function createJournalReducerState(sessionId: string, epoch: string): JournalReducerState {
   return {
@@ -100,7 +108,8 @@ export function createJournalReducerState(sessionId: string, epoch: string): Jou
     derivedTurnScope: new JournalDerivedTurnScope(),
     latestAcceptedTurnSequence: 0,
     queuePauseMarks: createJournalQueuePauseMarks(),
-    stoppedHistoryCarried: new Map()
+    stoppedHistoryCarried: new Map(),
+    epochOpening: null
   }
 }
 
@@ -112,6 +121,7 @@ export function applyJournalRow(
   state.lastSequence = Math.max(state.lastSequence, row.seq)
   state.highestFence = Math.max(state.highestFence, row.fence)
   if (row.kind === 'epoch') {
+    state.epochOpening = { reason: row.reason, openedAt: row.ts }
     return
   }
   state.lastActivityAt = Math.max(state.lastActivityAt, row.ts)

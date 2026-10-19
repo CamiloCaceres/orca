@@ -17,6 +17,20 @@ import {
   type StructuredAgentSessionTransitionSink
 } from './structured-agent-session-transition'
 import type { StructuredAgentSessionLogger } from './structured-agent-session-logger'
+import type {
+  StructuredAgentSessionIdentityResolver,
+  StructuredAgentSessionHistoryJournal,
+  StructuredAgentSessionLinkageJournal,
+  StructuredAgentSessionRevisionResolver
+} from './structured-agent-session-journal-views'
+export type {
+  StructuredAgentSessionLifecycleJournal,
+  StructuredAgentSessionIdentityResolver,
+  StructuredAgentSessionRevisionJournal,
+  StructuredAgentSessionHistoryJournal,
+  StructuredAgentSessionLinkageJournal,
+  StructuredAgentSessionRevisionResolver
+} from './structured-agent-session-journal-views'
 
 export type StructuredAgentSessionSinkAdmission =
   | { accepted: true }
@@ -55,32 +69,6 @@ export type StructuredAgentSessionItemAppendOptions = StructuredAgentSessionAppe
    *  (`JournalItemRow.executionOwner`). */
   executes?: true
 }
-
-export type StructuredAgentSessionLifecycleJournal = Pick<
-  AgentSessionJournal,
-  'epoch' | 'visitItems'
->
-
-export type StructuredAgentSessionIdentityResolver = (
-  journal: StructuredAgentSessionLifecycleJournal
-) => AgentJournalItemIdentity | null
-
-/** What a revision reads: a keyed read for a row it can name, and the scan for one it cannot. */
-export type StructuredAgentSessionRevisionJournal = Pick<
-  AgentSessionJournal,
-  'epoch' | 'visitItems' | 'itemBody'
->
-
-/** Rows already journaled and who produced each, read by a producer that has to agree with them. */
-export type StructuredAgentSessionLinkageJournal = Pick<
-  AgentSessionJournal,
-  'epoch' | 'visitItemsWithLinkage' | 'threadGoal' | 'threadGoalSource'
->
-
-/** The row a revision rewrites and its whole new body, read from the journal at execution. */
-export type StructuredAgentSessionRevisionResolver = (
-  journal: StructuredAgentSessionRevisionJournal
-) => { identity: AgentJournalItemIdentity; body: AgentJournalItemBody } | null
 
 export type StructuredAgentSessionRevisionOptions = StructuredAgentSessionItemAppendOptions
 
@@ -145,6 +133,8 @@ export type StructuredAgentSessionEventSink = StructuredAgentSessionTransitionSi
   journalEpoch?(): string | null
   /** The bound journal's producer linkage; null until bound. */
   journalLinkage?(): StructuredAgentSessionLinkageJournal | null
+  /** The bound journal's rows and current epoch; null until bound. */
+  journalHistory?(): StructuredAgentSessionHistoryJournal | null
   /** Whether the bound journal's Stop rule makes turn `turnId`, ending at `endedAt` with no verdict
    *  of its own, a person's cancellation (`personStopDecidesTurn`); false until bound. */
   journalStopDecidesTurn?(turnId: string, endedAt: number): boolean
@@ -294,6 +284,7 @@ export function createDeferredStructuredAgentSessionEventSink(deps: {
       ...createStructuredAgentSessionTransitionMembers(queue),
       journalEpoch: queue.journalEpoch,
       journalLinkage: queue.journalLinkage,
+      journalHistory: queue.journalHistory,
       journalStopDecidesTurn: queue.journalStopDecidesTurn,
       appendLifecycleBatch: (settlementId, mutations, options = {}) => {
         const admission = appendLifecycleBatch(settlementId, mutations, options)

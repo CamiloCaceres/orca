@@ -18664,6 +18664,8 @@
         "plan": "Plan",
         "historyRepaired": "No se pudo cargar parte del historial de este chat.",
         "historyItemTooLarge": "Esta parte del chat era demasiado grande para mostrarla.",
+        "continuedOutside": "Continuado fuera de este chat.",
+        "continuedOutsideRewound": "Continuado fuera de este chat. Las respuestas anteriores ya no están en el historial de esta conversación.",
         "stoppedBeforeStart": "Detenido manualmente",
         "dismiss": "Descartar",
         "copyError": "Copiar error",
