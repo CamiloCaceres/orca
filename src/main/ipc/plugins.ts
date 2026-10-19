@@ -1,3 +1,4 @@
+import { pluginThemeSettingsAfterRemoval } from '../../shared/plugin-theme-settings'
 import { ipcMain } from 'electron'
 import { z } from 'zod'
 import type { Store } from '../persistence'
@@ -237,7 +238,11 @@ export function registerPluginHandlers(
       (pluginKey) => pluginKey !== parsed.pluginKey
     )
     store.updateSettings(
-      { pluginConsents: consents, disabledPlugins },
+      {
+        pluginConsents: consents,
+        disabledPlugins,
+        ...pluginThemeSettingsAfterRemoval(settings, parsed.pluginKey)
+      },
       { notifyListeners: true, originWebContentsId: event.sender.id }
     )
     await pluginService.refresh()

@@ -26,7 +26,7 @@ import type {
 } from './managed-account-types'
 import type { NotificationSettings } from './notification-settings-types'
 import type { CtrlTabOrderMode } from './tab-types'
-import type { TerminalColorOverrides, TerminalPluginPalette } from './terminal-color-overrides'
+import type { TerminalColorOverrides } from './terminal-color-overrides'
 import type { TerminalQuickCommand } from './terminal-quick-command-types'
 import type { TuiAgent } from './tui-agent'
 import type { ZcodePlanSite } from './zcode-plan-sites'
@@ -74,11 +74,6 @@ export type GlobalSettings = GlobalSettingsBase & {
    *  Existing workspaces and user-typed names are never rewritten. */
   jiraIssueKeyCasing?: JiraIssueKeyCasing
   theme: 'system' | 'dark' | 'light'
-  /** A plugin theme's id; its colors replace the built-in ones and its base picks light or dark. */
-  pluginAppTheme?: `plugin:${string}` | null
-  /** Palettes of the selected plugin terminal themes, so main, headless serve and relays
-   *  resolve them without the plugin loaded. Only selected themes are kept. */
-  terminalPluginPalettes?: TerminalPluginPalette[]
   /** Controls the left sidebar surface without changing terminal brightness. */
   leftSidebarAppearanceMode: LeftSidebarAppearanceMode
   leftSidebarTintColor?: string
