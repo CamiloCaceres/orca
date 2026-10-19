@@ -7,7 +7,7 @@ import {
 
 type PluginThemeSettings = Pick<
   GlobalSettings,
-  'pluginAppTheme' | 'themeBeforePlugin' | 'terminalPluginPalettes'
+  'pluginAppTheme' | 'pluginIconTheme' | 'themeBeforePlugin' | 'terminalPluginPalettes'
 >
 
 // Two terminal slots (dark, light) can each hold one plugin palette.
@@ -45,6 +45,9 @@ export function normalizePluginThemeSettings(input: object): Partial<PluginTheme
   if ('pluginAppTheme' in input) {
     result.pluginAppTheme = contentId(input.pluginAppTheme)
   }
+  if ('pluginIconTheme' in input) {
+    result.pluginIconTheme = contentId(input.pluginIconTheme)
+  }
   if ('themeBeforePlugin' in input) {
     const theme = input.themeBeforePlugin
     result.themeBeforePlugin =
@@ -68,6 +71,7 @@ export function pluginThemeSettingsAfterRemoval(
     | 'terminalThemeDark'
     | 'terminalThemeLight'
     | 'pluginAppTheme'
+    | 'pluginIconTheme'
     | 'themeBeforePlugin'
     | 'terminalPluginPalettes'
   >,
@@ -78,6 +82,9 @@ export function pluginThemeSettingsAfterRemoval(
     update.pluginAppTheme = null
     update.themeBeforePlugin = null
     update.theme = settings.themeBeforePlugin ?? settings.theme
+  }
+  if (ownedBy(settings.pluginIconTheme, pluginKey)) {
+    update.pluginIconTheme = null
   }
   if (ownedBy(settings.terminalThemeDark, pluginKey)) {
     update.terminalThemeDark = ''
