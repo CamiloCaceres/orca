@@ -12038,7 +12038,8 @@
           "disableLabel": "Desactivar {{value0}}",
           "enableLabel": "Activar {{value0}}",
           "invalidPluginError": "Los archivos de este plugin no son válidos. Corrígelos y actualiza.",
-          "languageCoverage": "{{value0}} traducido al {{value1}}%"
+          "languageCoverage": "{{value0}} traducido al {{value1}}%",
+          "syntaxFailed": "El resaltado se detuvo: esta gramática falló."
         },
         "PluginVmRecipeConsentPreview": {
           "create": "Crear",

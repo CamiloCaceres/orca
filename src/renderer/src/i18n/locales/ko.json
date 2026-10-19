@@ -12043,7 +12043,8 @@
           "disableLabel": "{{value0}} 비활성화",
           "enableLabel": "{{value0}} 활성화",
           "invalidPluginError": "이 플러그인의 파일이 유효하지 않습니다. 수정한 후 새로 고치세요.",
-          "languageCoverage": "{{value0}} {{value1}}% 번역됨"
+          "languageCoverage": "{{value0}} {{value1}}% 번역됨",
+          "syntaxFailed": "강조 표시가 중지됨: 이 문법에 오류가 발생했습니다."
         },
         "PluginVmRecipeConsentPreview": {
           "create": "생성",

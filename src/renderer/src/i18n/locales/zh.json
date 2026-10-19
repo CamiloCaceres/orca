@@ -12043,7 +12043,8 @@
           "disableLabel": "禁用 {{value0}}",
           "enableLabel": "启用 {{value0}}",
           "invalidPluginError": "此插件的文件无效。修复后请刷新。",
-          "languageCoverage": "{{value0}} 已翻译 {{value1}}%"
+          "languageCoverage": "{{value0}} 已翻译 {{value1}}%",
+          "syntaxFailed": "高亮已停止：此语法出错。"
         },
         "PluginVmRecipeConsentPreview": {
           "create": "创建",
