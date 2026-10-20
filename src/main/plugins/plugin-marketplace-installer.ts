@@ -2,6 +2,12 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { PluginManifest } from '../../shared/plugins/plugin-manifest'
+import { PLUGIN_IMAGE_RULES } from '../../shared/plugins/plugin-image-fields'
+import { pluginShaImageUrl, type PluginHostImages } from '../../shared/plugins/plugin-image-url'
+import { readContainedPluginArtifactBytes } from './plugin-artifact-validation'
+import { declaredPluginImages } from './plugin-image-artifact-validation'
+import type { PluginImageCache } from './plugin-image-cache'
+import { pluginManifestHostImages } from './plugin-manifest-images'
 import { pluginCatalogReleaseCompatibilityError } from '../../shared/plugins/plugin-manifest-compatibility'
 import { isQualifiedPluginKey } from '../../shared/plugins/plugin-manifest'
 import { getUserPluginsDir } from './plugin-discovery'
@@ -34,6 +40,8 @@ export type PluginMarketplaceInstallPreview = {
   official: boolean
   bundled: boolean
   blockedByKillList?: { reason: string; advisoryUrl?: string }
+  /** The manifest's images, verified at preview and cached by hash. */
+  images?: PluginHostImages
 }
 
 export type PluginMarketplacePreviewIdentity = Pick<
@@ -46,13 +54,16 @@ export class PluginMarketplaceInstaller {
   private readonly userDataPath: string
   private readonly hostVersion: string
   private readonly blockedPluginReason: (pluginKey: string) => string | null
+  private readonly imageCache: PluginImageCache | null
 
   constructor(options: {
     marketplace: PluginMarketplaceService
     userDataPath: string
     hostVersion: string
     blockedPluginReason?: (pluginKey: string) => string | null
+    imageCache?: PluginImageCache
   }) {
+    this.imageCache = options.imageCache ?? null
     this.marketplace = options.marketplace
     this.userDataPath = options.userDataPath
     this.hostVersion = options.hostVersion
@@ -86,6 +97,7 @@ export class PluginMarketplaceInstaller {
       if (!inspection.ok) {
         throw new Error(inspection.error)
       }
+      const images = await this.cachePreviewImages(stagingDirectory, inspection.manifest)
       return {
         marketplaceSourceId,
         marketplaceName: listing.marketplaceName,
@@ -99,7 +111,8 @@ export class PluginMarketplaceInstaller {
         manifest: inspection.manifest,
         official: listing.official,
         bundled: listing.bundled,
-        ...(listing.blockedByKillList ? { blockedByKillList: listing.blockedByKillList } : {})
+        ...(listing.blockedByKillList ? { blockedByKillList: listing.blockedByKillList } : {}),
+        ...(images ? { images } : {})
       }
     } finally {
       await rm(stagingDirectory, { recursive: true, force: true })
@@ -169,6 +182,34 @@ export class PluginMarketplaceInstaller {
       pluginKey,
       hostVersion: this.hostVersion,
       blockedPluginReason: this.blockedPluginReason
+    })
+  }
+
+  /** Why cache now: the staging tree is deleted after preview, and images were already checked by
+   *  the install inspection, so their hashes are the only stable names. */
+  private async cachePreviewImages(
+    rootDir: string,
+    manifest: PluginManifest
+  ): Promise<PluginHostImages | undefined> {
+    const cache = this.imageCache
+    if (!cache) {
+      return undefined
+    }
+    const hashes = new Map<string, string>()
+    for (const image of declaredPluginImages(manifest)) {
+      const bytes = await readContainedPluginArtifactBytes(
+        rootDir,
+        image.path,
+        PLUGIN_IMAGE_RULES[image.kind].maxBytes
+      ).catch(() => null)
+      const sha256 = bytes ? await cache.put(bytes) : null
+      if (sha256) {
+        hashes.set(image.path, sha256)
+      }
+    }
+    return pluginManifestHostImages(manifest, (_slot, path) => {
+      const sha256 = hashes.get(path)
+      return sha256 ? pluginShaImageUrl(sha256) : null
     })
   }
 

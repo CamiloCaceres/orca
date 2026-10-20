@@ -6,6 +6,8 @@ import { needsReconsent } from '../../shared/plugins/plugin-consent-state'
 import { pluginPanelTabKey } from '../../shared/plugins/plugin-manifest'
 import type { PluginLockfile } from '../../shared/plugins/plugin-install-lockfile'
 import { isInvalidDiscoveredPlugin, type DiscoveredPlugin } from './plugin-discovery'
+import type { PluginHostImages } from '../../shared/plugins/plugin-image-url'
+import { pluginInstalledHostImages } from './plugin-manifest-images'
 import type { PluginService } from './plugin-service'
 import { listPluginVmRecipeCommands } from '../../shared/plugins/plugin-vm-recipe-artifact'
 import type { PluginCommandAliasActionId } from '../../shared/plugins/plugin-command-actions'
@@ -55,6 +57,8 @@ export type PluginListEntry = {
   description?: string
   /** Verified from the installed manifest, so the UI never infers authority from contents. */
   execution?: PluginExecutionProfile
+  /** Declared images, as orca-plugin-image URLs main serves after checking them. */
+  images?: PluginHostImages
   license?: string
   homepage?: string
   repository?: string
@@ -90,6 +94,8 @@ export type PluginListEntry = {
     marketplace?: { reference: string; ref: string; resolvedCommit: string }
   }
 }
+
+const withImages = (images: PluginHostImages | undefined) => (images ? { images } : {})
 
 export async function buildPluginList(
   service: PluginService,
@@ -170,6 +176,9 @@ export async function buildPluginList(
         publisher: plugin.manifest.publisher,
         ...(plugin.manifest.description ? { description: plugin.manifest.description } : {}),
         execution: pluginExecutionProfile(plugin.manifest),
+        ...withImages(
+          pluginInstalledHostImages(plugin.pluginKey, plugin.contentHash, plugin.manifest)
+        ),
         ...(plugin.manifest.license ? { license: plugin.manifest.license } : {}),
         ...(plugin.manifest.homepage ? { homepage: plugin.manifest.homepage } : {}),
         ...(plugin.manifest.repository ? { repository: plugin.manifest.repository } : {}),

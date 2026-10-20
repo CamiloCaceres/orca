@@ -1,3 +1,6 @@
+import { join } from 'node:path'
+import { PluginImageCache } from '../plugins/plugin-image-cache'
+import { installPluginImageProtocolHandler } from '../plugins/plugin-image-protocol'
 import { pluginHostVersion } from '../../shared/plugins/plugin-host-version'
 import { app, BrowserWindow } from 'electron'
 import { performance } from 'node:perf_hooks'
@@ -37,7 +40,11 @@ export async function initializeMainProcessPlugins(runtime: OrcaRuntimeService):
     pluginsDataDir: getPluginsDataDir(app.getPath('userData'))
   })
   await state.pluginKillListService.initialize()
+  const pluginImageCache = new PluginImageCache(
+    join(getPluginsDataDir(app.getPath('userData')), 'image-cache')
+  )
   state.pluginMarketplaceService = new PluginMarketplaceService({
+    imageCache: pluginImageCache,
     pluginsDataDir: getPluginsDataDir(app.getPath('userData')),
     getKillListEntry: (pluginKey) => state.pluginKillListService?.find(pluginKey) ?? null,
     hostVersion: pluginHostVersion(app.getVersion())
@@ -56,7 +63,8 @@ export async function initializeMainProcessPlugins(runtime: OrcaRuntimeService):
     marketplace: state.pluginMarketplaceService,
     userDataPath: app.getPath('userData'),
     hostVersion: pluginHostVersion(app.getVersion()),
-    blockedPluginReason: (pluginKey) => state.pluginKillListService?.reason(pluginKey) ?? null
+    blockedPluginReason: (pluginKey) => state.pluginKillListService?.reason(pluginKey) ?? null,
+    imageCache: pluginImageCache
   })
   state.pluginService = new PluginService({
     userDataPath: app.getPath('userData'),
@@ -70,6 +78,10 @@ export async function initializeMainProcessPlugins(runtime: OrcaRuntimeService):
     getKeybindings: () => state.keybindings?.getOverrides() ?? {},
     getPluginKillListEntry: (pluginKey) => state.pluginKillListService?.find(pluginKey) ?? null,
     hostEntryPath: resolvePluginHostEntryPath(app.getAppPath(), app.isPackaged)
+  })
+  installPluginImageProtocolHandler({
+    cache: pluginImageCache,
+    findValidPlugin: (pluginKey) => state.pluginService?.findValidPlugin(pluginKey) ?? null
   })
   const bundledPluginBootstrap = new PluginBundledBootstrapCoordinator({
     root: resolveBundledPluginRoot({

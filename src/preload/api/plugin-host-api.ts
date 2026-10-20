@@ -1,3 +1,4 @@
+import type { PluginHostImages } from '../../shared/plugins/plugin-image-url'
 import type { PluginExecutionProfile } from '../../shared/plugins/plugin-execution-profile'
 import type {
   PluginIconThemeMetadata,
@@ -53,6 +54,8 @@ export type PluginHostListEntry = {
   /** The verified execution profile from the installed manifest; absent for invalid entries and
    *  on hosts that predate it. Never infer it from the plugin's contents. */
   execution?: PluginExecutionProfile
+  /** Declared images (format 2 manifests), as orca-plugin-image URLs main serves. */
+  images?: PluginHostImages
   /** SPDX license expression from the manifest. */
   license?: string
   homepage?: string
@@ -147,6 +150,8 @@ export type PluginMarketplaceHostListing = {
   blockedByKillList?: { reason: string; advisoryUrl?: string }
   /** The release record a v2 catalog vouches for; absent for v1 catalogs. */
   release?: PluginCatalogRelease
+  /** The offered release's images, verified and cached by main; never hotlinked. */
+  images?: PluginHostImages
   /** Release details from a v2 catalog; all absent for v1 catalogs. */
   name?: string
   version?: string
@@ -180,6 +185,8 @@ export type PluginMarketplaceHostInstallPreview = {
   official: boolean
   bundled: boolean
   blockedByKillList?: { reason: string; advisoryUrl?: string }
+  /** The manifest's images, verified at preview. */
+  images?: PluginHostImages
 }
 
 export type PluginsApi = {

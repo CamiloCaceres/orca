@@ -11,6 +11,7 @@ import {
 } from '../../shared/plugins/plugin-catalog'
 import { formatPluginSchemaIssues } from '../../shared/plugins/plugin-schema-issues'
 import { gitExecFileAsyncBuffer } from '../git/runner'
+import { extractCatalogImages } from './plugin-catalog-image-extraction'
 import { readPluginGitCommit } from './plugin-git-repository'
 import type { PluginMarketplaceRegisteredSource } from './plugin-marketplace-store'
 
@@ -22,6 +23,8 @@ const MARKETPLACE_GIT_TIMEOUT_MS = 120_000
 export type PluginMarketplaceFetchResult = {
   marketplaceCommit: string
   marketplace: PluginMarketplace
+  /** Catalog images whose bytes matched their declared hash, size and format. */
+  images?: Buffer[]
 }
 
 /** Fetches a marketplace through system Git so private repositories use the
@@ -38,7 +41,7 @@ export async function fetchPluginMarketplace(
     },
     readMarketplaceAtCommit
   )
-  return { marketplaceCommit: commit, marketplace: value }
+  return { marketplaceCommit: commit, marketplace: value.marketplace, images: value.images }
 }
 
 /** Reads only the catalog index blobs, so the rest of the repository is never written out.
@@ -46,7 +49,7 @@ export async function fetchPluginMarketplace(
 async function readMarketplaceAtCommit(
   repository: string,
   commit: string
-): Promise<PluginMarketplace> {
+): Promise<{ marketplace: PluginMarketplace; images: Buffer[] }> {
   const options = { cwd: repository, timeout: MARKETPLACE_GIT_TIMEOUT_MS }
   const listing = await gitExecFileAsyncBuffer(
     ['ls-tree', '-l', '-z', commit, '--', PLUGIN_CATALOG_FILENAME, PLUGIN_MARKETPLACE_FILENAME],
@@ -73,7 +76,35 @@ async function readMarketplaceAtCommit(
     ...options,
     maxBuffer: MARKETPLACE_INDEX_MAX_BYTES
   })
-  return parsePluginMarketplaceIndex(filename, bytes.stdout)
+  const marketplace = parsePluginMarketplaceIndex(filename, bytes.stdout)
+  return extractCatalogImages(marketplace, (path, maxBytes) =>
+    readCatalogBlob(repository, commit, path, maxBytes)
+  )
+}
+
+/** One file from the catalog commit, refused before reading when it is larger than allowed. */
+async function readCatalogBlob(
+  repository: string,
+  commit: string,
+  path: string,
+  maxBytes: number
+): Promise<Buffer | null> {
+  const options = { cwd: repository, timeout: MARKETPLACE_GIT_TIMEOUT_MS }
+  const listing = await gitExecFileAsyncBuffer(['ls-tree', '-l', '-z', commit, '--', path], {
+    ...options,
+    maxBuffer: 4 * 1024
+  })
+  const match = /^100(?:644|755) blob ([0-9a-f]{40}) +([0-9]+)\t/.exec(
+    listing.stdout.toString('utf8')
+  )
+  if (!match?.[1] || Number(match[2]) > maxBytes) {
+    return null
+  }
+  const blob = await gitExecFileAsyncBuffer(['cat-file', 'blob', match[1]], {
+    ...options,
+    maxBuffer: maxBytes
+  })
+  return blob.stdout
 }
 
 export function parsePluginMarketplaceIndex(filename: string, bytes: Buffer): PluginMarketplace {
