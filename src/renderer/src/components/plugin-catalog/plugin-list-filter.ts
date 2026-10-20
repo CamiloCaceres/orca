@@ -42,7 +42,7 @@ export function isPluginFilterKind(value: string): value is PluginFilterKind {
 }
 
 /** The filter kinds one plugin belongs to: known kinds, or the raw category when unmapped. */
-export function pluginFilterKinds(entry: PluginListEntry): Set<string> {
+export function pluginFilterKinds(entry: Pick<PluginListEntry, 'categories'>): Set<string> {
   const kinds = new Set<string>()
   for (const category of entry.categories) {
     if (!NON_KIND_CATEGORIES.has(category)) {

@@ -3,6 +3,7 @@ import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
 import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
+import { pluginCategoryLabel } from '../plugin-catalog/plugin-category-label'
 import { DetailSection } from './PluginDetailSections'
 import { formatPluginReleaseDate } from './plugin-release-date'
 import { usePluginRollbackVersion } from './use-plugin-rollback-version'
@@ -158,7 +159,7 @@ export function PluginDetailInfo({
         {categories.length > 0 ? (
           <InfoRow
             label={translate('auto.components.settings.PluginDetailPage.categories', 'Categories')}
-            value={categories.join(', ')}
+            value={[...new Set(categories.map(pluginCategoryLabel))].join(', ')}
           />
         ) : null}
         <InfoRow
