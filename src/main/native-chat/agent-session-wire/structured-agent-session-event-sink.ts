@@ -1,3 +1,4 @@
+import type { JournalItemEcho } from '../agent-session-journal/journal-item-echo'
 import { agentJournalItemKey } from '../../../shared/agent-session-journal-item-key'
 import type {
   AgentJournalItemBody,
@@ -64,6 +65,7 @@ export type StructuredAgentSessionPublishOptions = Pick<
 
 /** An item write states which turn its row belongs to; the write that creates the row decides. */
 export type StructuredAgentSessionItemAppendOptions = StructuredAgentSessionAppendOptions & {
+  echoOf?: JournalItemEcho['echoOf']
   turnScope: AgentJournalTurnScope
   /** A reusable child's row a later run can resume: this child now executes it
    *  (`JournalItemRow.executionOwner`). */

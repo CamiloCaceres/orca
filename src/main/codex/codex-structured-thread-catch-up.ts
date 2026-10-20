@@ -165,6 +165,9 @@ export async function catchUpCodexThread(input: {
     }
     const epoch = journal.epoch
     const anchor = readCodexJournalTurnAnchor(history, input.threadId)
+    const nativeClientIds = new Set(
+      history.submissions().map((submission) => submission.clientMessageId)
+    )
     const read = {
       connection: input.connection,
       threadId: input.threadId,
@@ -180,28 +183,30 @@ export async function catchUpCodexThread(input: {
       sessionId: input.sessionId,
       threadId: input.threadId,
       journal,
+      nativeClientIds,
       check
     })
-    let first = true
+    let firstTurnId: string | null = null
     for await (const turn of loadCodexHistory(read, missing.pages)) {
       check()
-      if (first && anchor.hasRows) {
-        staging.append(
-          {
-            provider: 'legacy',
-            agent: 'codex',
-            sessionId: input.sessionId,
-            recordId: `continued-outside:${readCodexJournalString(turn, 'id')}`
-          },
-          agentSessionHostStatusBody(
-            missing.anchorIsLatest ? 'continued-outside' : 'continued-outside-rewound'
-          ),
-          { turnScope: AGENT_JOURNAL_THREAD_SCOPE }
-        )
-      }
-      first = false
+      firstTurnId ??= readCodexJournalString(turn, 'id')
       staging.restore(turn)
       await setImmediate()
+    }
+    if (anchor.hasRows && staging.hasOutside()) {
+      staging.append(
+        {
+          provider: 'legacy',
+          agent: 'codex',
+          sessionId: input.sessionId,
+          recordId: `continued-outside:${firstTurnId}`
+        },
+        agentSessionHostStatusBody(
+          missing.anchorIsLatest ? 'continued-outside' : 'continued-outside-rewound'
+        ),
+        { turnScope: AGENT_JOURNAL_THREAD_SCOPE },
+        true
+      )
     }
     const plan = staging.finish()
     let resolved = false
@@ -220,6 +225,15 @@ export async function catchUpCodexThread(input: {
               return []
             }
             if (current.epoch !== epoch || input.sink.journalHistory?.() !== history) {
+              return []
+            }
+            const currentNativeIds = history
+              .submissions()
+              .map((submission) => submission.clientMessageId)
+            if (
+              currentNativeIds.length !== nativeClientIds.size ||
+              currentNativeIds.some((id) => !nativeClientIds.has(id))
+            ) {
               return []
             }
             const now = readCodexJournalTurnAnchor(history, input.threadId)

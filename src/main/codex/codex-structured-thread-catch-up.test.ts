@@ -1,3 +1,4 @@
+import { registerCodexCatchUpEchoTests } from './codex-structured-thread-catch-up-echo.spec'
 // Turns made outside a Codex chat, through the real path they take:
 // Codex turns pages → translator → deferred sink → on-disk journal.
 
@@ -29,7 +30,7 @@ const SESSION = 'session-codex-catch-up'
 const THREAD = 'thread-abc'
 const STARTED_AT = 1_700_000_000
 
-function turn(index: number, view: 'full' | 'summary' = 'full'): Record<string, unknown> {
+export function turn(index: number, view: 'full' | 'summary' = 'full'): Record<string, unknown> {
   return {
     id: `turn-${index}`,
     status: 'completed',
@@ -68,7 +69,7 @@ afterEach(async () => {
   }
 })
 
-async function chat(clock: { now: number }) {
+export async function chat(clock: { now: number }) {
   const root = await mkdtemp(join(tmpdir(), 'orca-codex-catch-up-'))
   const journalOptions = {
     identity: {
@@ -146,6 +147,8 @@ async function chat(clock: { now: number }) {
 }
 
 describe('Codex chat catch-up', () => {
+  registerCodexCatchUpEchoTests({ chat, turn, sessionId: SESSION, threadId: THREAD })
+
   it('adds the turns made outside the chat once, in order, after the chat rows', async () => {
     const c = await chat({ now: 1_000 })
 
@@ -357,15 +360,21 @@ describe('Codex chat catch-up', () => {
     await c.open([turn(1), turn(2)], { sink: afterCommit, signal: committed.signal })
     expect(c.texts().slice(-2)).toEqual(['user:ask 2', 'assistant:answer 2'])
     const whole = c.journal.snapshot()
-    const changed = codexWith([turn(1), turn(2)])
+    const changed = codexWith([turn(1), turn(2), turn(3)])
+    let fullReads = 0
     await c.open([], {
       connection: {
         request: async (method, params) => {
           const page = await changed.request(method, params)
-          return params?.itemsView === 'full' ? { ...page, data: [turn(3), turn(1)] } : page
+          if (params?.itemsView === 'full') {
+            fullReads += 1
+            return { ...page, data: [turn(4), turn(2)] }
+          }
+          return page
         }
       }
     })
+    expect(fullReads).toBe(1)
     expect(c.journal.snapshot()).toEqual(whole)
   })
 

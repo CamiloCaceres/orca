@@ -1,0 +1,265 @@
+import { journalItemEchoFields } from '../native-chat/agent-session-journal/journal-item-echo'
+import { expect, it } from 'vitest'
+import type { AgentJournalMessageItem } from '../../shared/agent-session-journal-types'
+import {
+  agentJournalItemKey,
+  parseAgentJournalItemKey
+} from '../../shared/agent-session-journal-item-key'
+import type {
+  chat as catchUpChat,
+  turn as catchUpTurn
+} from './codex-structured-thread-catch-up.test'
+import { agentSessionSendBodyFingerprint } from '../../shared/structured-agent-session-send-mutation'
+import { agentSessionFailureFact } from '../../shared/agent-session-failure'
+import { agentSessionFailureWords } from '../../shared/agent-session-failure-words'
+import { AGENT_JOURNAL_THREAD_SCOPE } from '../../shared/agent-session-journal-types'
+import { structuredRewindCut } from '../native-chat/agent-session-wire/structured-rewind-cut'
+import {
+  applyJournalRow,
+  createJournalReducerState
+} from '../native-chat/agent-session-journal/journal-reducer'
+import { draftsDeliveredByAppliedEcho } from '../native-chat/agent-session-journal/queued-message-delivered-echo'
+
+export function registerCodexCatchUpEchoTests(input: {
+  chat: typeof catchUpChat
+  turn: typeof catchUpTurn
+  sessionId: string
+  threadId: string
+}): void {
+  const { chat, turn, sessionId: SESSION, threadId: THREAD } = input
+  it('uses saved native IDs only for display, preserving sends and drafts through outside echoes and replay', async () => {
+    const c = await chat({ now: 1_000 })
+    await c.open([turn(1)])
+    const body: AgentJournalMessageItem = {
+      kind: 'message',
+      role: 'user',
+      blocks: [
+        { type: 'text', text: 'continue' },
+        { type: 'image-ref', path: '/attachment.png' }
+      ]
+    }
+    const fingerprint = agentSessionSendBodyFingerprint(SESSION, body)
+    await c.journal.queuedMessages.insert({
+      messageId: 'draft',
+      body,
+      fingerprint,
+      hostInstance: 'p'
+    })
+    const states = ['unknown', 'rejected', 'queued', 'accepted'] as const
+    for (const state of states) {
+      await c.journal.appendSubmission(
+        {
+          clientMessageId: state,
+          body,
+          payloadFingerprint: fingerprint,
+          fence: 1,
+          handoverRecorded: true
+        },
+        state === 'rejected'
+          ? { messageId: 'draft', expect: 'waiting', settledByOp: null }
+          : undefined
+      )
+      if (state === 'queued') {
+        continue
+      }
+      await c.journal.resolveDispatch({
+        clientMessageId: state,
+        state: 'pending',
+        fence: 1,
+        turnScope: AGENT_JOURNAL_THREAD_SCOPE
+      })
+      if (state === 'unknown') {
+        await c.journal.markPendingSubmissionsUnknown(1)
+      } else if (state === 'accepted') {
+        await c.journal.resolveDispatch({
+          clientMessageId: state,
+          state: 'accepted',
+          providerIdentity: null,
+          fence: 1
+        })
+      } else {
+        await c.journal.resolveDispatch({
+          clientMessageId: state,
+          state: 'rejected',
+          ...agentSessionFailureWords(agentSessionFailureFact('cancelled'), {
+            surface: 'rejection'
+          }),
+          fence: 1
+        })
+      }
+    }
+    const before = c.journal.snapshot()
+    const draft = c.journal.queuedMessages.get('draft')
+    const receipts = states.map((state) => c.journal.receiptFor(state))
+    const native = states.map((state, n) => ({
+      ...turn(n + 2),
+      items: [
+        {
+          type: 'userMessage',
+          id: `u-${n + 2}`,
+          clientId: state,
+          content: [{ type: 'text', text: 'different historical rendering' }]
+        },
+        { type: 'agentMessage', id: `a-${n + 2}`, text: `answer ${n + 2}` }
+      ]
+    }))
+    await c.open([turn(1), ...native])
+    expect(c.journal.snapshot().items.slice(0, before.items.length)).toEqual(before.items)
+    expect(c.journal.snapshot().submissions).toEqual(before.submissions)
+    expect(states.map((state) => c.journal.receiptFor(state))).toEqual(receipts)
+    expect(c.journal.queuedMessages.get('draft')).toEqual(draft)
+    expect(c.texts().some((text) => text.includes('continued-outside'))).toBe(false)
+    expect(c.texts().filter((text) => text.includes('historical rendering'))).toEqual([])
+    expect(
+      c.journal
+        .snapshot()
+        .items.filter((item) => item.body.kind === 'message' && item.body.role === 'assistant')
+        .map((item) => parseAgentJournalItemKey(item.itemId))
+    ).toContainEqual({ provider: 'codex', threadId: THREAD, turnId: 'turn-5', ordinal: 1 })
+    const ownAgain = {
+      ...turn(6),
+      items: [
+        {
+          type: 'userMessage',
+          id: 'own-again',
+          clientId: 'unknown',
+          content: [{ type: 'text', text: 'native rendering' }]
+        },
+        { type: 'agentMessage', id: 'own-answer', text: 'answer 6' }
+      ]
+    }
+    const outside = {
+      ...turn(7),
+      items: [
+        {
+          type: 'userMessage',
+          id: 'outside',
+          clientId: 'foreign-request',
+          content: [
+            { type: 'text', text: 'continue' },
+            { type: 'localImage', path: '/attachment.png' }
+          ]
+        },
+        { type: 'agentMessage', id: 'outside-answer', text: 'outside answer' }
+      ]
+    }
+    await c.open([turn(1), ...native, ownAgain, outside])
+    expect(c.texts().slice(-4)).toEqual([
+      '(continued-outside)',
+      'assistant:answer 6',
+      'user:continue',
+      'assistant:outside answer'
+    ])
+    expect(c.journal.snapshot().submissions).toEqual(before.submissions)
+    expect(c.journal.queuedMessages.get('draft')).toEqual(draft)
+    const outsideKey = agentJournalItemKey({
+      provider: 'codex',
+      threadId: THREAD,
+      turnId: 'turn-7',
+      ordinal: 0
+    })
+    expect(journalItemEchoFields(c.journal.itemProvenance(outsideKey))).toEqual({ echoOf: null })
+    const whole = c.journal.snapshot()
+    await c.reopen()
+    await c.open([turn(1), ...native, ownAgain, outside])
+    expect(c.journal.snapshot()).toEqual(whole)
+    expect(c.journal.queuedMessages.get('draft')).toEqual(draft)
+    const replay = c.journal.readSince({ epoch: c.journal.epoch, sequence: 0 })
+    if (!replay.ok || !draft) {
+      throw new Error('missing replay fixture')
+    }
+    const state = createJournalReducerState(SESSION, c.journal.epoch)
+    for (const row of replay.rows) {
+      applyJournalRow(state, row)
+    }
+    expect(draftsDeliveredByAppliedEcho(state, [draft])).toEqual([])
+  })
+
+  it('carries nonclaim declarations through physical rows, revisions, tombstones and retained cuts', async () => {
+    const c = await chat({ now: 1_000 })
+    await c.open([turn(1)])
+    await c.journal.context.clear(
+      { operationId: 'cut', afterFence: 1, clearedAt: 1_000 },
+      { write: () => {}, committed: () => {} },
+      'cut'
+    )
+    const floor = c.journal.context.floor()
+    if (!floor) {
+      throw new Error('missing context floor')
+    }
+    const identity = { provider: 'codex', threadId: THREAD, turnId: 'turn-2', ordinal: 0 } as const
+    const key = agentJournalItemKey(identity)
+    const body: AgentJournalMessageItem = {
+      kind: 'message',
+      role: 'user',
+      blocks: [{ type: 'text', text: 'continue' }]
+    }
+    const saved = { future: 1 }
+    await c.journal.appendItem(identity, body, {
+      fence: 1,
+      turnScope: AGENT_JOURNAL_THREAD_SCOPE,
+      echoOf: saved
+    })
+    await c.journal.appendLifecycleBatch({
+      settlementId: 'revisions',
+      fence: 1,
+      mutations: [
+        { kind: 'tombstone', identity },
+        { kind: 'item', identity, body, turnScope: AGENT_JOURNAL_THREAD_SCOPE },
+        {
+          kind: 'item',
+          identity,
+          body,
+          turnScope: AGENT_JOURNAL_THREAD_SCOPE,
+          echoOf: 'conflicting-client'
+        }
+      ]
+    })
+    expect(journalItemEchoFields(c.journal.itemProvenance(key))).toEqual({ echoOf: saved })
+    // Oversized single mutations use standalone rows, still in the same transaction.
+    const largeIdentity = { ...identity, ordinal: 1 }
+    await c.journal.appendLifecycleBatch({
+      settlementId: 'oversized',
+      fence: 1,
+      mutations: [
+        {
+          kind: 'item',
+          identity: largeIdentity,
+          body: { ...body, blocks: [{ type: 'text', text: 'x'.repeat(1_500_001) }] },
+          turnScope: AGENT_JOURNAL_THREAD_SCOPE,
+          echoOf: null
+        }
+      ]
+    })
+    expect(
+      journalItemEchoFields(c.journal.itemProvenance(agentJournalItemKey(largeIdentity)))
+    ).toEqual({ echoOf: null })
+    await c.reopen()
+    expect(journalItemEchoFields(c.journal.itemProvenance(key))).toEqual({ echoOf: saved })
+    await c.open([turn(1), turn(2), turn(3)])
+    const target = agentJournalItemKey({ ...identity, turnId: 'turn-3' })
+    const cut = structuredRewindCut(c.journal, {
+      itemId: target,
+      provider: 'codex',
+      nativeId: THREAD
+    })
+    if (!cut) {
+      throw new Error('missing retained cut')
+    }
+    expect(cut.kept.find((item) => agentJournalItemKey(item.identity) === key)).toMatchObject({
+      echoOf: saved
+    })
+    await c.journal.context.rewind(floor, 1, cut.kept, () => ({
+      write: () => {},
+      committed: () => {}
+    }))
+    await c.reopen()
+    expect(journalItemEchoFields(c.journal.itemProvenance(key))).toEqual({ echoOf: saved })
+    await c.journal.replaceEpochItems('handle_forked', 1, cut.kept)
+    await c.reopen()
+    expect(journalItemEchoFields(c.journal.itemProvenance(key))).toEqual({ echoOf: saved })
+    expect(
+      journalItemEchoFields(c.journal.itemProvenance(agentJournalItemKey(largeIdentity)))
+    ).toEqual({ echoOf: null })
+  })
+}

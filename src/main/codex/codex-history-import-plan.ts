@@ -1,5 +1,13 @@
+import {
+  codexItemIdentity,
+  CodexTurnOrdinals,
+  readCodexThreadItem
+} from './codex-structured-item-translation'
 import { createHash } from 'node:crypto'
-import { agentJournalItemKey } from '../../shared/agent-session-journal-item-key'
+import {
+  agentJournalItemKey,
+  agentJournalSubmissionKey
+} from '../../shared/agent-session-journal-item-key'
 import type {
   AgentJournalItemBody,
   AgentJournalItemIdentity
@@ -24,20 +32,37 @@ export function createCodexHistoryImportPlan(input: {
   sessionId: string
   threadId: string
   journal: StructuredAgentSessionTransitionJournal
+  nativeClientIds: ReadonlySet<string>
   check: () => void
 }) {
   const mutations: JournalLifecycleMutationInput[] = []
   const encoded = new Map<string, string>()
   const turnIds: string[] = []
   let bytes = 0
+  let hasOutside = false
+  let omitted = new Map<string, string>()
   const append = (
     identity: AgentJournalItemIdentity,
     body: AgentJournalItemBody,
-    options: StructuredAgentSessionItemAppendOptions
+    options: StructuredAgentSessionItemAppendOptions,
+    prepend = false
   ) => {
     input.check()
-    const mutation = journalLifecycleItemMutation(options, identity, body)
     const key = agentJournalItemKey(identity)
+    if (omitted.has(key)) {
+      return { accepted: true } as const
+    }
+    // The saved relation is display-only: name the original prompt without accepting its send.
+    if (body.kind === 'turn' && body.userItemId) {
+      const nativePrompt = omitted.get(body.userItemId)
+      if (nativePrompt !== undefined) {
+        body = { ...body, userItemId: nativePrompt }
+      }
+    }
+    const mutation = {
+      ...journalLifecycleItemMutation(options, identity, body),
+      ...(body.kind === 'message' && body.role === 'user' ? { echoOf: null } : {})
+    }
     const serialized = JSON.stringify(mutation)
     const previous = encoded.get(key)
     if (previous !== undefined) {
@@ -50,7 +75,11 @@ export function createCodexHistoryImportPlan(input: {
     if (mutations.length >= CODEX_RESTORE_MAX_OPERATIONS || bytes > CODEX_RESTORE_MAX_BYTES) {
       throw new Error('too-large')
     }
-    mutations.push(mutation)
+    if (prepend) {
+      mutations.unshift(mutation)
+    } else {
+      mutations.push(mutation)
+    }
     encoded.set(key, serialized)
     return { accepted: true } as const
   }
@@ -75,8 +104,39 @@ export function createCodexHistoryImportPlan(input: {
   })
   return {
     append,
+    hasOutside: () => hasOutside,
     restore: (turn: Record<string, unknown>) => {
       input.check()
+      omitted = new Map<string, string>()
+      const ordinals = new CodexTurnOrdinals()
+      let native = false
+      let outsideUser = false
+      for (const value of Array.isArray(turn.items) ? turn.items : []) {
+        const item = readCodexThreadItem(value)
+        if (!item) {
+          continue
+        }
+        const identity = codexItemIdentity({
+          threadId: input.threadId,
+          turnId: typeof turn.id === 'string' ? turn.id : null,
+          item,
+          ordinals,
+          historyImport: true
+        })
+        if (item.type === 'userMessage') {
+          if (
+            typeof item.clientId === 'string' &&
+            item.clientId.length > 0 &&
+            input.nativeClientIds.has(item.clientId)
+          ) {
+            native = true
+            omitted.set(agentJournalItemKey(identity), agentJournalSubmissionKey(item.clientId))
+          } else {
+            outsideUser = true
+          }
+        }
+      }
+      hasOutside ||= !native || outsideUser
       const restored = translator.restoreThread(input.threadId, { turns: [turn] })
       if (!restored.accepted) {
         throw new Error(restored.reason)

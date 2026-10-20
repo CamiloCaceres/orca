@@ -1,3 +1,8 @@
+import {
+  journalItemEchoFields,
+  journalItemEchoRestatement,
+  type JournalItemEcho
+} from './journal-item-echo'
 // Republishing a live item set into a fresh epoch.
 //
 // One transaction: discard the old epoch's rows, insert the epoch row plus the
@@ -5,7 +10,10 @@
 
 import { sameJournalConversation } from './journal-history-origin'
 import { isQueuedAgentJournalSubmission } from '../../../shared/agent-session-queued-submission'
-import { agentJournalSubmissionKey } from '../../../shared/agent-session-journal-item-key'
+import {
+  agentJournalItemKey,
+  agentJournalSubmissionKey
+} from '../../../shared/agent-session-journal-item-key'
 
 import type {
   AgentJournalItemBody,
@@ -44,6 +52,7 @@ import type { AgentJournalEpochReason, JournalRow } from './journal-row-schema'
 import { assertJournalFence } from './journal-write-guards'
 
 export type JournalReplacementItem = AgentJournalProducerLinkage & {
+  echoOf?: JournalItemEcho['echoOf']
   identity: AgentJournalItemIdentity
   body: AgentJournalItemBody
   observedAt?: number
@@ -98,6 +107,14 @@ export function replaceJournalEpoch(input: {
       state,
       identity: item.identity,
       body: item.body,
+      ...journalItemEchoFields(item),
+      ...(input.previous && input.reason !== 'legacy_import' && input.reason !== 'session_created'
+        ? journalItemEchoRestatement(
+            input.previous.itemEchoes,
+            input.previous.aliases.get(agentJournalItemKey(item.identity)) ??
+              agentJournalItemKey(item.identity)
+          )
+        : {}),
       seq: state.lastSequence + 1,
       fence: input.fence,
       ownerFence: item.ownerFence,
