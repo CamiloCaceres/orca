@@ -265,6 +265,8 @@ describe('PluginMarketplaceInstaller', () => {
       version: '2.0.0'
     })
 
+    await expect(installer.rollbackVersion('community.notes')).resolves.toBe('1.0.0')
+    await expect(installer.rollbackVersion('not a key')).resolves.toBeNull()
     await expect(installer.rollback('community.notes')).resolves.toMatchObject({
       ok: true,
       version: '1.0.0',

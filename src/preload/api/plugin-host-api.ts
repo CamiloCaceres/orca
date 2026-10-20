@@ -52,8 +52,6 @@ export type PluginHostListEntry = {
   license?: string
   homepage?: string
   repository?: string
-  /** Version "Roll back" would restore; absent when no rollback is available. */
-  previousVersion?: string
   status: PluginHostStatus
   needsReconsent: boolean
   error?: string
@@ -225,6 +223,8 @@ export type PluginsApi = {
     pluginKey: string
   }) => Promise<PluginMarketplaceHostInstallPreview>
   rollbackMarketplacePlugin: (args: { pluginKey: string }) => Promise<PluginHostInstallResult>
+  /** Version a rollback would restore, or null. Read on demand so listing plugins stays I/O-free. */
+  getRollbackVersion: (args: { pluginKey: string }) => Promise<string | null>
   remove: (args: { pluginKey: string }) => Promise<PluginHostListEntry[]>
   getLogs: (args: { pluginKey: string }) => Promise<PluginHostLogLine[]>
   /** Re-discovers after settings edits (feature flag, dev paths). */

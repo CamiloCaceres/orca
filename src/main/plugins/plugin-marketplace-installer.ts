@@ -3,7 +3,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { PluginManifest } from '../../shared/plugins/plugin-manifest'
 import { pluginCatalogReleaseCompatibilityError } from '../../shared/plugins/plugin-manifest-compatibility'
+import { isQualifiedPluginKey } from '../../shared/plugins/plugin-manifest'
 import { getUserPluginsDir } from './plugin-discovery'
+import { readPluginRollbackVersion } from './plugin-rollback-candidate'
 import { checkoutPluginGitSource } from './plugin-git-repository'
 import {
   installPluginFromMarketplace,
@@ -152,6 +154,13 @@ export class PluginMarketplaceInstaller {
       ref: entry.source.marketplace.ref
     })
     return this.preview(sourceId, pluginKey)
+  }
+
+  /** What `rollback` would restore, read only when the UI asks. */
+  async rollbackVersion(pluginKey: string): Promise<string | null> {
+    return isQualifiedPluginKey(pluginKey)
+      ? readPluginRollbackVersion(join(getUserPluginsDir(this.userDataPath), pluginKey))
+      : null
   }
 
   async rollback(pluginKey: string): Promise<PluginInstallResult> {
