@@ -22,6 +22,13 @@ import { pluginFieldDoc, PLUGIN_MANIFEST_V2_SINCE } from './plugin-schema-field-
 
 const NEXT = PLUGIN_MANIFEST_V2_SINCE
 
+// Why hex only: these are painted directly, so anything that could carry url() or var() is out.
+const hexColor = (description: string) =>
+  z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, 'must be a #rrggbb color')
+    .meta(pluginFieldDoc(description, NEXT, ['#1b1430']))
+
 // Why only installable types: a catalog entry naming any other type fails to parse, so the
 // v2 catalog drops it instead of listing a plugin this client cannot install.
 export const PLUGIN_CATALOG_TYPES = [
@@ -111,6 +118,35 @@ export const pluginCatalogReleaseSchema = z
       .meta(
         pluginFieldDoc(
           'Icon, cover and screenshots for the listing, shown before anything is downloaded.',
+          NEXT
+        )
+      ),
+    themePreview: z
+      .array(
+        z
+          .strictObject({
+            label: z
+              .string()
+              .min(1)
+              .max(128)
+              .meta(pluginFieldDoc('Theme name.', NEXT, ['Dusk'])),
+            base: z.enum(['light', 'dark']).meta(pluginFieldDoc('Light or dark theme.', NEXT)),
+            background: hexColor('Window background.'),
+            foreground: hexColor('Main text.'),
+            accent: hexColor('Accent, such as buttons.'),
+            surface: hexColor('Cards and sidebars.')
+          })
+          .meta({
+            id: 'CatalogThemePreview',
+            description: 'Colors to draw a theme card before install.'
+          })
+      )
+      .max(4)
+      .optional()
+      .catch(undefined)
+      .meta(
+        pluginFieldDoc(
+          'Up to 4 theme palettes for listing art. Display only; the installed theme files decide the real colors.',
           NEXT
         )
       ),

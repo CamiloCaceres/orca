@@ -16,6 +16,8 @@ export async function enableIfDataPlugin(input: {
   const plugin = input.findValidPlugin(input.pluginKey)
   if (
     !plugin ||
+    // Why: a development override shadows the install, so it is not the bytes just reviewed.
+    plugin.isDev ||
     plugin.consentFingerprint !== input.installedFingerprint ||
     pluginExecutionProfile(plugin.manifest) !== 'data'
   ) {

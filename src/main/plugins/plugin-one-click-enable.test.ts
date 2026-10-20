@@ -45,7 +45,8 @@ describe('enableIfDataPlugin', () => {
   it.each([
     ['a plugin that adds instructions', installed('instructional', command), 'sha256-installed'],
     ['bytes other than the ones just installed', installed('data', theme), 'sha256-other'],
-    ['a plugin that failed discovery', null, 'sha256-installed']
+    ['a plugin that failed discovery', null, 'sha256-installed'],
+    ['a development override', { ...installed('data', theme), isDev: true }, 'sha256-installed']
   ])('leaves %s for review', async (_label, plugin, installedFingerprint) => {
     const approve = vi.fn(async () => undefined)
     await expect(

@@ -192,3 +192,25 @@ describe('catalog release summaries', () => {
     expect(parsed.images).toBeUndefined()
   })
 })
+
+describe('catalog theme previews', () => {
+  it('keeps hex palettes and drops anything else', () => {
+    const palette = {
+      label: 'Dusk',
+      base: 'dark',
+      background: '#1b1430',
+      foreground: '#e8e0ff',
+      accent: '#c38bff',
+      surface: '#241843'
+    }
+    expect(
+      pluginCatalogReleaseSchema.parse({ ...release(), themePreview: [palette] }).themePreview
+    ).toEqual([palette])
+    expect(
+      pluginCatalogReleaseSchema.parse({
+        ...release(),
+        themePreview: [{ ...palette, background: 'url(https://example.com/x)' }]
+      }).themePreview
+    ).toBeUndefined()
+  })
+})

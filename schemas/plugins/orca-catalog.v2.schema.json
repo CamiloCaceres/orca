@@ -293,6 +293,15 @@
           "x-orca-since": "1.4.233",
           "$ref": "#/$defs/CatalogImages"
         },
+        "themePreview": {
+          "description": "Up to 4 theme palettes for listing art. Display only; the installed theme files decide the real colors.",
+          "x-orca-since": "1.4.233",
+          "maxItems": 4,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CatalogThemePreview"
+          }
+        },
         "contributes": {
           "description": "What the release adds, as the listing shows it. Generate it with the catalog tooling; Orca refuses an install whose manifest says otherwise.",
           "x-orca-since": "1.4.233",
@@ -427,6 +436,76 @@
       ],
       "additionalProperties": false,
       "description": "An image stored in the catalog repository."
+    },
+    "CatalogThemePreview": {
+      "type": "object",
+      "properties": {
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Theme name.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "Dusk"
+          ]
+        },
+        "base": {
+          "type": "string",
+          "enum": [
+            "light",
+            "dark"
+          ],
+          "description": "Light or dark theme.",
+          "x-orca-since": "1.4.233"
+        },
+        "background": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "description": "Window background.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "#1b1430"
+          ]
+        },
+        "foreground": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "description": "Main text.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "#1b1430"
+          ]
+        },
+        "accent": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "description": "Accent, such as buttons.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "#1b1430"
+          ]
+        },
+        "surface": {
+          "type": "string",
+          "pattern": "^#[0-9a-fA-F]{6}$",
+          "description": "Cards and sidebars.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "#1b1430"
+          ]
+        }
+      },
+      "required": [
+        "label",
+        "base",
+        "background",
+        "foreground",
+        "accent",
+        "surface"
+      ],
+      "additionalProperties": false,
+      "description": "Colors to draw a theme card before install."
     },
     "CatalogContribution": {
       "type": "object",

@@ -58,6 +58,7 @@ The exact release the catalog vouches for. Orca refuses bytes that differ.
 | `updatedAt` | string | no | 1.4.233 | When this release was published, as an ISO 8601 date or date-time. Example: `"2026-10-20"` |
 | `changelog` | string | no | 1.4.233 | What changed in this release, as plain text. At most 2000 characters. Example: `"Adds highlighting for use expressions."` |
 | `images` | [CatalogImages](#catalogimages) | no | 1.4.233 | Images extracted from the release by catalog CI, which re-encodes them and strips metadata. Same rules as the manifest: icon PNG, WEBP, static, at least 128×128, square, at most 256 KB. Cover PNG, JPEG, WEBP, static, at least 800×500, at most 1024 KB. Screenshots PNG, JPEG, WEBP, static, at least 1280×800, at most 1536 KB. Images must not imitate Orca's trust badges. |
+| `themePreview` | [CatalogThemePreview](#catalogthemepreview)[] | no | 1.4.233 | Up to 4 theme palettes for listing art. Display only; the installed theme files decide the real colors. |
 | `contributes` | [CatalogContribution](#catalogcontribution)[] | no | 1.4.233 | What the release adds, as the listing shows it. Generate it with the catalog tooling; Orca refuses an install whose manifest says otherwise. |
 | `capabilities` | (`"workspace:read"` \| `"terminal:send"` \| `"notifications:show"` \| `"storage"` \| `"secrets"` \| `"events:subscribe"` \| `"settings:own"`)[] | no | 1.4.233 | Every capability the release asks for. Orca refuses an install whose manifest asks for different ones. Example: `["notifications:show"]` |
 | `fileTypes` | string[] | no | 1.4.233 | Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer. |
@@ -83,6 +84,19 @@ An image stored in the catalog repository.
 | `sha256` | string | yes | 1.4.233 | SHA-256 of the file's bytes; Orca refuses bytes that differ. |
 | `width` | integer | yes | 1.4.233 | Width in pixels. Example: `1600` |
 | `height` | integer | yes | 1.4.233 | Height in pixels. Example: `1000` |
+
+## CatalogThemePreview
+
+Colors to draw a theme card before install.
+
+| Field | Type | Required | Since | Description |
+| --- | --- | --- | --- | --- |
+| `label` | string | yes | 1.4.233 | Theme name. Example: `"Dusk"` |
+| `base` | `"light"` \| `"dark"` | yes | 1.4.233 | Light or dark theme. |
+| `background` | string | yes | 1.4.233 | Window background. Example: `"#1b1430"` |
+| `foreground` | string | yes | 1.4.233 | Main text. Example: `"#1b1430"` |
+| `accent` | string | yes | 1.4.233 | Accent, such as buttons. Example: `"#1b1430"` |
+| `surface` | string | yes | 1.4.233 | Cards and sidebars. Example: `"#1b1430"` |
 
 ## CatalogContribution
 
