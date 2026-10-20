@@ -33,4 +33,40 @@ export type PluginMarketplaceListing = {
   blockedByKillList?: { reason: string; advisoryUrl?: string }
   /** Exact release the catalog vouches for; absent for v1 catalogs. */
   release?: PluginCatalogRelease
+} & PluginCatalogListingDetails
+
+/** Display fields a release carries, flattened so list rows need not know release records. */
+export type PluginCatalogListingDetails = {
+  name?: string
+  version?: string
+  license?: string
+  repository?: string
+  homepage?: string
+  updatedAt?: string
+  changelog?: string
+}
+
+const DETAIL_KEYS = [
+  'name',
+  'license',
+  'repository',
+  'homepage',
+  'updatedAt',
+  'changelog'
+] as const satisfies readonly (keyof PluginCatalogListingDetails & keyof PluginCatalogRelease)[]
+
+export function pluginCatalogListingDetails(
+  release: PluginCatalogRelease | undefined
+): PluginCatalogListingDetails {
+  if (!release) {
+    return {}
+  }
+  const details: PluginCatalogListingDetails = { version: release.version }
+  for (const key of DETAIL_KEYS) {
+    const value = release[key]
+    if (value !== undefined) {
+      details[key] = value
+    }
+  }
+  return details
 }

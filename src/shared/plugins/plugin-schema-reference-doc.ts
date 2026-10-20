@@ -34,6 +34,9 @@ function typeLabel(schema: JsonSchema): string {
     const item = typeLabel(asSchema(schema.items))
     return item.includes(' \\| ') ? `(${item})[]` : `${item}[]`
   }
+  if (schema.anyOf) {
+    return [...new Set(schema.anyOf.map(typeLabel))].join(' \\| ')
+  }
   if (Array.isArray(schema.type)) {
     return schema.type.join(' \\| ')
   }

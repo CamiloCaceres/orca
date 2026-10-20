@@ -14,7 +14,8 @@ import { pluginMarketplaceV2Schema } from './plugin-marketplace'
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..', '..')
 
 function compile(schema: PluginJsonSchema) {
-  const ajv = new Ajv2020({ allErrors: true })
+  // Why no format plugin: every format the schemas use also carries a `pattern`.
+  const ajv = new Ajv2020({ allErrors: true, validateFormats: false })
   ajv.addKeyword('x-orca-since')
   return { ajv, validate: ajv.compile(schema) }
 }
@@ -136,7 +137,12 @@ describe('published plugin schemas', () => {
             minimumOrca: '1.4.223',
             types: ['syntax'],
             name: 'Gleam',
-            fileTypes: ['gleam']
+            fileTypes: ['gleam'],
+            license: 'Apache-2.0',
+            repository: 'https://github.com/acme/gleam',
+            homepage: 'https://gleam.example.com',
+            updatedAt: '2026-10-20T09:30:00Z',
+            changelog: 'Highlights use expressions.'
           }
         }
       ]

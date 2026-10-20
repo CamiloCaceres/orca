@@ -8,6 +8,7 @@ import {
   pluginExecutionProfileSchema,
   type PluginExecutionProfile
 } from './plugin-execution-profile'
+import { pluginCatalogReleaseDetailFields } from './plugin-detail-fields'
 import { PLUGIN_FILE_TYPE_RE, pluginFileTypeSchema } from './plugin-file-type'
 import type { PluginManifest } from './plugin-manifest'
 import { pluginFieldDoc, PLUGIN_MANIFEST_V2_SINCE } from './plugin-schema-field-docs'
@@ -95,6 +96,7 @@ export const pluginCatalogReleaseSchema = z
           ['Gleam']
         )
       ),
+    ...pluginCatalogReleaseDetailFields,
     /** Invalid entries are dropped, not fatal, so a newer catalog never hides the plugin. */
     fileTypes: z
       .array(z.unknown())

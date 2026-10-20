@@ -51,4 +51,9 @@ The exact release the catalog vouches for. Orca refuses bytes that differ.
 | `minimumOrca` | string | yes | 1.4.232 | The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it. Example: `"1.4.223"` |
 | `types` | (`"interface-language"` \| `"app-theme"` \| `"terminal-theme"` \| `"icon-theme"` \| `"syntax"` \| `"instructions"` \| `"panel"` \| `"worker"`)[] | yes | 1.4.232 | Every kind of contribution the release carries, matching its manifest exactly. Example: `["syntax"]` |
 | `name` | string | no | 1.4.232 | The manifest's `name`, so Orca can suggest the plugin before downloading it. Example: `"Gleam"` |
+| `license` | string | no | 1.4.232 | SPDX license expression. Example: `"MIT"` |
+| `repository` | string | no | 1.4.232 | Source repository page, https only. Example: `"https://github.com/acme/orca-gleam-syntax"` |
+| `homepage` | string | no | 1.4.232 | Project homepage, https only. Example: `"https://example.com/gleam"` |
+| `updatedAt` | string | no | 1.4.232 | When this release was published, as an ISO 8601 date or date-time. Example: `"2026-10-20"` |
+| `changelog` | string | no | 1.4.232 | What changed in this release, as plain text. At most 2000 characters. Example: `"Adds highlighting for use expressions."` |
 | `fileTypes` | string[] | no | 1.4.232 | Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer. |

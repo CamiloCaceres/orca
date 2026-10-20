@@ -22,9 +22,10 @@ import {
 import type { PluginKillListEntry } from '../../shared/plugins/plugin-kill-list'
 import { validateMarketplaceProvenance } from './plugin-marketplace-provenance'
 import { pluginMarketplaceErrorMessage } from './plugin-marketplace-error-message'
-import type {
-  PluginMarketplaceListing,
-  PluginMarketplaceSourceState
+import {
+  pluginCatalogListingDetails,
+  type PluginMarketplaceListing,
+  type PluginMarketplaceSourceState
 } from './plugin-marketplace-projection'
 export type {
   PluginMarketplaceListing,
@@ -287,6 +288,7 @@ export class PluginMarketplaceService {
       official,
       bundled: false,
       ...(entry.release ? { release: entry.release } : {}),
+      ...pluginCatalogListingDetails(entry.release),
       ...(blocked
         ? {
             blockedByKillList: {

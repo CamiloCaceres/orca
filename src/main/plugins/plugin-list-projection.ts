@@ -5,7 +5,9 @@ import {
 import { needsReconsent } from '../../shared/plugins/plugin-consent-state'
 import { pluginPanelTabKey } from '../../shared/plugins/plugin-manifest'
 import type { PluginLockfile } from '../../shared/plugins/plugin-install-lockfile'
-import { isInvalidDiscoveredPlugin } from './plugin-discovery'
+import { join } from 'node:path'
+import { getUserPluginsDir, isInvalidDiscoveredPlugin } from './plugin-discovery'
+import { readPluginRollbackVersion } from './plugin-rollback-candidate'
 import type { PluginService } from './plugin-service'
 import { listPluginVmRecipeCommands } from '../../shared/plugins/plugin-vm-recipe-artifact'
 import type { PluginCommandAliasActionId } from '../../shared/plugins/plugin-command-actions'
@@ -49,6 +51,11 @@ export type PluginListEntry = {
   version: string
   publisher: string
   description?: string
+  license?: string
+  homepage?: string
+  repository?: string
+  /** Version "Roll back" would restore; absent when no single retained version exists. */
+  previousVersion?: string
   status: PluginListStatus
   needsReconsent: boolean
   error?: string
@@ -145,6 +152,11 @@ export async function buildPluginList(
         candidateLockEntry.contentHash === plugin.contentHash
           ? candidateLockEntry
           : undefined
+      const previousVersion = lockEntry
+        ? await readPluginRollbackVersion(
+            join(getUserPluginsDir(service.options.userDataPath), plugin.pluginKey)
+          )
+        : null
       const bundled = lockEntry?.source.kind === 'bundled'
       const official =
         bundled ||
@@ -159,6 +171,10 @@ export async function buildPluginList(
         version: plugin.manifest.version,
         publisher: plugin.manifest.publisher,
         ...(plugin.manifest.description ? { description: plugin.manifest.description } : {}),
+        ...(plugin.manifest.license ? { license: plugin.manifest.license } : {}),
+        ...(plugin.manifest.homepage ? { homepage: plugin.manifest.homepage } : {}),
+        ...(plugin.manifest.repository ? { repository: plugin.manifest.repository } : {}),
+        ...(previousVersion ? { previousVersion } : {}),
         status,
         needsReconsent: needsReconsent(plugin.pluginKey, plugin.consentFingerprint, consents),
         ...(status === 'errored'

@@ -23,6 +23,8 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `author.name` | string | yes | 1.4.223 | Author or organization name. Example: `"Acme"` |
 | `author.url` | string | no | 1.4.223 | Author homepage. Example: `"https://example.com"` |
 | `repository` | string | no | 1.4.223 | Source repository URL. Example: `"https://github.com/acme/orca-gleam-syntax"` |
+| `license` | string | no | 1.4.232 | SPDX license expression. Example: `"MIT"` |
+| `homepage` | string | no | 1.4.232 | Project homepage, https only. Example: `"https://example.com/gleam"` |
 | `icon` | string | no | 1.4.223 | Square image shown beside the plugin name. Example: `"assets/icon.png"` |
 | `engines` | object | yes | 1.4.223 | Host versions this plugin supports. Older hosts refuse to load it. |
 | `engines.orca` | string | yes | 1.4.223 | Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it when you use a field newer than the current floor. Example: `">=1.4.223"` |

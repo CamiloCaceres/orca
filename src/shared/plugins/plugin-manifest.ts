@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { pluginCapabilitySchema } from './plugin-capabilities'
 import { pluginContributesShape } from './plugin-contribution-points'
 import { pluginIdSchema, pluginRelativePathSchema } from './plugin-manifest-fields'
+import { pluginManifestDetailFields } from './plugin-detail-fields'
 import { validatePluginManifestContributions } from './plugin-manifest-contribution-validation'
 import { formatPluginSchemaIssues } from './plugin-schema-issues'
 import {
@@ -88,6 +89,7 @@ const pluginManifestFields = {
     .meta(
       pluginFieldDoc('Source repository URL.', V1, ['https://github.com/acme/orca-gleam-syntax'])
     ),
+  ...pluginManifestDetailFields,
   icon: pluginRelativePathSchema
     .optional()
     .meta(pluginFieldDoc('Square image shown beside the plugin name.', V1, ['assets/icon.png'])),

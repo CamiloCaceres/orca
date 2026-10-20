@@ -114,6 +114,27 @@
       "type": "string",
       "maxLength": 2048
     },
+    "license": {
+      "description": "SPDX license expression.",
+      "x-orca-since": "1.4.232",
+      "examples": [
+        "MIT",
+        "Apache-2.0 OR MIT"
+      ],
+      "type": "string",
+      "maxLength": 128,
+      "pattern": "^\\(?[A-Za-z0-9][A-Za-z0-9.+-]*(?: (?:AND|OR|WITH) \\(?[A-Za-z0-9][A-Za-z0-9.+-]*\\)?)*\\)?$"
+    },
+    "homepage": {
+      "description": "Project homepage, https only.",
+      "x-orca-since": "1.4.232",
+      "examples": [
+        "https://example.com/gleam"
+      ],
+      "type": "string",
+      "maxLength": 2048,
+      "pattern": "^https:\\/\\/\\S+$"
+    },
     "icon": {
       "description": "Square image shown beside the plugin name.",
       "x-orca-since": "1.4.223",
