@@ -18,7 +18,7 @@ export type StructuredAgentSessionIdentityResolver = (
 /** What a revision reads: a keyed read for a row it can name, and the scan for one it cannot. */
 export type StructuredAgentSessionRevisionJournal = Pick<
   AgentSessionJournal,
-  'epoch' | 'visitItems' | 'itemBody'
+  'epoch' | 'visitItems' | 'itemBody' | 'item'
 >
 
 /** What a provider reads at open to tell its own saved history from what the chat already holds. */

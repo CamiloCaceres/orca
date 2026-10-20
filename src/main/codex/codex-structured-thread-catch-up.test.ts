@@ -1,4 +1,5 @@
 import { readCodexHistoryJournalView } from './codex-history-journal-view'
+import { projectStructuredItemsToNativeChat } from '../../shared/structured-agent-session-projection'
 import { registerCodexCatchUpEchoTests } from './codex-structured-thread-catch-up-echo.spec'
 // Turns made outside a Codex chat, through the real path they take:
 // Codex turns pages → translator → deferred sink → on-disk journal.
@@ -149,6 +150,29 @@ export async function chat(clock: { now: number }) {
 
 describe('Codex chat catch-up', () => {
   registerCodexCatchUpEchoTests({ chat, turn, sessionId: SESSION, threadId: THREAD })
+
+  it('retains the complete outside answer tail through catch-up, disk reopen and display', async () => {
+    const c = await chat({ now: 1_000 })
+    await c.open([turn(1)])
+    const answer = `${'outside answer paragraph\n'.repeat(1_024)}END-OF-OUTSIDE-ANSWER-30883`
+    const outside = { ...turn(2), items: [{ type: 'agentMessage', id: 'a-2', text: answer }] }
+    await c.open([turn(1), outside])
+    await c.reopen()
+    const items = c.journal.snapshot().items
+    const stored = items.find(
+      (item) =>
+        item.body.kind === 'message' &&
+        item.body.role === 'assistant' &&
+        item.body.blocks.some((block) => block.type === 'text' && block.text === answer)
+    )
+    expect(stored?.body).toEqual({
+      kind: 'message',
+      role: 'assistant',
+      blocks: [{ type: 'text', text: answer }]
+    })
+    const displayed = projectStructuredItemsToNativeChat(items).flatMap((message) => message.blocks)
+    expect(displayed).toContainEqual({ type: 'text', text: answer })
+  })
 
   it('adds the turns made outside the chat once, in order, after the chat rows', async () => {
     const c = await chat({ now: 1_000 })
