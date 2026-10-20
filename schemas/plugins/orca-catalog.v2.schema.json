@@ -288,6 +288,43 @@
           "minLength": 1,
           "maxLength": 2000
         },
+        "images": {
+          "description": "Icon, cover and screenshots for the listing, shown before anything is downloaded.",
+          "x-orca-since": "1.4.233",
+          "$ref": "#/$defs/CatalogImages"
+        },
+        "contributes": {
+          "description": "What the release adds, as the listing shows it. Generate it with the catalog tooling; Orca refuses an install whose manifest says otherwise.",
+          "x-orca-since": "1.4.233",
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CatalogContribution"
+          }
+        },
+        "capabilities": {
+          "description": "Every capability the release asks for. Orca refuses an install whose manifest asks for different ones.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            [
+              "notifications:show"
+            ]
+          ],
+          "maxItems": 7,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "workspace:read",
+              "terminal:send",
+              "notifications:show",
+              "storage",
+              "secrets",
+              "events:subscribe",
+              "settings:own"
+            ]
+          }
+        },
         "fileTypes": {
           "description": "Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer.",
           "x-orca-since": "1.4.233",
@@ -307,6 +344,137 @@
         "types"
       ],
       "description": "The exact release the catalog vouches for. Orca refuses bytes that differ."
+    },
+    "CatalogImages": {
+      "type": "object",
+      "properties": {
+        "icon": {
+          "$ref": "#/$defs/CatalogImage"
+        },
+        "cover": {
+          "$ref": "#/$defs/CatalogImage"
+        },
+        "screenshots": {
+          "description": "Screenshots, at most 6.",
+          "x-orca-since": "1.4.233",
+          "maxItems": 6,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CatalogImage"
+          }
+        }
+      },
+      "additionalProperties": false,
+      "description": "Images extracted from the release by catalog CI, which re-encodes them and strips metadata. Same rules as the manifest: icon PNG, WEBP, static, at least 128×128, square, at most 256 KB. Cover PNG, JPEG, WEBP, static, at least 800×500, at most 1024 KB. Screenshots PNG, JPEG, WEBP, static, at least 1280×800, at most 1536 KB. Images must not imitate Orca's trust badges."
+    },
+    "CatalogImage": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
+          "description": "File in the catalog repository, relative to its root. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "assets/acme.gleam/cover.png"
+          ]
+        },
+        "alt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "What the image shows, for screen readers. Required.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "The Dusk theme on a terminal"
+          ]
+        },
+        "sha256": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the file's bytes; Orca refuses bytes that differ.",
+          "x-orca-since": "1.4.233"
+        },
+        "width": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "description": "Width in pixels.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            1600
+          ]
+        },
+        "height": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 4096,
+          "description": "Height in pixels.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            1000
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "alt",
+        "sha256",
+        "width",
+        "height"
+      ],
+      "additionalProperties": false,
+      "description": "An image stored in the catalog repository."
+    },
+    "CatalogContribution": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "panels",
+            "commands",
+            "events",
+            "languagePacks",
+            "keybindings",
+            "vmRecipes",
+            "agents",
+            "themes",
+            "terminalThemes",
+            "iconThemes",
+            "syntaxes"
+          ],
+          "description": "Contribution point.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "themes"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "What the item is called in Orca.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "Dusk"
+          ]
+        },
+        "detail": {
+          "description": "Extra context, such as file extensions.",
+          "x-orca-since": "1.4.233",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+        }
+      },
+      "required": [
+        "kind",
+        "name"
+      ],
+      "description": "One thing the release adds to Orca."
     }
   }
 }

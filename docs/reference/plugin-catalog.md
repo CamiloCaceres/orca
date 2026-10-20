@@ -57,7 +57,42 @@ The exact release the catalog vouches for. Orca refuses bytes that differ.
 | `homepage` | string | no | 1.4.233 | Project homepage, https only. Example: `"https://example.com/gleam"` |
 | `updatedAt` | string | no | 1.4.233 | When this release was published, as an ISO 8601 date or date-time. Example: `"2026-10-20"` |
 | `changelog` | string | no | 1.4.233 | What changed in this release, as plain text. At most 2000 characters. Example: `"Adds highlighting for use expressions."` |
+| `images` | [CatalogImages](#catalogimages) | no | 1.4.233 | Images extracted from the release by catalog CI, which re-encodes them and strips metadata. Same rules as the manifest: icon PNG, WEBP, static, at least 128×128, square, at most 256 KB. Cover PNG, JPEG, WEBP, static, at least 800×500, at most 1024 KB. Screenshots PNG, JPEG, WEBP, static, at least 1280×800, at most 1536 KB. Images must not imitate Orca's trust badges. |
+| `contributes` | [CatalogContribution](#catalogcontribution)[] | no | 1.4.233 | What the release adds, as the listing shows it. Generate it with the catalog tooling; Orca refuses an install whose manifest says otherwise. |
+| `capabilities` | (`"workspace:read"` \| `"terminal:send"` \| `"notifications:show"` \| `"storage"` \| `"secrets"` \| `"events:subscribe"` \| `"settings:own"`)[] | no | 1.4.233 | Every capability the release asks for. Orca refuses an install whose manifest asks for different ones. Example: `["notifications:show"]` |
 | `fileTypes` | string[] | no | 1.4.233 | Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer. |
+
+## CatalogImages
+
+Images extracted from the release by catalog CI, which re-encodes them and strips metadata. Same rules as the manifest: icon PNG, WEBP, static, at least 128×128, square, at most 256 KB. Cover PNG, JPEG, WEBP, static, at least 800×500, at most 1024 KB. Screenshots PNG, JPEG, WEBP, static, at least 1280×800, at most 1536 KB. Images must not imitate Orca's trust badges.
+
+| Field | Type | Required | Since | Description |
+| --- | --- | --- | --- | --- |
+| `icon` | [CatalogImage](#catalogimage) | no |  | An image stored in the catalog repository. |
+| `cover` | [CatalogImage](#catalogimage) | no |  | An image stored in the catalog repository. |
+| `screenshots` | [CatalogImage](#catalogimage)[] | no | 1.4.233 | Screenshots, at most 6. |
+
+## CatalogImage
+
+An image stored in the catalog repository.
+
+| Field | Type | Required | Since | Description |
+| --- | --- | --- | --- | --- |
+| `path` | string | yes | 1.4.233 | File in the catalog repository, relative to its root. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"assets/acme.gleam/cover.png"` |
+| `alt` | string | yes | 1.4.233 | What the image shows, for screen readers. Required. Example: `"The Dusk theme on a terminal"` |
+| `sha256` | string | yes | 1.4.233 | SHA-256 of the file's bytes; Orca refuses bytes that differ. |
+| `width` | integer | yes | 1.4.233 | Width in pixels. Example: `1600` |
+| `height` | integer | yes | 1.4.233 | Height in pixels. Example: `1000` |
+
+## CatalogContribution
+
+One thing the release adds to Orca.
+
+| Field | Type | Required | Since | Description |
+| --- | --- | --- | --- | --- |
+| `kind` | `"panels"` \| `"commands"` \| `"events"` \| `"languagePacks"` \| `"keybindings"` \| `"vmRecipes"` \| `"agents"` \| `"themes"` \| `"terminalThemes"` \| `"iconThemes"` \| `"syntaxes"` | yes | 1.4.233 | Contribution point. Example: `"themes"` |
+| `name` | string | yes | 1.4.233 | What the item is called in Orca. Example: `"Dusk"` |
+| `detail` | string | no | 1.4.233 | Extra context, such as file extensions. |
 
 ## Versions and compatibility
 

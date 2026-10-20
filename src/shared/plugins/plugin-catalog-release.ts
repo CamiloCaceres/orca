@@ -8,7 +8,14 @@ import {
   pluginExecutionProfileSchema,
   type PluginExecutionProfile
 } from './plugin-execution-profile'
+import { PLUGIN_CAPABILITY_KINDS } from './plugin-capabilities'
+import {
+  pluginContributionSummary,
+  pluginContributionSummaryKey,
+  pluginContributionSummarySchema
+} from './plugin-contribution-summary'
 import { pluginCatalogReleaseDetailFields } from './plugin-detail-fields'
+import { pluginCatalogImagesSchema } from './plugin-image-fields'
 import { pluginFileTypeSchema } from './plugin-file-type'
 import type { PluginManifest } from './plugin-manifest'
 import { pluginFieldDoc, PLUGIN_MANIFEST_V2_SINCE } from './plugin-schema-field-docs'
@@ -98,6 +105,36 @@ export const pluginCatalogReleaseSchema = z
         )
       ),
     ...pluginCatalogReleaseDetailFields,
+    images: pluginCatalogImagesSchema
+      .optional()
+      .catch(undefined)
+      .meta(
+        pluginFieldDoc(
+          'Icon, cover and screenshots for the listing, shown before anything is downloaded.',
+          NEXT
+        )
+      ),
+    contributes: pluginContributionSummarySchema
+      .optional()
+      .catch(undefined)
+      .meta(
+        pluginFieldDoc(
+          'What the release adds, as the listing shows it. Generate it with the catalog tooling; Orca refuses an install whose manifest says otherwise.',
+          NEXT
+        )
+      ),
+    capabilities: z
+      .array(z.enum(PLUGIN_CAPABILITY_KINDS))
+      .max(PLUGIN_CAPABILITY_KINDS.length)
+      .optional()
+      .catch(undefined)
+      .meta(
+        pluginFieldDoc(
+          'Every capability the release asks for. Orca refuses an install whose manifest asks for different ones.',
+          NEXT,
+          [['notifications:show']]
+        )
+      ),
     /** Invalid entries are dropped, not fatal, so a newer catalog never hides the plugin. */
     fileTypes: z
       .array(pluginFileTypeSchema.optional().catch(undefined))
@@ -187,6 +224,19 @@ export function pluginCatalogReleaseError(input: {
   }
   if (release.fileTypes?.some((fileType) => !handled.has(fileType))) {
     return 'file types do not match the catalog release'
+  }
+  if (
+    release.contributes &&
+    pluginContributionSummaryKey(release.contributes) !==
+      pluginContributionSummaryKey(pluginContributionSummary(manifest))
+  ) {
+    return 'the listed contributions do not match the catalog release'
+  }
+  const asked = [...new Set(manifest.capabilities.map((capability) => capability.kind))]
+    .sort()
+    .join()
+  if (release.capabilities && [...new Set(release.capabilities)].sort().join() !== asked) {
+    return 'the listed capabilities do not match the catalog release'
   }
   return null
 }

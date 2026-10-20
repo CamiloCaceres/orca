@@ -137,7 +137,7 @@
       "pattern": "^https:\\/\\/\\S+$"
     },
     "icon": {
-      "description": "Square image shown beside the plugin name. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused.",
+      "description": "Square image shown beside the plugin name. PNG, WEBP, static, at least 128×128, square, at most 256 KB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused.",
       "x-orca-since": "1.4.160",
       "examples": [
         "assets/icon.png"
@@ -305,6 +305,48 @@
       "type": "array",
       "items": {
         "$ref": "#/$defs/Capability"
+      }
+    },
+    "cover": {
+      "description": "Wide image at the top of the plugin page.",
+      "x-orca-since": "1.4.233",
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
+          "description": "Cover image shown on the plugin page, 16:10 recommended (1600×1000). PNG, JPEG, WEBP, static, at least 800×500, at most 1024 KB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "images/cover.png"
+          ]
+        },
+        "alt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "What the image shows, for screen readers. Required.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "The Dusk theme on a terminal"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "alt"
+      ],
+      "additionalProperties": false
+    },
+    "screenshots": {
+      "description": "Screenshots for the plugin page, at most 6. All images together may be at most 8 MB.",
+      "x-orca-since": "1.4.233",
+      "maxItems": 6,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Screenshot"
       }
     },
     "pluginApi": {
@@ -779,6 +821,57 @@
       ],
       "additionalProperties": false,
       "description": "A host API the plugin may call once the user consents."
+    },
+    "Screenshot": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
+          "description": "Screenshot, 16:10 recommended (up to 2560×1600). PNG, JPEG, WEBP, static, at least 1280×800, at most 1536 KB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "images/editor.png"
+          ]
+        },
+        "alt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160,
+          "description": "What the image shows, for screen readers. Required.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "The Dusk theme on a terminal"
+          ]
+        },
+        "caption": {
+          "description": "Short caption under the screenshot.",
+          "x-orca-since": "1.4.233",
+          "examples": [
+            "Gleam in the editor"
+          ],
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 120
+        },
+        "theme": {
+          "description": "Show this screenshot only with a light or dark Orca theme.",
+          "x-orca-since": "1.4.233",
+          "type": "string",
+          "enum": [
+            "light",
+            "dark"
+          ]
+        }
+      },
+      "required": [
+        "path",
+        "alt"
+      ],
+      "additionalProperties": false,
+      "description": "One screenshot of the plugin in use."
     }
   }
 }

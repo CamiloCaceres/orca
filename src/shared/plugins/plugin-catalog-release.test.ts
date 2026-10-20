@@ -5,6 +5,7 @@ import {
   pluginCatalogReleaseSchema,
   type PluginCatalogRelease
 } from './plugin-catalog-release'
+import { pluginContributionSummary } from './plugin-contribution-summary'
 import { parsePluginManifest, type PluginManifest } from './plugin-manifest'
 
 const COMMIT = 'c'.repeat(40)
@@ -149,5 +150,45 @@ describe('catalog releases', () => {
       throw new Error(v1.error)
     }
     expect(check(release(), v1.manifest)).toContain('version 2 manifest')
+  })
+})
+
+describe('catalog release summaries', () => {
+  it('must match what the manifest adds and asks for', () => {
+    const themed = manifest({
+      contributes: { themes: [{ id: 'dusk', label: 'Dusk', path: 'dusk.json' }] },
+      capabilities: []
+    })
+    const base = { manifest: themed, resolvedCommit: COMMIT, contentHash: HASH }
+    const listed = release({ types: ['app-theme'] })
+    expect(
+      pluginCatalogReleaseError({
+        ...base,
+        release: { ...listed, contributes: pluginContributionSummary(themed), capabilities: [] }
+      })
+    ).toBeNull()
+    expect(
+      pluginCatalogReleaseError({
+        ...base,
+        release: { ...listed, contributes: [{ kind: 'themes', name: 'Midnight' }] }
+      })
+    ).toBe('the listed contributions do not match the catalog release')
+    expect(
+      pluginCatalogReleaseError({ ...base, release: { ...listed, capabilities: ['secrets'] } })
+    ).toBe('the listed capabilities do not match the catalog release')
+  })
+
+  it('drops unreadable summaries and images instead of hiding the release', () => {
+    const parsed = pluginCatalogReleaseSchema.parse({
+      ...release(),
+      contributes: [{ kind: 'widgets', name: 'x' }],
+      capabilities: ['root'],
+      images: {
+        cover: { path: '../escape.png', alt: 'x', sha256: 'f'.repeat(64), width: 1, height: 1 }
+      }
+    })
+    expect(parsed.contributes).toBeUndefined()
+    expect(parsed.capabilities).toBeUndefined()
+    expect(parsed.images).toBeUndefined()
   })
 })

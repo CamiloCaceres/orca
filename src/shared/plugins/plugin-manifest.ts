@@ -4,6 +4,7 @@ import { orcaEngineRangeSchema } from './plugin-manifest-engine-range'
 import { pluginContributesShape } from './plugin-contribution-points'
 import { pluginIdSchema, pluginRelativePathSchema } from './plugin-manifest-fields'
 import { pluginManifestDetailFields } from './plugin-detail-fields'
+import { PLUGIN_ICON_RULE_TEXT, pluginManifestImageFields } from './plugin-image-fields'
 import { validatePluginManifestContributions } from './plugin-manifest-contribution-validation'
 import { validatePluginEngineFloor } from './plugin-engine-floor'
 import { validatePluginManifestV2Rules } from './plugin-manifest-v2-rules'
@@ -109,7 +110,11 @@ const pluginManifestFields = {
   icon: pluginRelativePathSchema
     .optional()
     .meta(
-      pluginPathFieldDoc('Square image shown beside the plugin name.', V1, ['assets/icon.png'])
+      pluginPathFieldDoc(
+        `Square image shown beside the plugin name. ${PLUGIN_ICON_RULE_TEXT}`,
+        V1,
+        ['assets/icon.png']
+      )
     ),
   engines: z.object(enginesShape).meta(enginesDoc),
   main: pluginRelativePathSchema
@@ -161,6 +166,7 @@ export const pluginManifestV2Object = z
       )
     ),
     ...pluginManifestFields,
+    ...pluginManifestImageFields,
     // Why strict here too: format 2 refuses unknown keys at every level; format 1 never did.
     author: z.strictObject(authorShape).optional().meta(authorDoc),
     engines: z.strictObject(enginesShape).meta(enginesDoc),

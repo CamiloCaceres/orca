@@ -6,6 +6,12 @@ import {
 } from './plugin-catalog'
 import { PLUGIN_MANIFEST_FILENAME, parsePluginManifest } from './plugin-manifest'
 import { PLUGIN_MARKETPLACE_ENTRY_LIMIT } from './plugin-marketplace'
+import { readPluginImageHeader } from './plugin-image-format'
+import {
+  pluginImageRuleError,
+  type PluginCatalogImages,
+  type PluginImageKind
+} from './plugin-image-fields'
 import { formatPluginSchemaIssues } from './plugin-schema-issues'
 
 /**
@@ -13,20 +19,27 @@ import { formatPluginSchemaIssues } from './plugin-schema-issues'
  * trimming, keeping the first duplicate) so a mistake never hides other plugins; here every one
  * of those repairs is an error, so it is fixed before it ships.
  */
-export function validatePluginFile(fileName: string, raw: unknown): string[] {
+/** Reads a file relative to the catalog repository root, with its SHA-256; null when missing. */
+export type PluginCatalogFileReader = (path: string) => { bytes: Uint8Array; sha256: string } | null
+
+export function validatePluginFile(
+  fileName: string,
+  raw: unknown,
+  readCatalogFile?: PluginCatalogFileReader
+): string[] {
   if (fileName === PLUGIN_MANIFEST_FILENAME) {
     const parsed = parsePluginManifest(raw)
     return parsed.ok ? [] : [parsed.error]
   }
   if (fileName === PLUGIN_CATALOG_FILENAME) {
-    return validatePluginCatalog(raw)
+    return validatePluginCatalog(raw, readCatalogFile)
   }
   return [
     `unknown plugin file ${fileName}; expected ${PLUGIN_MANIFEST_FILENAME} or ${PLUGIN_CATALOG_FILENAME}`
   ]
 }
 
-function validatePluginCatalog(raw: unknown): string[] {
+function validatePluginCatalog(raw: unknown, readCatalogFile?: PluginCatalogFileReader): string[] {
   const tooNew = pluginCatalogVersionError(raw)
   if (tooNew) {
     return [tooNew]
@@ -76,6 +89,62 @@ function validatePluginCatalog(raw: unknown): string[] {
     ) {
       errors.push(`${at}.description: must be text of 1 to 4096 characters`)
     }
+    for (const [releaseIndex, release] of result.data.releases.entries()) {
+      const rawRelease: unknown = rawReleases[releaseIndex]
+      if (
+        typeof rawRelease === 'object' &&
+        rawRelease !== null &&
+        'images' in rawRelease &&
+        release.images === undefined
+      ) {
+        errors.push(`${at}.releases[${releaseIndex}].images: is not a valid image set`)
+      }
+      if (release.images && readCatalogFile) {
+        errors.push(
+          ...catalogImageErrors(release.images, readCatalogFile).map(
+            (error) => `${at}.releases[${releaseIndex}].images.${error}`
+          )
+        )
+      }
+    }
   }
   return errors
+}
+
+function catalogImageErrors(
+  images: PluginCatalogImages,
+  readCatalogFile: PluginCatalogFileReader
+): string[] {
+  const entries: [string, PluginImageKind, PluginCatalogImages['cover']][] = [
+    ['icon', 'icon', images.icon],
+    ['cover', 'cover', images.cover],
+    ...(images.screenshots ?? []).map(
+      (shot, index): [string, PluginImageKind, PluginCatalogImages['cover']] => [
+        `screenshots[${index}]`,
+        'screenshot',
+        shot
+      ]
+    )
+  ]
+  return entries.flatMap(([at, kind, image]) => {
+    if (!image) {
+      return []
+    }
+    const file = readCatalogFile(image.path)
+    if (!file) {
+      return [`${at}: ${image.path} is missing from the catalog repository`]
+    }
+    if (file.sha256 !== image.sha256) {
+      return [`${at}: sha256 does not match ${image.path}`]
+    }
+    const info = readPluginImageHeader(file.bytes)
+    if (typeof info === 'string') {
+      return [`${at}: ${info}`]
+    }
+    if (info.width !== image.width || info.height !== image.height) {
+      return [`${at}: is ${info.width}×${info.height}, not ${image.width}×${image.height}`]
+    }
+    const ruleError = pluginImageRuleError(kind, info, file.bytes.byteLength)
+    return ruleError ? [`${at}: ${ruleError}`] : []
+  })
 }

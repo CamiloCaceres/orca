@@ -25,7 +25,7 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `repository` | string | no | 1.4.160 | Source repository URL. Example: `"https://github.com/acme/orca-gleam-syntax"` |
 | `license` | string | no | 1.4.233 | SPDX license expression. Example: `"MIT"` |
 | `homepage` | string | no | 1.4.233 | Project homepage, https only. Example: `"https://example.com/gleam"` |
-| `icon` | string | no | 1.4.160 | Square image shown beside the plugin name. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"assets/icon.png"` |
+| `icon` | string | no | 1.4.160 | Square image shown beside the plugin name. PNG, WEBP, static, at least 128×128, square, at most 256 KB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"assets/icon.png"` |
 | `engines` | object | yes | 1.4.160 | Host versions this plugin supports. Older hosts refuse to load it. |
 | `engines.orca` | string | yes | 1.4.160 | Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it to the newest "Since" of any field you use; a format 2 manifest needs at least `>=1.4.233`, because older Orca cannot read format 2. Example: `">=1.4.233"` |
 | `main` | string | no | 1.4.160 | Node entry run in an out-of-process plugin worker. Requires the `trusted-worker` execution profile, and is required by it, by `contributes.events` and by any command without an `action`. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"dist/main.mjs"` |
@@ -42,6 +42,10 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `contributes.iconThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.233 | File icon themes. At most 32. |
 | `contributes.syntaxes` | [SyntaxContribution](#syntaxcontribution)[] | no | 1.4.233 | Syntax highlighting for editor languages. At most 16. |
 | `capabilities` | [Capability](#capability)[] | no | 1.4.160 | Host APIs the plugin asks the user to grant. At most 32. |
+| `cover` | object | no | 1.4.233 | Wide image at the top of the plugin page. |
+| `cover.path` | string | yes | 1.4.233 | Cover image shown on the plugin page, 16:10 recommended (1600×1000). PNG, JPEG, WEBP, static, at least 800×500, at most 1024 KB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"images/cover.png"` |
+| `cover.alt` | string | yes | 1.4.233 | What the image shows, for screen readers. Required. Example: `"The Dusk theme on a terminal"` |
+| `screenshots` | [Screenshot](#screenshot)[] | no | 1.4.233 | Screenshots for the plugin page, at most 6. All images together may be at most 8 MB. |
 | `pluginApi` | `1` | no | 1.4.160 | Major version of the plugin host API this plugin targets. Optional (defaults to 1), and refused on `data` and `instructional` plugins, which never call it. |
 
 ## PanelContribution
@@ -140,6 +144,17 @@ A host API the plugin may call once the user consents.
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
 | `kind` | `"workspace:read"` \| `"terminal:send"` \| `"notifications:show"` \| `"storage"` \| `"secrets"` \| `"events:subscribe"` \| `"settings:own"` | yes | 1.4.160 | Capability granted on user consent. |
+
+## Screenshot
+
+One screenshot of the plugin in use.
+
+| Field | Type | Required | Since | Description |
+| --- | --- | --- | --- | --- |
+| `path` | string | yes | 1.4.233 | Screenshot, 16:10 recommended (up to 2560×1600). PNG, JPEG, WEBP, static, at least 1280×800, at most 1536 KB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"images/editor.png"` |
+| `alt` | string | yes | 1.4.233 | What the image shows, for screen readers. Required. Example: `"The Dusk theme on a terminal"` |
+| `caption` | string | no | 1.4.233 | Short caption under the screenshot. Example: `"Gleam in the editor"` |
+| `theme` | `"light"` \| `"dark"` | no | 1.4.233 | Show this screenshot only with a light or dark Orca theme. |
 
 ## Versions and compatibility
 
