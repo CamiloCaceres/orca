@@ -15,6 +15,9 @@ export type LoadFailureMeta = {
 
 type BrowserLoadErrorLike = BrowserLoadError | null
 
+// Chromium's ERR_BLOCKED_BY_CLIENT: an extension's blocking rule cancelled the page load.
+const BLOCKED_BY_EXTENSION_ERROR_CODE = -20
+
 // Unknown Chromium permissions keep their raw name instead of disappearing behind invented copy.
 function humanizePermission(permission: string): string {
   switch (permission) {
@@ -141,6 +144,12 @@ export function formatLoadFailureDescription(
       { value0: host }
     )
   }
+  if (loadError.code === BLOCKED_BY_EXTENSION_ERROR_CODE) {
+    return translate(
+      'browser.loadFailure.blockedByExtension',
+      'An extension blocked this page. To open it, allow this site in the extension, then retry.'
+    )
+  }
   if (meta.isLocalhostLike) {
     return "We couldn't connect to your local server."
   }
@@ -157,6 +166,7 @@ export function formatLoadFailureRecoveryHint(
   if (
     !meta.isLocalhostLike ||
     loadError?.code === BROWSER_GUEST_RECOVERY_ERROR_CODE ||
+    loadError?.code === BLOCKED_BY_EXTENSION_ERROR_CODE ||
     (loadError && isChromiumCertificateErrorCode(loadError.code))
   ) {
     return null
@@ -166,4 +176,8 @@ export function formatLoadFailureRecoveryHint(
 
 export function isCertificateLoadError(loadError: BrowserLoadErrorLike): boolean {
   return Boolean(loadError && isChromiumCertificateErrorCode(loadError.code))
+}
+
+export function isBlockedByExtensionLoadError(loadError: BrowserLoadErrorLike): boolean {
+  return loadError?.code === BLOCKED_BY_EXTENSION_ERROR_CODE
 }

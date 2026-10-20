@@ -3,6 +3,7 @@ import {
   toSecureCertificateEndpoint
 } from '../../shared/browser-url'
 import { isChromiumInternalErrorUrl } from './browser-manager-types'
+import { watchDecisionBlockedMainFrames } from './browser-session-request-decisions'
 import { BrowserManagerGuestPopupPolicy } from './browser-manager-guest-popup-policy'
 import { allowPageUnload } from './browser-guest-unload-policy'
 import { initiatingFrameUrl } from './browser-external-app-launch'
@@ -151,6 +152,12 @@ export abstract class BrowserManagerGuestNavigationPolicy extends BrowserManager
     guest.on('did-start-navigation', didStartNavigationHandler)
     guest.on('did-navigate', didNavigateHandler)
     guest.on('did-fail-load', didFailLoadHandler)
+    // Why emit: an extension-blocked guest main frame commits no error page, so Electron reports
+    // nothing; every did-fail-load reader (this policy, the pane, webNavigation) needs the failure.
+    const stopWatchingBlockedMainFrames = watchDecisionBlockedMainFrames(guest.id, (url) => {
+      const { processId, routingId } = guest.mainFrame
+      guest.emit('did-fail-load', {}, -20, 'ERR_BLOCKED_BY_CLIENT', url, true, processId, routingId)
+    })
     guest.on('will-prevent-unload', allowPageUnload)
     const handleDestroyed = (): void => {
       const browserTabId = this.tabIdByWebContentsId.get(guest.id)
@@ -164,6 +171,7 @@ export abstract class BrowserManagerGuestNavigationPolicy extends BrowserManager
     guest.on('destroyed', handleDestroyed)
 
     return () => {
+      stopWatchingBlockedMainFrames()
       try {
         guest.off('destroyed', handleDestroyed)
       } catch {

@@ -1,6 +1,6 @@
 import { SecuritySurface } from '@/components/ui/security-surface'
 import { useEffect, useRef, useState } from 'react'
-import { Copy, ExternalLink, Globe, Loader2, RefreshCw, ShieldAlert } from 'lucide-react'
+import { Copy, ExternalLink, Globe, Loader2, Puzzle, RefreshCw, ShieldAlert } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { translate } from '@/i18n/i18n'
@@ -15,6 +15,7 @@ import { normalizeCertificateError } from '../../../../../shared/browser-certifi
 import {
   formatLoadFailureDescription,
   formatLoadFailureRecoveryHint,
+  isBlockedByExtensionLoadError,
   isCertificateLoadError,
   type LoadFailureMeta
 } from './browser-notices'
@@ -157,6 +158,7 @@ export function BrowserLoadFailureOverlay({
   const meta = getLoadErrorMetadata(presentationLoadError)
   const certificateError = isCertificateLoadError(presentationLoadError)
   const guestRecoveryError = presentationLoadError.code === BROWSER_GUEST_RECOVERY_ERROR_CODE
+  const blockedByExtension = isBlockedByExtensionLoadError(presentationLoadError)
   const recoveryHint = formatLoadFailureRecoveryHint(meta, presentationLoadError)
   const activeProceedAttempt =
     proceedAttempt?.challengeId === matchingCertificateFailure?.challengeId ? proceedAttempt : null
@@ -269,18 +271,30 @@ export function BrowserLoadFailureOverlay({
           className="flex max-w-lg flex-col items-center px-8 py-8 text-center"
         >
           <div className="mb-4 rounded-full border border-border bg-muted p-3 text-muted-foreground">
-            {certificateError ? <ShieldAlert className="size-5" /> : <Globe className="size-5" />}
+            {certificateError ? (
+              <ShieldAlert className="size-5" />
+            ) : blockedByExtension ? (
+              <Puzzle className="size-5" />
+            ) : (
+              <Globe className="size-5" />
+            )}
           </div>
           <h2 className="text-base font-semibold text-foreground">
             {certificateError
               ? translate('browser.loadFailure.connectionNotSecure', "Connection isn't secure")
               : guestRecoveryError
                 ? translate('browser.guestRecovery.title', 'Browser page stopped')
-                : meta.host
-                  ? translate('browser.loadFailure.cantReachHost', "Can't reach {{value0}}", {
-                      value0: meta.host
-                    })
-                  : translate('browser.loadFailure.cantLoadPage', "Can't load this page")}
+                : blockedByExtension
+                  ? meta.host
+                    ? translate('browser.loadFailure.hostBlocked', '{{value0}} is blocked', {
+                        value0: meta.host
+                      })
+                    : translate('browser.loadFailure.pageBlocked', 'This page is blocked')
+                  : meta.host
+                    ? translate('browser.loadFailure.cantReachHost', "Can't reach {{value0}}", {
+                        value0: meta.host
+                      })
+                    : translate('browser.loadFailure.cantLoadPage', "Can't load this page")}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
             {formatLoadFailureDescription(presentationLoadError, meta)}
@@ -296,7 +310,7 @@ export function BrowserLoadFailureOverlay({
           {recoveryHint ? (
             <p className="mt-2 text-xs text-muted-foreground">{recoveryHint}</p>
           ) : null}
-          {sshRoutedHint ? (
+          {sshRoutedHint && !blockedByExtension ? (
             <p className="mt-2 text-xs text-muted-foreground">
               {translate(
                 'browser.loadFailure.sshRoutedHint',
@@ -352,7 +366,7 @@ export function BrowserLoadFailureOverlay({
               </>
             ) : (
               <>
-                {httpsRecoveryUrl && !guestRecoveryError ? (
+                {httpsRecoveryUrl && !guestRecoveryError && !blockedByExtension ? (
                   <Button
                     size="sm"
                     className="h-9 gap-2 px-3"

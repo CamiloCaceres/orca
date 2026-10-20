@@ -147,6 +147,45 @@ describe('BrowserLoadFailureOverlay', () => {
     expect(screen.queryByRole('button', { name: 'Try HTTPS' })).toBeNull()
   })
 
+  it('says an extension blocked the page and offers no HTTPS retry', () => {
+    const { rerender } = render(
+      <BrowserLoadFailureOverlay
+        loadError={{
+          code: -20,
+          description: 'ERR_BLOCKED_BY_CLIENT',
+          validatedUrl: 'http://ads.example.com/'
+        }}
+        externalUrl="http://ads.example.com/"
+        currentUrl="http://ads.example.com/"
+        httpsRecoveryUrl="https://ads.example.com/"
+        sshRoutedHint
+        {...callbacks}
+      />
+    )
+
+    expect(screen.getByText('ads.example.com is blocked')).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        'An extension blocked this page. To open it, allow this site in the extension, then retry.'
+      )
+    ).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try HTTPS' })).toBeNull()
+    expect(screen.queryByText(/SSH host/)).toBeNull()
+    expect(screen.getByRole('button', { name: 'Retry' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Copy Address' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Open Externally' })).toBeEnabled()
+
+    rerender(
+      <BrowserLoadFailureOverlay
+        loadError={{ code: -20, description: 'ERR_BLOCKED_BY_CLIENT', validatedUrl: 'not a url' }}
+        currentUrl="not a url"
+        httpsRecoveryUrl={null}
+        {...callbacks}
+      />
+    )
+    expect(screen.getByText('This page is blocked')).toBeInTheDocument()
+  })
+
   it('presents guest recovery failures without network troubleshooting', () => {
     render(
       <BrowserLoadFailureOverlay

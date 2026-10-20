@@ -6,6 +6,7 @@ import {
   formatLoadFailureRecoveryHint,
   formatPermissionNotice,
   formatPopupNotice,
+  isBlockedByExtensionLoadError,
   isCertificateLoadError
 } from './browser-notices'
 import { BROWSER_GUEST_RECOVERY_ERROR_CODE } from '../host-guest/browser-page-guest-recovery'
@@ -184,6 +185,21 @@ describe('browser notice formatting', () => {
     expect(
       formatLoadFailureRecoveryHint({ host: 'localhost:3000', isLocalhostLike: true }, loadError)
     ).toBeNull()
+  })
+
+  it('says an extension blocked the page, without local-server advice', () => {
+    const loadError = {
+      code: -20,
+      description: 'ERR_BLOCKED_BY_CLIENT',
+      validatedUrl: 'http://localhost:3000/'
+    }
+    const meta = { host: 'localhost:3000', isLocalhostLike: true }
+    expect(formatLoadFailureDescription(loadError, meta)).toBe(
+      'An extension blocked this page. To open it, allow this site in the extension, then retry.'
+    )
+    expect(formatLoadFailureRecoveryHint(meta, loadError)).toBeNull()
+    expect(isBlockedByExtensionLoadError(loadError)).toBe(true)
+    expect(isCertificateLoadError(loadError)).toBe(false)
   })
 
   it('formats certificate failures without local-server recovery advice', () => {
