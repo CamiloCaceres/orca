@@ -28,7 +28,7 @@ type PluginMarketplacePreviewDialogProps = {
   onConfirm: () => void
 }
 
-function contributionSummary(
+export function contributionSummary(
   preview: PluginMarketplaceHostInstallPreview
 ): { key: string; label: string }[] {
   const { contributes } = preview.manifest

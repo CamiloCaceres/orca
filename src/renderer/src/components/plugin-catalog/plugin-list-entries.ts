@@ -2,6 +2,8 @@ import type {
   PluginHostListEntry,
   PluginMarketplaceHostListing
 } from '../../../../preload/api-types'
+import type { PluginCatalogType } from '../../../../shared/plugins/plugin-catalog-release'
+import { compareAppVersions } from '../../../../shared/app-version'
 import { pluginDisplayNameFromKey } from './plugin-display-name'
 
 /** One plugin as the list and detail page show it, whether installed, listed, or both. */
@@ -13,8 +15,25 @@ export type PluginListEntry = {
   description: string | null
   official: boolean
   categories: readonly string[]
+  /** What the catalog says this release contributes; empty when unknown. */
+  types: readonly PluginCatalogType[]
+  /** Oldest Orca the catalog release supports, e.g. "1.6.0". */
+  minimumOrca: string | null
+  /** A newer catalog version than the installed one, if any. */
+  updateVersion: string | null
   installed: PluginHostListEntry | null
   listing: PluginMarketplaceHostListing | null
+}
+
+function newerCatalogVersion(
+  plugin: PluginHostListEntry,
+  listing: PluginMarketplaceHostListing | null
+): string | null {
+  const release = listing?.release
+  if (!release || plugin.source?.kind !== 'marketplace') {
+    return null
+  }
+  return compareAppVersions(release.version, plugin.version) > 0 ? release.version : null
 }
 
 export function pluginListEntryFromInstalled(
@@ -29,6 +48,9 @@ export function pluginListEntryFromInstalled(
     description: plugin.description ?? listing?.description ?? null,
     official: plugin.official,
     categories: listing?.categories ?? [],
+    types: listing?.release?.types ?? [],
+    minimumOrca: listing?.release?.minimumOrca ?? null,
+    updateVersion: newerCatalogVersion(plugin, listing),
     installed: plugin,
     listing
   }
@@ -37,13 +59,16 @@ export function pluginListEntryFromInstalled(
 export function pluginListEntryFromListing(listing: PluginMarketplaceHostListing): PluginListEntry {
   return {
     pluginKey: listing.pluginKey,
-    // Why: listings carry no manifest name yet; the key is the only name they have.
-    name: pluginDisplayNameFromKey(listing.pluginKey),
+    // Why: older catalogs carry no release name; the key is the only name they have.
+    name: listing.release?.name ?? pluginDisplayNameFromKey(listing.pluginKey),
     publisher: listing.marketplaceOwner || null,
-    version: null,
+    version: listing.release?.version ?? null,
     description: listing.description ?? null,
     official: listing.official,
     categories: listing.categories,
+    types: listing.release?.types ?? [],
+    minimumOrca: listing.release?.minimumOrca ?? null,
+    updateVersion: null,
     installed: null,
     listing
   }

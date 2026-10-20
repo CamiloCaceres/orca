@@ -209,7 +209,36 @@ export function usePluginCatalog({
     preview && installedByKey.get(preview.pluginKey)?.source?.contentHash === preview.contentHash
   )
 
+  // Why: the plugin page reads the same preview the install dialog would, without opening it.
+  const previewCacheRef = useRef(
+    new Map<string, Promise<PluginMarketplaceHostInstallPreview | null>>()
+  )
+  const fetchPreview = useCallback(
+    (
+      listing: PluginMarketplaceHostListing
+    ): Promise<PluginMarketplaceHostInstallPreview | null> => {
+      const key = `${listing.marketplaceSourceId}:${listing.pluginKey}:${listing.marketplaceCommit}`
+      let request = previewCacheRef.current.get(key)
+      if (!request) {
+        request = window.api.plugins
+          .previewMarketplacePlugin({
+            marketplaceSourceId: listing.marketplaceSourceId,
+            pluginKey: listing.pluginKey
+          })
+          .catch((cause: unknown) => {
+            console.warn('[plugins] plugin page preview failed:', cause)
+            previewCacheRef.current.delete(key)
+            return null
+          })
+        previewCacheRef.current.set(key, request)
+      }
+      return request
+    },
+    []
+  )
+
   return {
+    fetchPreview,
     sources,
     listings,
     loading,
