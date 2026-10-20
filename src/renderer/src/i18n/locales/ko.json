@@ -13013,7 +13013,8 @@
           "noneInstalled": "카탈로그에서 테마, 언어, 명령을 찾아보거나 폴더나 Git에서 추가하세요.",
           "browseAll": "모든 플러그인 보기",
           "resultCount": "플러그인 {{value0}}개 일치",
-          "resultCountOne": "플러그인 1개 일치"
+          "resultCountOne": "플러그인 1개 일치",
+          "updateAll": "모두 업데이트…"
         },
         "PluginDetailPage": {
           "bundled": "Orca에 기본 포함",
@@ -13083,13 +13084,33 @@
           "crashedOnce": "한 번 충돌했습니다. 플러그인 페이지에서 로그를 확인하세요.",
           "updateAvailable": "업데이트 {{value0}} 사용 가능",
           "updateLabel": "{{value0}}을(를) {{value1}}(으)로 업데이트",
-          "update": "{{value0}}(으)로 업데이트"
+          "update": "{{value0}}(으)로 업데이트",
+          "needsOrca": "Orca {{value0}} 필요"
         },
         "PluginSettingsOverview": {
           "offTitle": "플러그인이 꺼져 있습니다",
           "offBody": "플러그인이 아무것도 실행되지 않습니다. 켜면 카탈로그를 둘러보고 설치한 항목을 사용할 수 있습니다.",
           "turnOn": "플러그인 켜기",
           "systemDescription": "모든 플러그인을 한 번에 끕니다. 검토하고 사용하도록 설정하기 전에는 아무것도 실행되지 않습니다."
+        },
+        "PluginFilterPopover": {
+          "label": "플러그인 필터",
+          "kind": "카테고리",
+          "catalog": "카탈로그",
+          "clear": "필터 지우기"
+        },
+        "PluginUpdateAllDialog": {
+          "title": "플러그인을 업데이트할까요?",
+          "reading": "각 업데이트의 변경 사항을 읽는 중…",
+          "someGrow": "새 접근 권한을 요청하는 업데이트는 아래에 펼쳐 표시됩니다. 나머지는 추가되는 항목만 바뀝니다.",
+          "noneGrow": "새 접근 권한을 요청하는 업데이트가 없습니다.",
+          "previewError": "이 업데이트를 읽을 수 없습니다. 건너뜁니다.",
+          "newAccess": "새 접근 권한: {{value0}}",
+          "noNewAccess": "새 접근 권한 없음",
+          "failed": "{{value0}}을(를) 업데이트할 수 없습니다. 나머지는 업데이트되었습니다.",
+          "cancel": "취소",
+          "updateOne": "플러그인 1개 업데이트",
+          "updateMany": "플러그인 {{value0}}개 업데이트"
         }
       },
       "right": {

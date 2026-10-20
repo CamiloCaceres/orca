@@ -13121,7 +13121,8 @@
           "noneInstalled": "Parcourez le catalogue pour trouver des thèmes, langages et commandes, ou ajoutez-en un depuis un dossier ou Git.",
           "browseAll": "Parcourir tous les plugins",
           "resultCount": "{{value0}} plugins correspondent",
-          "resultCountOne": "1 plugin correspond"
+          "resultCountOne": "1 plugin correspond",
+          "updateAll": "Tout mettre à jour…"
         },
         "PluginDetailPage": {
           "bundled": "Fourni avec Orca",
@@ -13191,13 +13192,33 @@
           "crashedOnce": "A planté une fois. Consultez ses journaux sur la page du plugin.",
           "updateAvailable": "mise à jour {{value0}} disponible",
           "updateLabel": "Mettre à jour {{value0}} vers {{value1}}",
-          "update": "Mettre à jour vers {{value0}}"
+          "update": "Mettre à jour vers {{value0}}",
+          "needsOrca": "Nécessite Orca {{value0}}"
         },
         "PluginSettingsOverview": {
           "offTitle": "Les plugins sont désactivés",
           "offBody": "Rien de vos plugins ne s’exécute. Activez-les pour parcourir le catalogue et utiliser ce que vous avez installé.",
           "turnOn": "Activer les plugins",
           "systemDescription": "Désactive tous les plugins d’un coup. Rien ne s’exécute tant que vous ne l’avez pas vérifié et activé."
+        },
+        "PluginFilterPopover": {
+          "label": "Filtrer les plugins",
+          "kind": "Catégorie",
+          "catalog": "Catalogue",
+          "clear": "Effacer les filtres"
+        },
+        "PluginUpdateAllDialog": {
+          "title": "Mettre à jour les plugins ?",
+          "reading": "Lecture des changements de chaque mise à jour…",
+          "someGrow": "Les mises à jour qui demandent un nouvel accès sont détaillées ci-dessous. Les autres ne changent que ce qu’elles ajoutent.",
+          "noneGrow": "Aucune de ces mises à jour ne demande de nouvel accès.",
+          "previewError": "Impossible de lire cette mise à jour. Elle sera ignorée.",
+          "newAccess": "Nouvel accès : {{value0}}",
+          "noNewAccess": "Aucun nouvel accès",
+          "failed": "Impossible de mettre à jour {{value0}}. Les autres ont été mis à jour.",
+          "cancel": "Annuler",
+          "updateOne": "Mettre à jour 1 plugin",
+          "updateMany": "Mettre à jour {{value0}} plugins"
         }
       },
       "right": {

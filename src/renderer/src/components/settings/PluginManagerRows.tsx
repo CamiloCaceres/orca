@@ -13,6 +13,7 @@ import {
   type PluginStatusKind
 } from './plugin-status-presentation'
 import { invalidPluginErrorMessage } from './plugin-error-presentation'
+import { satisfiesOrcaEngineRange } from '../../../../shared/plugins/plugin-manifest'
 import {
   copyPluginId,
   DetailsItem,
@@ -281,15 +282,28 @@ export function InstalledPluginRow({
 export function AvailablePluginRow({
   entry,
   busy,
+  orcaVersion,
   onOpen,
   onInstall
 }: {
   entry: PluginListEntry
   busy: boolean
+  orcaVersion: string | null
   onOpen: (entry: PluginListEntry) => void
   onInstall: (entry: PluginListEntry) => void
 }): React.JSX.Element {
   const blocked = entry.listing?.blockedByKillList
+  const needsOrca =
+    entry.minimumOrca &&
+    orcaVersion &&
+    !satisfiesOrcaEngineRange(orcaVersion, `>=${entry.minimumOrca}`)
+      ? entry.minimumOrca
+      : null
+  const needsOrcaText = needsOrca
+    ? translate('auto.components.settings.PluginManagerRows.needsOrca', 'Needs Orca {{value0}}', {
+        value0: needsOrca
+      })
+    : null
   return (
     <PluginListRow
       entry={entry}
@@ -313,7 +327,13 @@ export function AvailablePluginRow({
       }
       descriptionTone={blocked ? 'destructive' : 'default'}
       chips={<PluginChips entry={entry} />}
-      status={blocked ? <StatusWord kind="blocked" /> : null}
+      status={
+        blocked ? (
+          <StatusWord kind="blocked" />
+        ) : needsOrcaText ? (
+          <span className="text-xs whitespace-nowrap text-status-warning">{needsOrcaText}</span>
+        ) : null
+      }
       action={
         blocked ? null : busy ? (
           <Loader2 className="size-4 animate-spin text-muted-foreground" aria-hidden="true" />
@@ -321,6 +341,7 @@ export function AvailablePluginRow({
           <Button
             variant="outline"
             size="xs"
+            disabled={Boolean(needsOrca)}
             aria-label={translate(
               'auto.components.settings.PluginManagerRows.installName',
               'Install {{value0}}',

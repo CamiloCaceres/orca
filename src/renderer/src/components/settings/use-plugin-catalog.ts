@@ -34,6 +34,8 @@ export function usePluginCatalog({
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<PluginMarketplaceHostInstallPreview | null>(null)
   const [previewMode, setPreviewMode] = useState<PluginMarketplacePreviewMode>('install')
+  // Why: opened from a plugin page, the review skips what the page already showed.
+  const [previewAccessOnly, setPreviewAccessOnly] = useState(false)
   const [previewBusyKey, setPreviewBusyKey] = useState<string | null>(null)
   const [installBusy, setInstallBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -113,7 +115,8 @@ export function usePluginCatalog({
 
   const openPreview = async (
     listing: PluginMarketplaceHostListing,
-    update: boolean
+    update: boolean,
+    accessOnly = false
   ): Promise<void> => {
     const requestId = ++previewRequestRef.current
     setPreviewBusyKey(listing.pluginKey)
@@ -128,6 +131,7 @@ export function usePluginCatalog({
           })
       if (mountedRef.current && requestId === previewRequestRef.current) {
         setPreviewMode(update ? 'update' : 'install')
+        setPreviewAccessOnly(accessOnly)
         setPreview(nextPreview)
       }
     } catch (cause) {
@@ -246,6 +250,7 @@ export function usePluginCatalog({
     error,
     preview,
     previewMode,
+    previewAccessOnly,
     previewBusyKey,
     installBusy,
     actionError,

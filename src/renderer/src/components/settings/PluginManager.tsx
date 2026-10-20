@@ -21,6 +21,15 @@ import { PluginMarketplacePreviewDialog } from './PluginMarketplacePreviewDialog
 import { PluginMarketplaceSourceDialog } from './PluginMarketplaceSourceDialog'
 import { usePluginCatalog } from './use-plugin-catalog'
 import { CatalogNotice, PluginCatalogGroups } from './PluginCatalogGroups'
+import { PluginFilterPopover } from './PluginFilterPopover'
+import { PluginUpdateAllDialog } from './PluginUpdateAllDialog'
+import {
+  matchesPluginFilter,
+  NO_PLUGIN_LIST_FILTER,
+  pluginFilterCategories,
+  pluginFilterSize,
+  type PluginListFilter
+} from '../plugin-catalog/plugin-list-filter'
 import { PluginDetailPage } from './PluginDetailPage'
 import { useOrcaVersion, usePluginPageNavigation } from './use-plugin-page-navigation'
 import type { PluginLogsState } from './use-plugin-logs'
@@ -67,6 +76,8 @@ export function PluginManager({
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<PluginCatalogFilter>('all')
   const [sourcesOpen, setSourcesOpen] = useState(false)
+  const [listFilter, setListFilter] = useState<PluginListFilter>(NO_PLUGIN_LIST_FILTER)
+  const [updateAllOpen, setUpdateAllOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(() => new Set())
   const catalog = usePluginCatalog({ installedPlugins: plugins, onInstalled, onRefreshInstalled })
   const { openKey, open, back } = usePluginPageNavigation()
@@ -78,12 +89,14 @@ export function PluginManager({
     [plugins, catalog.listings]
   )
   const query = search.trim()
-  const installed = entries.installed.filter((entry) => matchesPluginSearch(entry, query))
+  const narrowed = Boolean(query) || pluginFilterSize(listFilter) > 0
+  const matches = (entry: PluginListEntry): boolean =>
+    matchesPluginSearch(entry, query) && matchesPluginFilter(entry, listFilter)
+  const installed = entries.installed.filter(matches)
   const updates = entries.installed.filter((entry) => entry.updateVersion)
-  const visibleInstalled =
-    filter === 'updates' ? updates.filter((e) => matchesPluginSearch(e, query)) : installed
+  const visibleInstalled = filter === 'updates' ? updates.filter(matches) : installed
   const capped = (groupId: string, rows: PluginListEntry[]): PluginListEntry[] =>
-    query || filter !== 'all' || expandedGroups.has(groupId)
+    narrowed || filter !== 'all' || expandedGroups.has(groupId)
       ? rows
       : rows.slice(0, PLUGIN_GROUP_ROW_CAP)
   const showAll = (groupId: string) => () =>
@@ -118,13 +131,11 @@ export function PluginManager({
   const visibleAvailableCount = entries.available.filter(
     (entry) =>
       catalog.sources.some((source) => source.id === entry.listing?.marketplaceSourceId) &&
-      matchesPluginSearch(entry, query)
+      matches(entry)
   ).length
   const showInstalledGroup = filter !== 'all' || visibleInstalled.length > 0
   const nothingMatches =
-    Boolean(query) &&
-    visibleInstalled.length === 0 &&
-    (filter !== 'all' || visibleAvailableCount === 0)
+    narrowed && visibleInstalled.length === 0 && (filter !== 'all' || visibleAvailableCount === 0)
 
   const installedGroup = pluginsLoading ? (
     <PluginListGroup
@@ -161,7 +172,15 @@ export function PluginManager({
           : translate('auto.components.settings.PluginManager.installed', 'Installed')
       }
       showHeading={filter === 'all'}
-      aside={String(visibleInstalled.length)}
+      aside={
+        filter === 'updates' && updates.length > 0 ? (
+          <Button variant="outline" size="xs" onClick={() => setUpdateAllOpen(true)}>
+            {translate('auto.components.settings.PluginManager.updateAll', 'Update all…')}
+          </Button>
+        ) : (
+          String(visibleInstalled.length)
+        )
+      }
       hiddenCount={visibleInstalled.length - capped('installed', visibleInstalled).length}
       onShowAll={showAll('installed')}
     >
@@ -182,6 +201,14 @@ export function PluginManager({
   }, [pageGone, back])
   const dialogs = (
     <>
+      <PluginUpdateAllDialog
+        open={updateAllOpen}
+        entries={updates}
+        onClose={() => setUpdateAllOpen(false)}
+        onUpdated={async () => {
+          await onRefreshInstalled()
+        }}
+      />
       <PluginMarketplaceSourceDialog
         open={sourcesOpen}
         sources={catalog.sources}
@@ -196,6 +223,7 @@ export function PluginManager({
         mode={catalog.previewMode}
         busy={catalog.installBusy}
         currentVersion={catalog.currentVersion}
+        accessOnly={catalog.previewAccessOnly}
         error={catalog.actionError}
         onClose={catalog.closePreview}
         onConfirm={() => void catalog.installPreview()}
@@ -217,7 +245,7 @@ export function PluginManager({
           fetchPreview={catalog.fetchPreview}
           onInstall={(target) => {
             if (target.listing) {
-              void catalog.openPreview(target.listing, false)
+              void catalog.openPreview(target.listing, false, true)
             }
           }}
           onBack={back}
@@ -239,6 +267,12 @@ export function PluginManager({
         updateCount={updates.length}
         toolbar={
           <>
+            <PluginFilterPopover
+              filter={listFilter}
+              categories={pluginFilterCategories([...entries.installed, ...entries.available])}
+              sources={catalog.sources}
+              onChange={setListFilter}
+            />
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -337,12 +371,14 @@ export function PluginManager({
             <PluginCatalogGroups
               catalog={catalog}
               available={entries.available}
-              query={query}
+              matches={matches}
+              narrowed={narrowed}
               filter={filter}
               capped={capped}
               showAll={showAll}
               openEntry={openEntry}
               openSources={() => setSourcesOpen(true)}
+              orcaVersion={orcaVersion}
             />
           </div>
         )}

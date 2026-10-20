@@ -13008,7 +13008,8 @@
           "noneInstalled": "Explora el catálogo para encontrar temas, lenguajes y comandos, o añade uno desde una carpeta o Git.",
           "browseAll": "Ver todos los plugins",
           "resultCount": "{{value0}} plugins coinciden",
-          "resultCountOne": "1 plugin coincide"
+          "resultCountOne": "1 plugin coincide",
+          "updateAll": "Actualizar todo…"
         },
         "PluginDetailPage": {
           "bundled": "Incluido con Orca",
@@ -13078,13 +13079,33 @@
           "crashedOnce": "Falló una vez. Consulta sus registros en la página del plugin.",
           "updateAvailable": "actualización {{value0}} disponible",
           "updateLabel": "Actualizar {{value0}} a {{value1}}",
-          "update": "Actualizar a {{value0}}"
+          "update": "Actualizar a {{value0}}",
+          "needsOrca": "Requiere Orca {{value0}}"
         },
         "PluginSettingsOverview": {
           "offTitle": "Los plugins están desactivados",
           "offBody": "No se ejecuta nada de tus plugins. Actívalos para explorar el catálogo y usar lo que instalaste.",
           "turnOn": "Activar plugins",
           "systemDescription": "Desactiva todos los plugins a la vez. No se ejecuta nada hasta que lo revises y lo actives."
+        },
+        "PluginFilterPopover": {
+          "label": "Filtrar plugins",
+          "kind": "Categoría",
+          "catalog": "Catálogo",
+          "clear": "Borrar filtros"
+        },
+        "PluginUpdateAllDialog": {
+          "title": "¿Actualizar plugins?",
+          "reading": "Leyendo qué cambia cada actualización…",
+          "someGrow": "Las actualizaciones que piden acceso nuevo se muestran desplegadas abajo. Las demás solo cambian lo que añaden.",
+          "noneGrow": "Ninguna de estas actualizaciones pide acceso nuevo.",
+          "previewError": "No se pudo leer esta actualización. Se omitirá.",
+          "newAccess": "Acceso nuevo: {{value0}}",
+          "noNewAccess": "Sin acceso nuevo",
+          "failed": "No se pudo actualizar {{value0}}. Los demás se actualizaron.",
+          "cancel": "Cancelar",
+          "updateOne": "Actualizar 1 plugin",
+          "updateMany": "Actualizar {{value0}} plugins"
         }
       },
       "right": {

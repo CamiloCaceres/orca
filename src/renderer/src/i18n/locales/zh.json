@@ -13013,7 +13013,8 @@
           "noneInstalled": "在目录中浏览主题、语言和命令，或从文件夹或 Git 添加。",
           "browseAll": "浏览所有插件",
           "resultCount": "{{value0}} 个插件匹配",
-          "resultCountOne": "1 个插件匹配"
+          "resultCountOne": "1 个插件匹配",
+          "updateAll": "全部更新…"
         },
         "PluginDetailPage": {
           "bundled": "随 Orca 附带",
@@ -13083,13 +13084,33 @@
           "crashedOnce": "崩溃了一次。请在插件页面查看日志。",
           "updateAvailable": "有可用更新 {{value0}}",
           "updateLabel": "将 {{value0}} 更新到 {{value1}}",
-          "update": "更新到 {{value0}}"
+          "update": "更新到 {{value0}}",
+          "needsOrca": "需要 Orca {{value0}}"
         },
         "PluginSettingsOverview": {
           "offTitle": "插件已关闭",
           "offBody": "你的插件都不会运行。开启后即可浏览目录并使用已安装的插件。",
           "turnOn": "开启插件",
           "systemDescription": "一次性关闭所有插件。在你查看并启用之前，不会运行任何内容。"
+        },
+        "PluginFilterPopover": {
+          "label": "筛选插件",
+          "kind": "类别",
+          "catalog": "目录",
+          "clear": "清除筛选"
+        },
+        "PluginUpdateAllDialog": {
+          "title": "要更新插件吗？",
+          "reading": "正在读取每个更新的变更…",
+          "someGrow": "需要新访问权限的更新在下方展开显示，其余更新只改变所添加的内容。",
+          "noneGrow": "这些更新都不需要新的访问权限。",
+          "previewError": "无法读取此更新，将跳过。",
+          "newAccess": "新访问权限：{{value0}}",
+          "noNewAccess": "无新访问权限",
+          "failed": "无法更新 {{value0}}，其他插件已更新。",
+          "cancel": "取消",
+          "updateOne": "更新 1 个插件",
+          "updateMany": "更新 {{value0}} 个插件"
         }
       },
       "right": {

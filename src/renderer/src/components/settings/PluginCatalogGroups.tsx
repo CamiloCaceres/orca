@@ -6,7 +6,7 @@ import { Button } from '../ui/button'
 import type { PluginCatalogFilter } from '../plugin-catalog/PluginCatalogLayout'
 import { PluginListGroup } from '../plugin-catalog/PluginListGroup'
 import { PluginListSkeleton } from '../plugin-catalog/PluginListSkeleton'
-import { matchesPluginSearch, type PluginListEntry } from '../plugin-catalog/plugin-list-entries'
+import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
 import { AvailablePluginRow } from './PluginManagerRows'
 import type { usePluginCatalog } from './use-plugin-catalog'
 
@@ -54,27 +54,31 @@ export function CatalogNotice({
 export function PluginCatalogGroups({
   catalog,
   available,
-  query,
+  matches,
+  narrowed,
   filter,
   capped,
   showAll,
   openEntry,
-  openSources
+  openSources,
+  orcaVersion
 }: {
   catalog: ReturnType<typeof usePluginCatalog>
   available: readonly PluginListEntry[]
-  query: string
+  matches: (entry: PluginListEntry) => boolean
+  /** Search or a filter is on: show every match and hide groups with none. */
+  narrowed: boolean
   filter: PluginCatalogFilter
   capped: (groupId: string, rows: PluginListEntry[]) => PluginListEntry[]
   showAll: (groupId: string) => () => void
   openEntry: (pluginKey: string) => void
   openSources: () => void
+  orcaVersion: string | null
 }): React.JSX.Element | null {
   const entries = { available }
   const availableBySource = catalog.sources.map((source) => {
     const rows = entries.available.filter(
-      (entry) =>
-        entry.listing?.marketplaceSourceId === source.id && matchesPluginSearch(entry, query)
+      (entry) => entry.listing?.marketplaceSourceId === source.id && matches(entry)
     )
     return { source, rows }
   })
@@ -113,7 +117,7 @@ export function PluginCatalogGroups({
         const listedTotal = entries.available.filter(
           (entry) => entry.listing?.marketplaceSourceId === source.id
         ).length
-        if (query && rows.length === 0) {
+        if (narrowed && rows.length === 0) {
           return null
         }
         const failed = Boolean(source.error)
@@ -169,7 +173,7 @@ export function PluginCatalogGroups({
             title={source.marketplace?.name ?? source.source.url}
             detail={sourceDetail(source)}
             aside={
-              listedTotal > shown.length && !query
+              listedTotal > shown.length && !narrowed
                 ? translate(
                     'auto.components.settings.PluginManager.shownOf',
                     '{{value0}} of {{value1}}',
@@ -190,6 +194,7 @@ export function PluginCatalogGroups({
                     key={`${source.id}:${entry.pluginKey}`}
                     entry={entry}
                     busy={catalog.previewBusyKey === entry.pluginKey}
+                    orcaVersion={orcaVersion}
                     onOpen={(target) => openEntry(target.pluginKey)}
                     onInstall={(target) => {
                       if (target.listing) {

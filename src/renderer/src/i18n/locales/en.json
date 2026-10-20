@@ -13299,7 +13299,8 @@
           "noneInstalled": "Browse the catalog for themes, languages and commands, or add one from a folder or Git.",
           "browseAll": "Browse all plugins",
           "resultCount": "{{value0}} plugins match",
-          "resultCountOne": "1 plugin matches"
+          "resultCountOne": "1 plugin matches",
+          "updateAll": "Update all…"
         },
         "PluginDetailPage": {
           "bundled": "Bundled with Orca",
@@ -13369,13 +13370,33 @@
           "crashedOnce": "Crashed once. View its logs on the plugin page.",
           "updateAvailable": "update {{value0}} available",
           "updateLabel": "Update {{value0}} to {{value1}}",
-          "update": "Update {{value0}}"
+          "update": "Update {{value0}}",
+          "needsOrca": "Needs Orca {{value0}}"
         },
         "PluginSettingsOverview": {
           "offTitle": "Plugins are off",
           "offBody": "Nothing from your plugins runs. Turn them on to browse the catalog and use what you installed.",
           "turnOn": "Turn on plugins",
           "systemDescription": "Turns every plugin off at once. Nothing runs until you review and enable it."
+        },
+        "PluginFilterPopover": {
+          "label": "Filter plugins",
+          "kind": "Category",
+          "catalog": "Catalog",
+          "clear": "Clear filters"
+        },
+        "PluginUpdateAllDialog": {
+          "title": "Update plugins?",
+          "reading": "Reading what each update changes…",
+          "someGrow": "Updates that ask for new access are expanded below. The others change only what they add.",
+          "noneGrow": "None of these updates asks for new access.",
+          "previewError": "Couldn’t read this update. It will be skipped.",
+          "newAccess": "New access: {{value0}}",
+          "noNewAccess": "No new access",
+          "failed": "Couldn’t update {{value0}}. The others were updated.",
+          "cancel": "Cancel",
+          "updateOne": "Update 1 plugin",
+          "updateMany": "Update {{value0}} plugins"
         }
       },
       "right": {
