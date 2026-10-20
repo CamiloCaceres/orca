@@ -13,6 +13,7 @@ import { getPluginsSectionPresentation } from './plugins-search'
 import { SettingsSection } from './SettingsSection'
 import { usePluginLogs } from './use-plugin-logs'
 import { usePluginMarketplaceLifecycle } from './use-plugin-marketplace-lifecycle'
+import { isPluginEnabled } from './plugin-status-presentation'
 
 type PluginsSettingsSectionProps = {
   mounted: boolean
@@ -222,11 +223,7 @@ export function PluginsSettingsSection({
   }
 
   const toggleEnabled = async (plugin: PluginHostListEntry): Promise<void> => {
-    const enabled =
-      plugin.status === 'running' ||
-      plugin.status === 'restarting' ||
-      plugin.status === 'idle' ||
-      plugin.status === 'errored'
+    const enabled = isPluginEnabled(plugin)
     setBusyPluginKeys((current) => new Set(current).add(plugin.pluginKey))
     try {
       const nextEnabled = !enabled

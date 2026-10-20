@@ -23,6 +23,13 @@ import {
   DropdownMenuTrigger
 } from '../ui/dropdown-menu'
 import { SettingsSwitch } from './SettingsFormControls'
+import {
+  isPluginEnabled,
+  pluginNeedsReview,
+  pluginStatusKind,
+  pluginStatusLabel,
+  type PluginStatusKind
+} from './plugin-status-presentation'
 
 export type PluginLogsState = {
   loading: boolean
@@ -42,47 +49,15 @@ type PluginSettingsRowProps = {
   onRemoveRequest: (pluginKey: string) => void
 }
 
-function statusPresentation(plugin: PluginHostListEntry): { label: string; className: string } {
-  if (plugin.blockedByKillList) {
-    return {
-      label: translate('auto.components.settings.PluginSettingsRow.blocked', 'Blocked'),
-      className: 'border-destructive/25 bg-destructive/8 text-destructive'
-    }
-  }
-  if (plugin.needsReconsent || plugin.status === 'pending') {
-    return {
-      label: translate('auto.components.settings.PluginSettingsRow.needsReview', 'Needs review'),
-      className: 'border-foreground/20 bg-foreground/8 text-foreground'
-    }
-  }
-  if (plugin.status === 'restarting') {
-    return {
-      label: translate('auto.components.settings.PluginSettingsRow.restarting', 'Restarting'),
-      className: 'border-foreground/20 bg-foreground/8 text-foreground'
-    }
-  }
-  if (plugin.status === 'errored' || plugin.status === 'invalid') {
-    return {
-      label:
-        plugin.status === 'invalid'
-          ? translate('auto.components.settings.PluginSettingsRow.invalid', 'Invalid')
-          : translate('auto.components.settings.PluginSettingsRow.error', 'Error'),
-      className: 'border-destructive/25 bg-destructive/8 text-destructive'
-    }
-  }
-  if (plugin.status === 'disabled') {
-    return {
-      label: translate('auto.components.settings.PluginSettingsRow.disabled', 'Disabled'),
-      className: 'border-border bg-muted/40 text-muted-foreground'
-    }
-  }
-  return {
-    label:
-      plugin.status === 'running'
-        ? translate('auto.components.settings.PluginSettingsRow.running', 'Running')
-        : translate('auto.components.settings.PluginSettingsRow.enabled', 'Enabled'),
-    className: 'border-status-success-border bg-status-success-background text-status-success'
-  }
+const STATUS_PILL_CLASS: Record<PluginStatusKind, string> = {
+  blocked: 'border-destructive/25 bg-destructive/8 text-destructive',
+  review: 'border-foreground/20 bg-foreground/8 text-foreground',
+  restarting: 'border-foreground/20 bg-foreground/8 text-foreground',
+  error: 'border-destructive/25 bg-destructive/8 text-destructive',
+  invalid: 'border-destructive/25 bg-destructive/8 text-destructive',
+  disabled: 'border-border bg-muted/40 text-muted-foreground',
+  running: 'border-status-success-border bg-status-success-background text-status-success',
+  enabled: 'border-status-success-border bg-status-success-background text-status-success'
 }
 
 function PluginLogs({ pluginKey, state }: { pluginKey: string; state?: PluginLogsState }) {
@@ -140,7 +115,7 @@ export function PluginSettingsRow({
   onRollbackRequest,
   onRemoveRequest
 }: PluginSettingsRowProps): React.JSX.Element {
-  const status = statusPresentation(plugin)
+  const statusKind = pluginStatusKind(plugin)
   const syntaxFailed = usePluginSyntaxFailureStore((state) =>
     Object.keys(state.failures).some((id) => id.startsWith(`plugin:${plugin.pluginKey}/`))
   )
@@ -148,12 +123,8 @@ export function PluginSettingsRow({
   const languagePacks = usePluginLanguagePackStore((state) => state.entries).filter(
     (pack) => pack.pluginKey === plugin.pluginKey
   )
-  const needsReview = plugin.needsReconsent || plugin.status === 'pending'
-  const enabled =
-    plugin.status === 'running' ||
-    plugin.status === 'restarting' ||
-    plugin.status === 'idle' ||
-    plugin.status === 'errored'
+  const needsReview = pluginNeedsReview(plugin)
+  const enabled = isPluginEnabled(plugin)
   const switchDisabled =
     busy || needsReview || plugin.status === 'invalid' || Boolean(plugin.blockedByKillList)
 
@@ -205,11 +176,11 @@ export function PluginSettingsRow({
             <span
               className={cn(
                 'inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[11px] font-medium',
-                status.className
+                STATUS_PILL_CLASS[statusKind]
               )}
             >
               <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
-              {status.label}
+              {pluginStatusLabel(statusKind)}
             </span>
             {busy ? <Loader2 className="size-3.5 animate-spin text-muted-foreground" /> : null}
           </div>
