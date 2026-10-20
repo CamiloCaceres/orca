@@ -95,6 +95,35 @@ describe('plugin list entries', () => {
     expect(orphan?.updatable).toBe(false)
   })
 
+  it('tells two catalogs at one URL apart by ref', () => {
+    const base = fromCatalog(installed('acme.notes', 'Notes'), 'https://official.invalid/c.git')
+    const plugin: PluginHostListEntry = {
+      ...base,
+      source: base.source && {
+        ...base.source,
+        marketplace: {
+          reference: 'https://official.invalid/c.git',
+          ref: 'beta',
+          resolvedCommit: 'c'
+        }
+      }
+    }
+    const sources = [
+      catalog('stable', 'https://official.invalid/c.git'),
+      {
+        ...catalog('beta', 'https://official.invalid/c.git'),
+        source: { kind: 'git' as const, url: 'https://official.invalid/c.git', ref: 'beta' }
+      }
+    ]
+    const listings = [
+      listing('acme.notes', { marketplaceSourceId: 'stable', version: '3.0.0' }),
+      listing('acme.notes', { marketplaceSourceId: 'beta', version: '2.0.0' })
+    ]
+    const [joined] = buildPluginListEntries([plugin], listings, { sources }).installed
+    expect(joined?.listing?.marketplaceSourceId).toBe('beta')
+    expect(joined?.updateVersion).toBe('2.0.0')
+  })
+
   it('does not offer an update this Orca is too old to run', () => {
     const plugin = fromCatalog(installed('acme.notes', 'Notes'), 'https://official.invalid/c.git')
     const sources = [catalog('official', 'https://official.invalid/c.git')]

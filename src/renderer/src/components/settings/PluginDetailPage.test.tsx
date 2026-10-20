@@ -134,7 +134,10 @@ beforeEach(() => {
   Object.defineProperty(window, 'api', {
     configurable: true,
     value: {
-      plugins: { getRollbackVersion: vi.fn().mockResolvedValue(null) },
+      plugins: {
+        getRollbackVersion: vi.fn().mockResolvedValue(null),
+        getInstalledManifest: vi.fn().mockResolvedValue(null)
+      },
       shell: { openUrl: vi.fn() }
     }
   })
@@ -196,5 +199,22 @@ describe('PluginDetailPage', () => {
     const container = await render(pluginListEntryFromInstalled(installed), vi.fn())
     expect(container.textContent).toContain('Gleam')
     expect(container.textContent).toContain('Highlighting stopped: this grammar failed.')
+  })
+
+  it('names what a plugin under review adds from its installed manifest', async () => {
+    vi.mocked(window.api.plugins.getInstalledManifest).mockResolvedValue(preview.manifest)
+    const container = await render(
+      pluginListEntryFromInstalled({
+        ...installed,
+        pluginKey: 'stablyai.icons',
+        status: 'pending'
+      }),
+      vi.fn()
+    )
+    expect(window.api.plugins.getInstalledManifest).toHaveBeenCalledWith({
+      pluginKey: 'stablyai.icons'
+    })
+    expect(container.textContent).toContain('Minimal Icons')
+    expect(container.textContent).toContain('File icon theme')
   })
 })

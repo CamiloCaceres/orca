@@ -29,7 +29,7 @@ import {
   uncoveredCatalogTypes,
   type PluginContributionKind
 } from './plugin-contributions'
-import { useInstalledPluginContributionSource } from './use-plugin-contribution-source'
+import { useInstalledPluginContributions } from './use-plugin-contribution-source'
 
 function shortcutPlatform(): NodeJS.Platform {
   if (navigator.userAgent.includes('Mac')) {
@@ -143,9 +143,9 @@ function CommandRow({
 }
 
 /**
- * Each named thing the plugin adds. An installed plugin reads Orca's live registrations; a catalog
- * plugin reads its fetched manifest. Catalog types fill in whatever neither names (a disabled
- * plugin's theme, or a manifest that couldn't be read).
+ * Each named thing the plugin adds. An installed plugin reads Orca's live registrations, or its
+ * manifest while it's off or under review; a catalog plugin reads its fetched manifest. Catalog
+ * types fill in whatever neither names (a manifest that couldn't be read).
  */
 export function PluginAddsSection({
   plugin,
@@ -158,7 +158,7 @@ export function PluginAddsSection({
   types: readonly PluginCatalogType[]
   onOpenShortcuts: () => void
 }): React.JSX.Element | null {
-  const installedSource = useInstalledPluginContributionSource(plugin)
+  const installedSource = useInstalledPluginContributions(plugin)
   const source = plugin
     ? installedSource
     : preview

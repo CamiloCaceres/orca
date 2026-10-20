@@ -169,6 +169,7 @@ function installApi(overrides: Record<string, unknown> = {}): {
       plugins: {
         list: vi.fn().mockResolvedValue([plugin]),
         getRollbackVersion: vi.fn().mockResolvedValue(null),
+        getInstalledManifest: vi.fn().mockResolvedValue(null),
         onChanged: vi.fn().mockReturnValue(unsubscribe),
         refresh: vi.fn().mockResolvedValue([plugin]),
         setEnabled: vi.fn().mockResolvedValue([{ ...plugin, status: 'disabled' }]),

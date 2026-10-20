@@ -1,5 +1,6 @@
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { PluginHostListEntry } from '../../../../preload/api-types'
+import type { PluginManifest } from '../../../../shared/plugins/plugin-manifest'
 import { usePluginIconThemes } from '@/store/plugin-icon-themes'
 import {
   ensurePluginLanguagePacksLoaded,
@@ -8,7 +9,11 @@ import {
 import { usePluginSyntaxFailureStore } from '@/store/plugin-syntax-failures'
 import { usePluginSyntaxes } from '@/store/plugin-syntax-packs'
 import { usePluginTerminalThemes, usePluginThemes } from '@/store/plugin-themes'
-import { EMPTY_CONTRIBUTION_SOURCE, type PluginContributionSource } from './plugin-contributions'
+import {
+  EMPTY_CONTRIBUTION_SOURCE,
+  manifestContributionSource,
+  type PluginContributionSource
+} from './plugin-contributions'
 
 /** What an installed plugin adds right now, from Orca's live registrations; empty for others. */
 export function useInstalledPluginContributionSource(
@@ -43,4 +48,56 @@ export function useInstalledPluginContributionSource(
       agents: []
     }
   }, [plugin, appThemes, terminalThemes, iconThemes, syntaxes, languagePacks, failures])
+}
+
+/** An installed plugin's declared manifest, read when its page opens; null until read or if unreadable. */
+export function useInstalledPluginManifest(pluginKey: string | null): PluginManifest | null {
+  const [loaded, setLoaded] = useState<{
+    pluginKey: string
+    manifest: PluginManifest | null
+  } | null>(null)
+  useEffect(() => {
+    if (!pluginKey) {
+      return
+    }
+    let stale = false
+    window.api.plugins
+      .getInstalledManifest({ pluginKey })
+      .then((manifest) => {
+        if (!stale) {
+          setLoaded({ pluginKey, manifest })
+        }
+      })
+      .catch((cause: unknown) => console.warn('[plugins] installed manifest read failed:', cause))
+    return () => {
+      stale = true
+    }
+  }, [pluginKey])
+  return loaded && loaded.pluginKey === pluginKey ? loaded.manifest : null
+}
+
+function hasLiveContent(source: PluginContributionSource): boolean {
+  return (
+    source.appThemes.length +
+      source.terminalThemes.length +
+      source.iconThemes.length +
+      source.syntaxes.length +
+      source.languages.length >
+    0
+  )
+}
+
+/**
+ * Live registrations while the plugin is on (they carry coverage and grammar failures); otherwise
+ * what its manifest declares, so a plugin under review or turned off still names what it adds.
+ */
+export function useInstalledPluginContributions(
+  plugin: PluginHostListEntry | null
+): PluginContributionSource {
+  const live = useInstalledPluginContributionSource(plugin)
+  const manifest = useInstalledPluginManifest(plugin?.pluginKey ?? null)
+  return useMemo(
+    () => (hasLiveContent(live) || !manifest ? live : manifestContributionSource(manifest)),
+    [live, manifest]
+  )
 }

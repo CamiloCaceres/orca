@@ -1442,6 +1442,9 @@
           "installed": "Installed",
           "official": "Official"
         },
+        "PluginSettingsOverview": {
+          "pausedUnknown": "Your installed plugins are paused and will be back when you turn plugins on."
+        },
         "PluginSettingsRow": {
           "hideLogs": "Hide logs",
           "languageCoverage": "{{value0}} {{value1}}% translated",

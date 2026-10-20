@@ -109,6 +109,7 @@ function installApi(overrides: Record<string, unknown> = {}): void {
         refreshMarketplaces: vi.fn().mockResolvedValue(undefined),
         previewMarketplacePlugin: vi.fn().mockResolvedValue(null),
         getRollbackVersion: vi.fn().mockResolvedValue('1.0.0-rc.1'),
+        getInstalledManifest: vi.fn().mockResolvedValue(null),
         ...overrides
       },
       updater: { getVersion: vi.fn().mockResolvedValue('1.4.214') },

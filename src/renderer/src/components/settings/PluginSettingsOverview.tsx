@@ -113,15 +113,7 @@ function PluginsOffState({
             })}
           </PluginListGroup>
         </SettingsCard>
-      ) : (
-        // Why: an older host lists nothing while plugins are off; say they're paused, not gone.
-        <SettingsCard className="px-5 py-4 text-sm text-muted-foreground">
-          {translate(
-            'auto.components.settings.PluginSettingsOverview.pausedUnknown',
-            'Your installed plugins are paused and will be back when you turn plugins on.'
-          )}
-        </SettingsCard>
-      )}
+      ) : null}
     </>
   )
 }

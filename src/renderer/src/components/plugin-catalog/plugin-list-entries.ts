@@ -109,13 +109,18 @@ export function pluginListEntryFromListing(
 function sourceListing(
   plugin: PluginHostListEntry,
   candidates: readonly PluginMarketplaceHostListing[],
-  catalogUrlById: ReadonlyMap<string, string>
+  catalogById: ReadonlyMap<string, PluginMarketplaceHostSourceState>
 ): { listing: PluginMarketplaceHostListing | null; ownCatalog: boolean } {
-  const installedFrom = plugin.source?.marketplace?.reference
+  const installedFrom = plugin.source?.marketplace
+  // Why url+ref: that is how the host finds the catalog an update comes from; older hosts send no ref.
   const own = installedFrom
-    ? candidates.find(
-        (listing) => catalogUrlById.get(listing.marketplaceSourceId) === installedFrom
-      )
+    ? candidates.find((listing) => {
+        const catalog = catalogById.get(listing.marketplaceSourceId)
+        return (
+          catalog?.source.url === installedFrom.reference &&
+          (installedFrom.ref === undefined || catalog.source.ref === installedFrom.ref)
+        )
+      })
     : undefined
   if (own) {
     return { listing: own, ownCatalog: true }
@@ -140,7 +145,7 @@ export function buildPluginListEntries(
   for (const listing of listings) {
     listingsByKey.set(listing.pluginKey, [...(listingsByKey.get(listing.pluginKey) ?? []), listing])
   }
-  const catalogUrlById = new Map(sources.map((source) => [source.id, source.source.url]))
+  const catalogById = new Map(sources.map((source) => [source.id, source]))
   const catalogIdsOf = (pluginKey: string): string[] =>
     (listingsByKey.get(pluginKey) ?? []).map((listing) => listing.marketplaceSourceId)
   const installedKeys = new Set(installed.map((plugin) => plugin.pluginKey))
@@ -149,7 +154,7 @@ export function buildPluginListEntries(
       const { listing, ownCatalog } = sourceListing(
         plugin,
         listingsByKey.get(plugin.pluginKey) ?? [],
-        catalogUrlById
+        catalogById
       )
       const entry = pluginListEntryFromInstalled(plugin, listing, {
         catalogIds: catalogIdsOf(plugin.pluginKey),
