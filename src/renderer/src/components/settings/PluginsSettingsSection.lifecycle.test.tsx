@@ -325,6 +325,31 @@ describe('PluginsSettingsSection lifecycle', () => {
     ).toBe(true)
   })
 
+  it('shows what is true after a Restart fails halfway', async () => {
+    const crashed = { ...plugin, status: 'errored' as const }
+    const stopped = { ...plugin, status: 'disabled' as const }
+    const list = vi.fn().mockResolvedValueOnce([crashed]).mockResolvedValue([stopped])
+    installApi({
+      list,
+      setEnabled: vi
+        .fn()
+        .mockResolvedValueOnce([stopped])
+        .mockRejectedValueOnce(new Error('worker failed to start'))
+    })
+    const { container } = await renderSection()
+    const restart = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent?.trim() === 'Restart'
+    )
+    if (!restart) {
+      throw new Error('missing restart action')
+    }
+
+    await act(async () => click(restart))
+
+    expect(list).toHaveBeenCalledTimes(2)
+    expect(container.querySelector('[aria-label="Enable Notes"]')).not.toBeNull()
+  })
+
   it('confirms marketplace rollback before invoking plugin IPC', async () => {
     const marketplacePlugin: PluginHostListEntry = {
       ...plugin,

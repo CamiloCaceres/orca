@@ -53,6 +53,7 @@ function entry(pluginKey: string, kinds: string[]): PluginListEntry {
     types: [],
     minimumOrca: null,
     catalogIds: [],
+    updatable: true,
     updateVersion: '1.1.0',
     installed: plugin,
     listing: null
@@ -214,6 +215,36 @@ describe('PluginUpdateAllDialog', () => {
     expect(installMarketplacePlugin).toHaveBeenCalledWith(
       expect.objectContaining({ pluginKey: 'a' })
     )
+    // Why: "b" updated on the first pass, so a second failure isn't "nothing was updated".
+    expect(container.textContent).toContain('Couldn’t update a. The others were updated.')
+  })
+
+  it('keeps the set it opened with while the list reloads mid-run', async () => {
+    const previewMarketplaceUpdate = vi.fn(({ pluginKey }: { pluginKey: string }) =>
+      Promise.resolve(preview(pluginKey, []))
+    )
+    installApi({
+      previewMarketplaceUpdate,
+      installMarketplacePlugin: vi.fn(({ pluginKey }: { pluginKey: string }) =>
+        Promise.resolve(pluginKey === 'a' ? { ok: false, error: 'boom' } : { ok: true, pluginKey })
+      )
+    })
+    const onUpdated = vi.fn().mockResolvedValue(undefined)
+    const container = await renderDialog([entry('a', []), entry('b', [])], { onUpdated })
+    await act(async () => button(container, 'Update 2 plugins')?.click())
+    // Why: after "b" updates, the reloaded list no longer has it among pending updates.
+    await act(async () => {
+      root?.render(
+        <PluginUpdateAllDialog
+          open
+          entries={[entry('a', [])]}
+          onClose={vi.fn()}
+          onUpdated={onUpdated}
+        />
+      )
+    })
+    expect(previewMarketplaceUpdate).toHaveBeenCalledTimes(2)
+    expect(container.querySelector('[data-plugin-update="b"]')?.textContent).toContain('Updated')
   })
 
   it('says nothing was updated when every update fails', async () => {

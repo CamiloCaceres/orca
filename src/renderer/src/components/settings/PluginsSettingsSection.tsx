@@ -15,6 +15,7 @@ import { SettingsSection } from './SettingsSection'
 import { usePluginLogs } from './use-plugin-logs'
 import { usePluginMarketplaceLifecycle } from './use-plugin-marketplace-lifecycle'
 import { usePluginPageNavigation } from './use-plugin-page-navigation'
+import { usePluginReviewQueue } from './use-plugin-review-queue'
 import { isPluginEnabled } from './plugin-status-presentation'
 
 type PluginsSettingsSectionProps = {
@@ -38,7 +39,6 @@ export function PluginsSettingsSection({
   const [error, setError] = useState<string | null>(null)
   const [installKind, setInstallKind] = useState<'local-path' | 'git' | null>(null)
   const [sourcesOpen, setSourcesOpen] = useState(false)
-  const [consentPluginId, setConsentPluginId] = useState<string | null>(null)
   const [removePluginId, setRemovePluginId] = useState<string | null>(null)
   const [busyPluginKeys, setBusyPluginKeys] = useState<Set<string>>(() => new Set())
   const [featureBusy, setFeatureBusy] = useState(false)
@@ -47,6 +47,9 @@ export function PluginsSettingsSection({
   const mountedRef = useRef(false)
   const listRequestRef = useRef(0)
   const page = usePluginPageNavigation()
+  const review = usePluginReviewQueue()
+  const consentPluginId = review.reviewKey
+  const clearReviews = review.clear
   const installedKeysRef = useRef<ReadonlySet<string>>(new Set())
 
   const applyPluginList = (nextPlugins: PluginHostListEntry[]): void => {
@@ -61,7 +64,7 @@ export function PluginsSettingsSection({
     setPlugins(nextPlugins)
     setError(null)
     // Why: accepted discovery results own installed-plugin identity and invalidate stale UI state.
-    setConsentPluginId((current) => (current && installedPluginKeys.has(current) ? current : null))
+    review.prune(installedPluginKeys)
     setRemovePluginId((current) => (current && installedPluginKeys.has(current) ? current : null))
     setBusyPluginKeys(
       (current) => new Set([...current].filter((pluginKey) => installedPluginKeys.has(pluginKey)))
@@ -123,7 +126,7 @@ export function PluginsSettingsSection({
       setLoading(true)
       setError(null)
       setInstallKind(null)
-      setConsentPluginId(null)
+      clearReviews()
       setRemovePluginId(null)
       setBusyPluginKeys(new Set())
       setFeatureBusy(false)
@@ -134,7 +137,7 @@ export function PluginsSettingsSection({
       mountedRef.current = false
       listRequestRef.current += 1
     }
-  }, [mounted])
+  }, [mounted, clearReviews])
 
   useEffect(() => {
     if (!mounted) {
@@ -163,7 +166,7 @@ export function PluginsSettingsSection({
     plugins,
     applyCompletedMutation,
     setPluginListError,
-    setConsentPluginId,
+    openReviews: review.enqueue,
     setBusyPluginKeys
   })
   const pluginLogs = usePluginLogs(mounted, mountedRef, plugins)
@@ -209,7 +212,7 @@ export function PluginsSettingsSection({
     }
     // Why: installation is not consent; select by id and wait for the authoritative list.
     setInstallKind(null)
-    setConsentPluginId(result.pluginKey)
+    review.show(result.pluginKey)
     await loadPluginList(window.api.plugins.refresh())
   }
 
@@ -227,7 +230,7 @@ export function PluginsSettingsSection({
       })
       applyCompletedMutation(nextPlugins)
       if (mountedRef.current) {
-        setConsentPluginId(null)
+        review.advance(nextPlugins)
       }
     } finally {
       clearBusy(pluginKey)
@@ -248,7 +251,7 @@ export function PluginsSettingsSection({
       // pending; open its review instead of silently flipping the row back to "Needs review".
       const next = nextPlugins.find((entry) => entry.pluginKey === plugin.pluginKey)
       if (nextEnabled && next?.status === 'pending' && mountedRef.current) {
-        setConsentPluginId(plugin.pluginKey)
+        review.show(plugin.pluginKey)
       }
     } catch (cause) {
       if (mountedRef.current) {
@@ -355,7 +358,7 @@ export function PluginsSettingsSection({
         devPathsBusy={devPathsBusy}
         handlers={{
           onOpen: () => undefined,
-          onReview: setConsentPluginId,
+          onReview: review.show,
           onToggleEnabled: (pluginKey) => {
             const plugin = plugins.find((entry) => entry.pluginKey === pluginKey)
             if (plugin) {

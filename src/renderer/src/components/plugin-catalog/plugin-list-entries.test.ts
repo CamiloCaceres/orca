@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import type {
   PluginHostListEntry,
-  PluginMarketplaceHostListing
+  PluginMarketplaceHostListing,
+  PluginMarketplaceHostSourceState
 } from '../../../../preload/api-types'
 import {
   buildPluginListEntries,
@@ -46,7 +47,74 @@ function installed(pluginKey: string, name: string): PluginHostListEntry {
   }
 }
 
+function fromCatalog(plugin: PluginHostListEntry, catalogUrl: string): PluginHostListEntry {
+  return {
+    ...plugin,
+    source: {
+      kind: 'marketplace',
+      reference: 'https://example.invalid/plugin.git',
+      resolvedCommit: 'a'.repeat(40),
+      contentHash: 'b'.repeat(64),
+      marketplace: { reference: catalogUrl, resolvedCommit: 'c'.repeat(40) }
+    }
+  }
+}
+
+function catalog(id: string, url: string): PluginMarketplaceHostSourceState {
+  return {
+    id,
+    source: { kind: 'git', url, ref: 'main' },
+    addedAt: 0,
+    marketplace: null,
+    stale: false,
+    official: false
+  }
+}
+
 describe('plugin list entries', () => {
+  it('joins an installed plugin to the catalog it came from, and updates only from there', () => {
+    const plugin = fromCatalog(installed('acme.notes', 'Notes'), 'https://mirror.invalid/c.git')
+    const sources = [
+      catalog('official', 'https://official.invalid/c.git'),
+      catalog('mirror', 'https://mirror.invalid/c.git')
+    ]
+    const listings = [
+      listing('acme.notes', { version: '3.0.0' }),
+      listing('acme.notes', { marketplaceSourceId: 'mirror', version: '2.0.0' })
+    ]
+    const [joined] = buildPluginListEntries([plugin], listings, { sources }).installed
+    expect(joined?.listing?.marketplaceSourceId).toBe('mirror')
+    expect(joined?.updateVersion).toBe('2.0.0')
+    expect(joined?.catalogIds).toEqual(['official', 'mirror'])
+
+    // Why: with its own catalog removed, another catalog's newer version is not an update to offer.
+    const [orphan] = buildPluginListEntries([plugin], [listings[0]!], {
+      sources: [sources[0]!]
+    }).installed
+    expect(orphan?.updateVersion).toBeNull()
+    expect(orphan?.updatable).toBe(false)
+  })
+
+  it('does not offer an update this Orca is too old to run', () => {
+    const plugin = fromCatalog(installed('acme.notes', 'Notes'), 'https://official.invalid/c.git')
+    const sources = [catalog('official', 'https://official.invalid/c.git')]
+    const newer = listing('acme.notes', {
+      version: '2.0.0',
+      release: {
+        version: '2.0.0',
+        commit: 'd'.repeat(40),
+        contentHash: 'e'.repeat(64),
+        execution: 'data',
+        minimumOrca: '2.0.0',
+        types: []
+      }
+    })
+    const build = (orcaVersion: string) =>
+      buildPluginListEntries([plugin], [newer], { sources, orcaVersion }).installed[0]
+    expect(build('1.9.0')?.updateVersion).toBeNull()
+    expect(build('2.1.0')?.updateVersion).toBe('2.0.0')
+  })
+
   it('lists installed plugins once, joined to their listing, and the rest as available', () => {
     const result = buildPluginListEntries(
       [installed('stablyai.orca-midnight-theme', 'Orca Midnight')],

@@ -7,6 +7,7 @@ import {
 } from 'react'
 import type { PluginHostListEntry } from '../../../../preload/api-types'
 import { translate } from '@/i18n/i18n'
+import { pluginNeedsReview } from './plugin-status-presentation'
 
 type PluginMarketplaceLifecycleOptions = {
   mounted: boolean
@@ -14,7 +15,8 @@ type PluginMarketplaceLifecycleOptions = {
   plugins: readonly PluginHostListEntry[]
   applyCompletedMutation: (plugins: PluginHostListEntry[]) => void
   setPluginListError: (cause: unknown) => void
-  setConsentPluginId: Dispatch<SetStateAction<string | null>>
+  /** Opens review for these plugins, one after another. */
+  openReviews: (pluginKeys: readonly string[]) => void
   setBusyPluginKeys: Dispatch<SetStateAction<Set<string>>>
 }
 
@@ -24,12 +26,12 @@ export function usePluginMarketplaceLifecycle({
   plugins,
   applyCompletedMutation,
   setPluginListError,
-  setConsentPluginId,
+  openReviews,
   setBusyPluginKeys
 }: PluginMarketplaceLifecycleOptions): {
   rollbackPlugin: PluginHostListEntry | null
   rollbackError: string | null
-  /** Reloads, then opens review for the first changed plugin that now needs it. */
+  /** Reloads, then opens review for each changed plugin that now needs it, in turn. */
   reloadAfterMutation: (pluginKeys: string | readonly string[]) => Promise<void>
   requestRollback: (pluginKey: string) => void
   cancelRollback: () => void
@@ -54,13 +56,11 @@ export function usePluginMarketplaceLifecycle({
         return
       }
       applyCompletedMutation(nextPlugins)
-      const needsReview = nextPlugins.find(
-        (plugin) =>
-          changed.has(plugin.pluginKey) && (plugin.needsReconsent || plugin.status === 'pending')
+      openReviews(
+        nextPlugins
+          .filter((plugin) => changed.has(plugin.pluginKey) && pluginNeedsReview(plugin))
+          .map((plugin) => plugin.pluginKey)
       )
-      if (needsReview) {
-        setConsentPluginId(needsReview.pluginKey)
-      }
     } catch (cause) {
       if (mountedRef.current) {
         setPluginListError(cause)

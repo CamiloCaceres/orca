@@ -19,6 +19,7 @@ function entry(
     minimumOrca: null,
     updateVersion: null,
     catalogIds,
+    updatable: false,
     installed: null,
     listing: sourceId
       ? {

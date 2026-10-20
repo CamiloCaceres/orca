@@ -120,7 +120,7 @@ export function PluginDetailPage({
   const controls = plugin
     ? installedPluginControls(plugin, entry, {
         busy,
-        canCheckUpdate: plugin.source?.kind === 'marketplace' && Boolean(listing),
+        canCheckUpdate: entry.updatable,
         handlers,
         inPage: true
       })

@@ -142,7 +142,7 @@ export function PluginManager({
       key={entry.pluginKey}
       entry={entry}
       busy={busyPluginKeys.has(entry.pluginKey) || catalog.previewBusyKey === entry.pluginKey}
-      canCheckUpdate={entry.installed?.source?.kind === 'marketplace' && Boolean(entry.listing)}
+      canCheckUpdate={entry.updatable}
       handlers={rowHandlers}
     />
   )

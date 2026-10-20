@@ -48,8 +48,8 @@ function requiredNewerOrca(
   return range.replace(/^>=/, '')
 }
 
-function failureMessage(failed: readonly string[], total: number): string {
-  return failed.length === total
+function failureMessage(failed: readonly string[], updatedCount: number): string {
+  return updatedCount === 0
     ? translate(
         'auto.components.settings.PluginUpdateAllDialog.failedAll',
         'Couldn’t update {{value0}}. Nothing was updated.',
@@ -85,20 +85,19 @@ export function PluginUpdateAllDialog({
   const [updated, setUpdated] = useState<ReadonlySet<string>>(() => new Set())
   const [busy, setBusy] = useState(false)
   const [failure, setFailure] = useState<string | null>(null)
-  const entriesRef = useRef(entries)
-  entriesRef.current = entries
+  // Why frozen: each update reloads the list mid-run; previews (git clones) and "Updated" rows
+  // belong to the set the user opened, and the parent mounts a fresh dialog per open.
+  const [plugins] = useState(entries)
   const orcaVersionRef = useRef(orcaVersion)
   orcaVersionRef.current = orcaVersion
-  // Why: each preview is a git clone; the parent passes a new array every render, so key by plugins.
-  const requestKey = open ? entries.map((entry) => entry.pluginKey).join('\n') : null
 
   useEffect(() => {
-    if (requestKey === null) {
+    if (!open) {
       return
     }
     let stale = false
     void Promise.all(
-      entriesRef.current.map(async (entry): Promise<UpdateCandidate> => {
+      plugins.map(async (entry): Promise<UpdateCandidate> => {
         try {
           const preview = await window.api.plugins.previewMarketplaceUpdate({
             pluginKey: entry.pluginKey
@@ -122,7 +121,7 @@ export function PluginUpdateAllDialog({
     return () => {
       stale = true
     }
-  }, [requestKey])
+  }, [open, plugins])
 
   const installable = (candidate: UpdateCandidate): boolean =>
     Boolean(candidate.preview) && !candidate.needsOrca && !updated.has(candidate.entry.pluginKey)
@@ -169,7 +168,7 @@ export function PluginUpdateAllDialog({
       onClose()
       return
     }
-    setFailure(failureMessage(failed, chosen.length))
+    setFailure(failureMessage(failed, updated.size + done.length))
   }
 
   return (

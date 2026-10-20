@@ -25,6 +25,8 @@ export type PluginListEntry = {
   updateVersion: string | null
   /** Every catalog that lists this plugin, for filtering by catalog. */
   catalogIds: readonly string[]
+  /** The listing comes from the catalog this plugin was installed from, so it can update it. */
+  updatable: boolean
   installed: PluginHostListEntry | null
   listing: PluginMarketplaceHostListing | null
 }
@@ -71,6 +73,7 @@ export function pluginListEntryFromInstalled(
     minimumOrca: listing?.release?.minimumOrca ?? null,
     updateVersion: newerCatalogVersion(plugin, listing, orcaVersion),
     catalogIds,
+    updatable: plugin.source?.kind === 'marketplace' && listing !== null,
     installed: plugin,
     listing
   }
@@ -93,27 +96,32 @@ export function pluginListEntryFromListing(
     minimumOrca: listing.release?.minimumOrca ?? null,
     updateVersion: null,
     catalogIds,
+    updatable: false,
     installed: null,
     listing
   }
 }
 
-/** The listing from the catalog a plugin was installed from, else the first that lists it. */
+/**
+ * The listing from the catalog a plugin was installed from, else the first that lists it. Only a
+ * listing from the plugin's own catalog may offer an update; another catalog's is display-only.
+ */
 function sourceListing(
   plugin: PluginHostListEntry,
   candidates: readonly PluginMarketplaceHostListing[],
   catalogUrlById: ReadonlyMap<string, string>
-): PluginMarketplaceHostListing | null {
+): { listing: PluginMarketplaceHostListing | null; ownCatalog: boolean } {
   const installedFrom = plugin.source?.marketplace?.reference
-  return (
-    (installedFrom
-      ? candidates.find(
-          (listing) => catalogUrlById.get(listing.marketplaceSourceId) === installedFrom
-        )
-      : undefined) ??
-    candidates[0] ??
-    null
-  )
+  const own = installedFrom
+    ? candidates.find(
+        (listing) => catalogUrlById.get(listing.marketplaceSourceId) === installedFrom
+      )
+    : undefined
+  if (own) {
+    return { listing: own, ownCatalog: true }
+  }
+  // Why: with no recorded catalog (older installs) the first listing is the best guess.
+  return { listing: candidates[0] ?? null, ownCatalog: !installedFrom }
 }
 
 /**
@@ -137,13 +145,18 @@ export function buildPluginListEntries(
     (listingsByKey.get(pluginKey) ?? []).map((listing) => listing.marketplaceSourceId)
   const installedKeys = new Set(installed.map((plugin) => plugin.pluginKey))
   return {
-    installed: installed.map((plugin) =>
-      pluginListEntryFromInstalled(
+    installed: installed.map((plugin) => {
+      const { listing, ownCatalog } = sourceListing(
         plugin,
-        sourceListing(plugin, listingsByKey.get(plugin.pluginKey) ?? [], catalogUrlById),
-        { catalogIds: catalogIdsOf(plugin.pluginKey), orcaVersion }
+        listingsByKey.get(plugin.pluginKey) ?? [],
+        catalogUrlById
       )
-    ),
+      const entry = pluginListEntryFromInstalled(plugin, listing, {
+        catalogIds: catalogIdsOf(plugin.pluginKey),
+        orcaVersion
+      })
+      return ownCatalog ? entry : { ...entry, updateVersion: null, updatable: false }
+    }),
     available: [...listingsByKey.entries()]
       .filter(([pluginKey]) => !installedKeys.has(pluginKey))
       .map(([pluginKey, candidates]) =>
