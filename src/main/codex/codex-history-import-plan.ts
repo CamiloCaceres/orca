@@ -103,6 +103,9 @@ export function createCodexHistoryImportPlan(input: {
     append,
     restore: (turn: Record<string, unknown>) => {
       input.check()
+      if (typeof turn.id !== 'string') {
+        throw new Error('invalid-turn')
+      }
       omitted = new Map<string, string>()
       const ordinals = new CodexTurnOrdinals()
       let native = false
@@ -148,9 +151,6 @@ export function createCodexHistoryImportPlan(input: {
       const restored = translator.restoreThread(input.threadId, { turns: [turn] })
       if (!restored.accepted) {
         throw new Error(restored.reason)
-      }
-      if (typeof turn.id !== 'string') {
-        throw new Error('invalid-turn')
       }
       turnIds.push(turn.id)
     },
