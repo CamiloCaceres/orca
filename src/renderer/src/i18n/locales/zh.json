@@ -12003,7 +12003,8 @@
           "title": "回滚插件？",
           "description": "恢复 {{value0}} 的上一个版本。如果访问权限有变化，需要重新审查。",
           "cancel": "取消",
-          "confirm": "回滚插件"
+          "confirm": "回滚插件",
+          "descriptionVersion": "恢复 {{value0}} {{value1}}。更改的访问权限需要重新审核。"
         },
         "PluginsSettingsSection": {
           "systemLabel": "插件系统",
@@ -13087,7 +13088,8 @@
           "updateLabel": "将 {{value0}} 更新到 {{value1}}",
           "update": "更新到 {{value0}}",
           "needsOrca": "需要 Orca {{value0}}",
-          "off": "已关闭"
+          "off": "已关闭",
+          "rollbackTo": "回滚到 {{value0}}…"
         },
         "PluginSettingsOverview": {
           "offTitle": "插件已关闭",
@@ -13113,6 +13115,13 @@
           "cancel": "取消",
           "updateOne": "更新 1 个插件",
           "updateMany": "更新 {{value0}} 个插件"
+        },
+        "PluginDetailInfo": {
+          "previous": "上一版本",
+          "updated": "更新于",
+          "license": "许可证",
+          "homepage": "主页",
+          "whatsNew": "新功能"
         }
       },
       "right": {

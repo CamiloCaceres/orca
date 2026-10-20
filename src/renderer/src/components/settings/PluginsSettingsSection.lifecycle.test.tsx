@@ -168,6 +168,7 @@ function installApi(overrides: Record<string, unknown> = {}): {
     value: {
       plugins: {
         list: vi.fn().mockResolvedValue([plugin]),
+        getRollbackVersion: vi.fn().mockResolvedValue(null),
         onChanged: vi.fn().mockReturnValue(unsubscribe),
         refresh: vi.fn().mockResolvedValue([plugin]),
         setEnabled: vi.fn().mockResolvedValue([{ ...plugin, status: 'disabled' }]),
@@ -338,10 +339,16 @@ describe('PluginsSettingsSection lifecycle', () => {
         }
       }
     }
-    installApi({ list: vi.fn().mockResolvedValue([marketplacePlugin]) })
+    installApi({
+      list: vi.fn().mockResolvedValue([marketplacePlugin]),
+      getRollbackVersion: vi.fn().mockResolvedValue('0.9.0')
+    })
     const { container } = await renderSection()
+    expect(window.api.plugins.getRollbackVersion).toHaveBeenCalledWith({
+      pluginKey: plugin.pluginKey
+    })
     const rollbackAction = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Roll back…'
+      (button) => button.textContent === 'Roll back to 0.9.0…'
     )
     if (!rollbackAction) {
       throw new Error('missing rollback action')
@@ -360,6 +367,24 @@ describe('PluginsSettingsSection lifecycle', () => {
     expect(window.api.plugins.rollbackMarketplacePlugin).toHaveBeenCalledWith({
       pluginKey: plugin.pluginKey
     })
+  })
+
+  it('offers no rollback when no earlier version is kept', async () => {
+    installApi({
+      list: vi.fn().mockResolvedValue([
+        {
+          ...plugin,
+          source: {
+            kind: 'marketplace',
+            reference: 'https://example.com/notes.git',
+            resolvedCommit: 'current-commit',
+            contentHash: 'current-content'
+          }
+        }
+      ])
+    })
+    const { container } = await renderSection()
+    expect(container.textContent).not.toContain('Roll back')
   })
 
   it('accepts overlapping mutations in completion order without regressing final state', async () => {

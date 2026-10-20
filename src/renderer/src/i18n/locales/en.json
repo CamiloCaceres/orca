@@ -12282,7 +12282,8 @@
           "title": "Roll back plugin?",
           "description": "Restores the previous version of {{value0}}. Changed access needs another review.",
           "cancel": "Cancel",
-          "confirm": "Roll back plugin"
+          "confirm": "Roll back plugin",
+          "descriptionVersion": "Restores {{value0}} {{value1}}. Changed access needs another review."
         },
         "PluginsSettingsSection": {
           "systemLabel": "Plugin system",
@@ -13373,7 +13374,8 @@
           "updateLabel": "Update {{value0}} to {{value1}}",
           "update": "Update {{value0}}",
           "needsOrca": "Needs Orca {{value0}}",
-          "off": "Off"
+          "off": "Off",
+          "rollbackTo": "Roll back to {{value0}}…"
         },
         "PluginSettingsOverview": {
           "offTitle": "Plugins are off",
@@ -13399,6 +13401,13 @@
           "cancel": "Cancel",
           "updateOne": "Update 1 plugin",
           "updateMany": "Update {{value0}} plugins"
+        },
+        "PluginDetailInfo": {
+          "previous": "Previous",
+          "updated": "Updated",
+          "license": "License",
+          "homepage": "Homepage",
+          "whatsNew": "What’s new"
         }
       },
       "right": {

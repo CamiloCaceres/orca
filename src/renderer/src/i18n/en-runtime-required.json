@@ -1413,6 +1413,12 @@
           "fullCoverage_one": "All 1 detected agent has the skill.",
           "fullCoverage_other": "All {{value0}} detected agents have the skill."
         },
+        "PluginManager": {
+          "sourcesLabel": "Catalog sources"
+        },
+        "PluginManagerRows": {
+          "rollback": "Roll back…"
+        },
         "PluginMarketplaceBrowser": {
           "addSource": "Add marketplace",
           "empty": "The configured marketplaces do not list any plugins.",

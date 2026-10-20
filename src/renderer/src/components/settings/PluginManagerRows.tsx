@@ -13,6 +13,7 @@ import {
   type PluginStatusKind
 } from './plugin-status-presentation'
 import { invalidPluginErrorMessage } from './plugin-error-presentation'
+import { usePluginRollbackVersion } from './use-plugin-rollback-version'
 import { satisfiesOrcaEngineRange } from '../../../../shared/plugins/plugin-manifest'
 import {
   copyPluginId,
@@ -219,10 +220,10 @@ export function installedPluginControls(
           <DropdownMenuSeparator />
         ) : null}
         {plugin.source?.kind === 'marketplace' ? (
-          <DropdownMenuItem onSelect={() => handlers.onRollbackRequest(plugin.pluginKey)}>
-            <RotateCcw />
-            {translate('auto.components.settings.PluginManagerRows.rollback', 'Roll back…')}
-          </DropdownMenuItem>
+          <RollbackItem
+            pluginKey={plugin.pluginKey}
+            onSelect={() => handlers.onRollbackRequest(plugin.pluginKey)}
+          />
         ) : null}
         {removable ? (
           <DropdownMenuItem
@@ -244,6 +245,32 @@ export function installedPluginControls(
       </MoreButton>
     )
   }
+}
+
+// Why: menu content mounts on open, so the rollback version is read only when someone looks.
+function RollbackItem({
+  pluginKey,
+  onSelect
+}: {
+  pluginKey: string
+  onSelect: () => void
+}): React.JSX.Element | null {
+  const version = usePluginRollbackVersion(pluginKey)
+  if (!version) {
+    return null
+  }
+  return (
+    <DropdownMenuItem onSelect={onSelect}>
+      <RotateCcw />
+      {translate(
+        'auto.components.settings.PluginManagerRows.rollbackTo',
+        'Roll back to {{value0}}…',
+        {
+          value0: version
+        }
+      )}
+    </DropdownMenuItem>
+  )
 }
 
 export function InstalledPluginRow({

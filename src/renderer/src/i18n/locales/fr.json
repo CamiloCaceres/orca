@@ -12102,7 +12102,8 @@
           "title": "Restaurer le plugin ?",
           "description": "Restaure la version précédente de {{value0}}. Un accès modifié nécessite un nouvel examen.",
           "cancel": "Annuler",
-          "confirm": "Restaurer le plugin"
+          "confirm": "Restaurer le plugin",
+          "descriptionVersion": "Restaure {{value0}} {{value1}}. Un accès modifié nécessite un nouvel examen."
         },
         "PluginsSettingsSection": {
           "systemLabel": "Système de plugins",
@@ -13195,7 +13196,8 @@
           "updateLabel": "Mettre à jour {{value0}} vers {{value1}}",
           "update": "Mettre à jour vers {{value0}}",
           "needsOrca": "Nécessite Orca {{value0}}",
-          "off": "Désactivé"
+          "off": "Désactivé",
+          "rollbackTo": "Revenir à {{value0}}…"
         },
         "PluginSettingsOverview": {
           "offTitle": "Les plugins sont désactivés",
@@ -13221,6 +13223,13 @@
           "cancel": "Annuler",
           "updateOne": "Mettre à jour 1 plugin",
           "updateMany": "Mettre à jour {{value0}} plugins"
+        },
+        "PluginDetailInfo": {
+          "previous": "Précédente",
+          "updated": "Mis à jour",
+          "license": "Licence",
+          "homepage": "Page d’accueil",
+          "whatsNew": "Nouveautés"
         }
       },
       "right": {

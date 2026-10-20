@@ -12003,7 +12003,8 @@
           "title": "플러그인을 롤백하시겠습니까?",
           "description": "{{value0}}의 이전 버전을 복원합니다. 접근 권한이 바뀌면 다시 검토해야 합니다.",
           "cancel": "취소",
-          "confirm": "플러그인 롤백"
+          "confirm": "플러그인 롤백",
+          "descriptionVersion": "{{value0}} {{value1}}을(를) 복원합니다. 변경된 접근 권한은 다시 검토해야 합니다."
         },
         "PluginsSettingsSection": {
           "systemLabel": "플러그인 시스템",
@@ -13087,7 +13088,8 @@
           "updateLabel": "{{value0}}을(를) {{value1}}(으)로 업데이트",
           "update": "{{value0}}(으)로 업데이트",
           "needsOrca": "Orca {{value0}} 필요",
-          "off": "꺼짐"
+          "off": "꺼짐",
+          "rollbackTo": "{{value0}}(으)로 되돌리기…"
         },
         "PluginSettingsOverview": {
           "offTitle": "플러그인이 꺼져 있습니다",
@@ -13113,6 +13115,13 @@
           "cancel": "취소",
           "updateOne": "플러그인 1개 업데이트",
           "updateMany": "플러그인 {{value0}}개 업데이트"
+        },
+        "PluginDetailInfo": {
+          "previous": "이전 버전",
+          "updated": "업데이트",
+          "license": "라이선스",
+          "homepage": "홈페이지",
+          "whatsNew": "새로운 기능"
         }
       },
       "right": {

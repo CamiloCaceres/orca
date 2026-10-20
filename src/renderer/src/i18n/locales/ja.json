@@ -12003,7 +12003,8 @@
           "title": "プラグインをロールバックしますか？",
           "description": "{{value0}} を以前のバージョンに戻します。アクセス権が変わった場合は再確認が必要です。",
           "cancel": "キャンセル",
-          "confirm": "プラグインをロールバック"
+          "confirm": "プラグインをロールバック",
+          "descriptionVersion": "{{value0}} {{value1}} を復元します。変更されたアクセスは再確認が必要です。"
         },
         "PluginsSettingsSection": {
           "systemLabel": "プラグインシステム",
@@ -13087,7 +13088,8 @@
           "updateLabel": "{{value0}} を {{value1}} にアップデート",
           "update": "{{value0}} にアップデート",
           "needsOrca": "Orca {{value0}} が必要",
-          "off": "オフ"
+          "off": "オフ",
+          "rollbackTo": "{{value0}} に戻す…"
         },
         "PluginSettingsOverview": {
           "offTitle": "プラグインはオフです",
@@ -13113,6 +13115,13 @@
           "cancel": "キャンセル",
           "updateOne": "1 件のプラグインをアップデート",
           "updateMany": "{{value0}} 件のプラグインをアップデート"
+        },
+        "PluginDetailInfo": {
+          "previous": "以前のバージョン",
+          "updated": "更新日",
+          "license": "ライセンス",
+          "homepage": "ホームページ",
+          "whatsNew": "新機能"
         }
       },
       "right": {

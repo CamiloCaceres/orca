@@ -3,7 +3,11 @@ import type {
   PluginHostListEntry,
   PluginMarketplaceHostListing
 } from '../../../../preload/api-types'
-import { buildPluginListEntries, matchesPluginSearch } from './plugin-list-entries'
+import {
+  buildPluginListEntries,
+  matchesPluginSearch,
+  pluginListEntryFromListing
+} from './plugin-list-entries'
 
 function listing(pluginKey: string, extra: Partial<PluginMarketplaceHostListing> = {}) {
   const value: PluginMarketplaceHostListing = {
@@ -58,6 +62,16 @@ describe('plugin list entries', () => {
     expect(
       result.available.map((entry) => [entry.name, entry.listing?.marketplaceSourceId])
     ).toEqual([['Orca Nord Theme', 'official']])
+  })
+
+  it('names and versions a listing from its flat release fields, then the raw release', () => {
+    const flat = pluginListEntryFromListing(
+      listing('stablyai.orca-midnight-theme', { name: 'Orca Midnight', version: '2.0.0' })
+    )
+    expect(flat).toMatchObject({ name: 'Orca Midnight', version: '2.0.0' })
+    const bare = pluginListEntryFromListing(listing('stablyai.orca-midnight-theme'))
+    expect(bare.version).toBeNull()
+    expect(bare.name).not.toBe('')
   })
 
   it('searches names, publishers, catalogs and categories', () => {

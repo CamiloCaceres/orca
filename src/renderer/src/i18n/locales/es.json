@@ -11998,7 +11998,8 @@
           "title": "¿Revertir el plugin?",
           "description": "Restaura la versión anterior de {{value0}}. Si cambió su acceso, deberás revisarlo de nuevo.",
           "cancel": "Cancelar",
-          "confirm": "Revertir plugin"
+          "confirm": "Revertir plugin",
+          "descriptionVersion": "Restaura {{value0}} {{value1}}. Los cambios de acceso necesitan otra revisión."
         },
         "PluginsSettingsSection": {
           "systemLabel": "Sistema de plugins",
@@ -13082,7 +13083,8 @@
           "updateLabel": "Actualizar {{value0}} a {{value1}}",
           "update": "Actualizar a {{value0}}",
           "needsOrca": "Requiere Orca {{value0}}",
-          "off": "Desactivado"
+          "off": "Desactivado",
+          "rollbackTo": "Volver a {{value0}}…"
         },
         "PluginSettingsOverview": {
           "offTitle": "Los plugins están desactivados",
@@ -13108,6 +13110,13 @@
           "cancel": "Cancelar",
           "updateOne": "Actualizar 1 plugin",
           "updateMany": "Actualizar {{value0}} plugins"
+        },
+        "PluginDetailInfo": {
+          "previous": "Anterior",
+          "updated": "Actualizado",
+          "license": "Licencia",
+          "homepage": "Página web",
+          "whatsNew": "Novedades"
         }
       },
       "right": {

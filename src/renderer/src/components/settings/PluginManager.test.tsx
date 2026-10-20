@@ -87,7 +87,9 @@ const catalogListings = [
       minimumOrca: '1.4.0',
       types: ['app-theme'],
       name: 'Orca Nord'
-    }
+    },
+    license: 'MIT',
+    changelog: 'Warmer comments.\n<b>not markup</b>'
   }),
   ...Array.from({ length: PLUGIN_GROUP_ROW_CAP + 2 }, (_, index) =>
     listing(`stablyai.extra-${index}`)
@@ -105,6 +107,7 @@ function installApi(overrides: Record<string, unknown> = {}): void {
         listMarketplacePlugins: vi.fn().mockResolvedValue(catalogListings),
         refreshMarketplaces: vi.fn().mockResolvedValue(undefined),
         previewMarketplacePlugin: vi.fn().mockResolvedValue(null),
+        getRollbackVersion: vi.fn().mockResolvedValue('1.0.0-rc.1'),
         ...overrides
       },
       updater: { getVersion: vi.fn().mockResolvedValue('1.4.214') },
@@ -209,6 +212,25 @@ describe('PluginManager', () => {
       '[data-plugin-key="stablyai.orca-nord-theme"] [data-plugin-row-name]'
     )
     expect(document.activeElement).toBe(restored)
+  })
+
+  it('shows release notes as text, license and the rollback version on the plugin page', async () => {
+    const container = await render()
+    await act(async () =>
+      container
+        .querySelector<HTMLButtonElement>(
+          '[data-plugin-key="stablyai.orca-nord-theme"] [data-plugin-row-name]'
+        )
+        ?.click()
+    )
+    expect(window.api.plugins.getRollbackVersion).toHaveBeenCalledWith({
+      pluginKey: 'stablyai.orca-nord-theme'
+    })
+    expect(container.textContent).toContain('What’s new')
+    expect(container.textContent).toContain('<b>not markup</b>')
+    expect(container.querySelector('b')).toBeNull()
+    expect(container.textContent).toContain('MIT')
+    expect(container.textContent).toContain('1.0.0-rc.1')
   })
 
   it('says when nothing matches and clears the search', async () => {

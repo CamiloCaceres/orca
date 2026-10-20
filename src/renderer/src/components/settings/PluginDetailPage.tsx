@@ -1,18 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import {
-  ArrowUpRight,
-  BadgeCheck,
-  ChevronLeft,
-  CircleAlert,
-  Info,
-  TriangleAlert
-} from 'lucide-react'
+import { BadgeCheck, ChevronLeft, CircleAlert, Info, TriangleAlert } from 'lucide-react'
 import type { PluginMarketplaceHostInstallPreview } from '../../../../preload/api-types'
 import { satisfiesOrcaEngineRange } from '../../../../shared/plugins/plugin-manifest'
 import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
 import { PluginCatalogAvatar } from '../plugin-catalog/PluginCatalogAvatar'
 import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
+import { PluginDetailInfo, PluginReleaseNotes } from './PluginDetailInfo'
 import { PluginAccessSection, PluginAddsSection, PluginLogsSection } from './PluginDetailSections'
 import { installedPluginControls, type InstalledRowHandlers } from './PluginManagerRows'
 import { PluginChips } from './plugin-row-parts'
@@ -44,21 +38,6 @@ function sourceLabel(entry: PluginListEntry): string {
     return translate('auto.components.settings.PluginDetailPage.gitUrl', 'Git URL')
   }
   return entry.listing?.marketplaceName ?? ''
-}
-
-function InfoRow({ label, value, mono = false }: { label: string; value: string; mono?: boolean }) {
-  return (
-    <div className="flex justify-between gap-3 py-1 text-xs">
-      <dt className="shrink-0 text-muted-foreground">{label}</dt>
-      <dd
-        data-mono={mono}
-        className="min-w-0 truncate text-right data-[mono=true]:font-mono"
-        title={value}
-      >
-        {value}
-      </dd>
-    </div>
-  )
 }
 
 function Alert({
@@ -147,11 +126,7 @@ export function PluginDetailPage({
   const version = plugin?.version ?? preview?.manifest.version ?? entry.version
   // Why: a fetched manifest names the plugin exactly; older catalogs only give its key.
   const name = plugin?.name ?? preview?.manifest.name ?? entry.name
-  // Why: "official" is trust, already shown by the verified mark.
-  const categories = entry.categories.filter((category) => category !== 'official')
   const description = plugin?.description ?? preview?.manifest.description ?? entry.description
-  const repository =
-    listing?.source.url ?? (plugin?.source?.kind === 'git' ? plugin.source.reference : null)
 
   let alert: React.ReactNode = null
   if (plugin?.blockedByKillList) {
@@ -301,71 +276,10 @@ export function PluginDetailPage({
             runsCode={plugin?.hasWorker ?? entry.types.includes('worker')}
             loading={previewLoading}
           />
+          <PluginReleaseNotes entry={entry} />
           {plugin?.hasWorker ? <PluginLogsSection state={logsState} /> : null}
         </div>
-        <aside className="mt-6">
-          <h3 className="mb-2 text-2xs font-semibold tracking-[0.05em] text-muted-foreground uppercase">
-            {translate('auto.components.settings.PluginDetailPage.info', 'Info')}
-          </h3>
-          <dl>
-            {version ? (
-              <InfoRow
-                label={translate('auto.components.settings.PluginDetailPage.version', 'Version')}
-                value={version}
-              />
-            ) : null}
-            {entry.updateVersion ? (
-              <InfoRow
-                label={translate('auto.components.settings.PluginDetailPage.latest', 'Latest')}
-                value={entry.updateVersion}
-              />
-            ) : null}
-            {entry.minimumOrca ? (
-              <InfoRow
-                label={translate('auto.components.settings.PluginDetailPage.requires', 'Requires')}
-                value={translate(
-                  'auto.components.settings.PluginDetailPage.requiresValue',
-                  'Orca {{value0}} or later',
-                  {
-                    value0: entry.minimumOrca
-                  }
-                )}
-              />
-            ) : null}
-            {categories.length > 0 ? (
-              <InfoRow
-                label={translate(
-                  'auto.components.settings.PluginDetailPage.categories',
-                  'Categories'
-                )}
-                value={categories.join(', ')}
-              />
-            ) : null}
-            <InfoRow
-              label={translate('auto.components.settings.PluginDetailPage.pluginId', 'Plugin ID')}
-              value={entry.pluginKey}
-              mono
-            />
-            {plugin?.source?.contentHash ? (
-              <InfoRow
-                label={translate('auto.components.settings.PluginDetailPage.content', 'Content')}
-                value={plugin.source.contentHash}
-                mono
-              />
-            ) : null}
-          </dl>
-          {repository && repository.startsWith('https://') ? (
-            <Button
-              variant="link"
-              size="xs"
-              className="mt-2 -ml-2"
-              onClick={() => void window.api.shell.openUrl(repository)}
-            >
-              {translate('auto.components.settings.PluginDetailPage.repository', 'Repository')}
-              <ArrowUpRight />
-            </Button>
-          ) : null}
-        </aside>
+        <PluginDetailInfo entry={entry} version={version} />
       </div>
     </article>
   )

@@ -25,15 +25,20 @@ export type PluginListEntry = {
   listing: PluginMarketplaceHostListing | null
 }
 
+// Why: v2 catalogs flatten release fields onto the listing; the raw record covers older hosts.
+function catalogVersion(listing: PluginMarketplaceHostListing): string | null {
+  return listing.version ?? listing.release?.version ?? null
+}
+
 function newerCatalogVersion(
   plugin: PluginHostListEntry,
   listing: PluginMarketplaceHostListing | null
 ): string | null {
-  const release = listing?.release
-  if (!release || plugin.source?.kind !== 'marketplace') {
+  const version = listing ? catalogVersion(listing) : null
+  if (!version || plugin.source?.kind !== 'marketplace') {
     return null
   }
-  return compareAppVersions(release.version, plugin.version) > 0 ? release.version : null
+  return compareAppVersions(version, plugin.version) > 0 ? version : null
 }
 
 export function pluginListEntryFromInstalled(
@@ -60,9 +65,9 @@ export function pluginListEntryFromListing(listing: PluginMarketplaceHostListing
   return {
     pluginKey: listing.pluginKey,
     // Why: older catalogs carry no release name; the key is the only name they have.
-    name: listing.release?.name ?? pluginDisplayNameFromKey(listing.pluginKey),
+    name: listing.name ?? listing.release?.name ?? pluginDisplayNameFromKey(listing.pluginKey),
     publisher: listing.marketplaceOwner || null,
-    version: listing.release?.version ?? null,
+    version: catalogVersion(listing),
     description: listing.description ?? null,
     official: listing.official,
     categories: listing.categories,
