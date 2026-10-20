@@ -9,6 +9,9 @@
     "resources/licenses/**",
     ".github/actions/cloud-sql-rollout-lease/**",
     ".anti-slop-plugin/**",
-    "src/main/runtime/__fixtures__/*.timing.json"
+    "src/main/runtime/__fixtures__/*.timing.json",
+    "schemas/plugins/*.schema.json",
+    "docs/reference/plugin-manifest.md",
+    "docs/reference/plugin-catalog.md"
   ]
 }

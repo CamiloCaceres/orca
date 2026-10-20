@@ -1,0 +1,244 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-marketplace.v2.schema.json",
+  "title": "Orca plugin catalog",
+  "description": "The orca-marketplace.v2.json file that lists installable plugin releases.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "JSON Schema URL for editor completion. Ignored by Orca.",
+      "x-orca-since": "unreleased",
+      "type": "string",
+      "maxLength": 2048
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Marketplace display name.",
+      "x-orca-since": "unreleased",
+      "examples": [
+        "Orca Plugins"
+      ]
+    },
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128,
+      "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$",
+      "description": "Account that publishes the marketplace.",
+      "x-orca-since": "unreleased",
+      "examples": [
+        "stablyai"
+      ]
+    },
+    "plugins": {
+      "maxItems": 2048,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/CatalogEntry"
+      },
+      "description": "Listed plugins, at most 2048. An entry this Orca cannot parse is skipped, not fatal.",
+      "x-orca-since": "unreleased"
+    }
+  },
+  "required": [
+    "name",
+    "owner",
+    "plugins"
+  ],
+  "$defs": {
+    "CatalogEntry": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "`<publisher>.<id>`, matching the plugin's manifest.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "acme.gleam-syntax"
+          ]
+        },
+        "source": {
+          "$ref": "#/$defs/CatalogGitSource"
+        },
+        "description": {
+          "description": "Listing text shown in the marketplace.",
+          "x-orca-since": "unreleased",
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096
+        },
+        "categories": {
+          "default": [],
+          "description": "Lowercase slugs used to filter the marketplace.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            [
+              "themes"
+            ]
+          ],
+          "maxItems": 16,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 64,
+            "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
+          }
+        },
+        "release": {
+          "$ref": "#/$defs/CatalogRelease"
+        }
+      },
+      "required": [
+        "id",
+        "source",
+        "release"
+      ],
+      "description": "One installable plugin."
+    },
+    "CatalogGitSource": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "const": "git",
+          "description": "Source kind. Only `git` is supported.",
+          "x-orca-since": "unreleased"
+        },
+        "url": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32768,
+          "description": "HTTPS or SSH URL of the plugin repository.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "https://github.com/acme/orca-gleam-syntax.git"
+          ]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "description": "Branch or tag the author publishes from. A `release` pins the exact commit.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "main"
+          ]
+        }
+      },
+      "required": [
+        "kind",
+        "url",
+        "ref"
+      ],
+      "additionalProperties": false,
+      "description": "Where the plugin source lives."
+    },
+    "CatalogRelease": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "The manifest's `version` for this release.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "1.2.0"
+          ]
+        },
+        "commit": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}$",
+          "description": "Full SHA-1 commit Orca checks out for this release.",
+          "x-orca-since": "unreleased"
+        },
+        "contentHash": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{64}$",
+          "description": "SHA-256 of the plugin's installed files, as Orca computes it at install.",
+          "x-orca-since": "unreleased"
+        },
+        "execution": {
+          "type": "string",
+          "enum": [
+            "data",
+            "instructional",
+            "sandboxed-ui",
+            "trusted-worker"
+          ],
+          "description": "The manifest's `execution` profile.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "data"
+          ]
+        },
+        "minimumOrca": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+$",
+          "description": "The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "1.4.223"
+          ]
+        },
+        "types": {
+          "minItems": 1,
+          "maxItems": 8,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "enum": [
+              "interface-language",
+              "app-theme",
+              "terminal-theme",
+              "icon-theme",
+              "syntax",
+              "instructions",
+              "panel",
+              "worker"
+            ]
+          },
+          "description": "Every kind of contribution the release carries, matching its manifest exactly.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            [
+              "syntax"
+            ]
+          ]
+        },
+        "name": {
+          "description": "The manifest's `name`, so Orca can suggest the plugin before downloading it.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "Gleam"
+          ],
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "fileTypes": {
+          "description": "Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer.",
+          "x-orca-since": "unreleased",
+          "items": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9+_-]{0,15}$"
+          },
+          "type": "array"
+        }
+      },
+      "required": [
+        "version",
+        "commit",
+        "contentHash",
+        "execution",
+        "minimumOrca",
+        "types"
+      ],
+      "description": "The exact release the catalog vouches for. Orca refuses bytes that differ."
+    }
+  }
+}

@@ -1,0 +1,728 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-plugin.schema.json",
+  "title": "Orca plugin manifest",
+  "description": "The orca-plugin.json file at the root of an Orca plugin (manifest format 2).",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "description": "JSON Schema URL for editor completion. Ignored by Orca.",
+      "x-orca-since": "unreleased",
+      "type": "string",
+      "maxLength": 2048
+    },
+    "manifestVersion": {
+      "type": "number",
+      "const": 2,
+      "description": "Manifest format. Use 2 for new plugins.",
+      "x-orca-since": "unreleased"
+    },
+    "execution": {
+      "type": "string",
+      "enum": [
+        "data",
+        "instructional",
+        "sandboxed-ui",
+        "trusted-worker"
+      ],
+      "description": "Most authority the plugin needs, least first: `data` (themes, syntaxes, translations), `instructional` (commands, shortcuts, recipes, agents), `sandboxed-ui` (panels), `trusted-worker` (`main` and events). Contributions beyond it fail validation.",
+      "x-orca-since": "unreleased",
+      "examples": [
+        "data"
+      ]
+    },
+    "id": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "Plugin id, kebab-case. The install identity is `<publisher>.<id>`.",
+      "x-orca-since": "1.4.223",
+      "examples": [
+        "gleam-syntax"
+      ]
+    },
+    "publisher": {
+      "type": "string",
+      "maxLength": 64,
+      "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+      "description": "Publisher slug, kebab-case. Usually your GitHub user or organization.",
+      "x-orca-since": "1.4.223",
+      "examples": [
+        "acme"
+      ]
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 256,
+      "description": "Display name.",
+      "x-orca-since": "1.4.223",
+      "examples": [
+        "Gleam"
+      ]
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)\\.(?:0|[1-9]\\d*)(?:-(?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*)(?:\\.(?:0|[1-9]\\d*|\\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\\+[0-9A-Za-z-]+(?:\\.[0-9A-Za-z-]+)*)?$",
+      "description": "Plugin version, semver.",
+      "x-orca-since": "1.4.223",
+      "examples": [
+        "1.2.0"
+      ]
+    },
+    "description": {
+      "description": "One or two sentences shown in the plugin list.",
+      "x-orca-since": "1.4.223",
+      "type": "string",
+      "maxLength": 4096
+    },
+    "author": {
+      "description": "Who maintains the plugin.",
+      "x-orca-since": "1.4.223",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Author or organization name.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "Acme"
+          ]
+        },
+        "url": {
+          "description": "Author homepage.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "https://example.com"
+          ],
+          "type": "string",
+          "maxLength": 2048
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "repository": {
+      "description": "Source repository URL.",
+      "x-orca-since": "1.4.223",
+      "examples": [
+        "https://github.com/acme/orca-gleam-syntax"
+      ],
+      "type": "string",
+      "maxLength": 2048
+    },
+    "icon": {
+      "description": "Square image shown beside the plugin name.",
+      "x-orca-since": "1.4.223",
+      "examples": [
+        "assets/icon.png"
+      ],
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$"
+    },
+    "engines": {
+      "type": "object",
+      "properties": {
+        "orca": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^>=\\d+\\.\\d+\\.\\d+$",
+          "description": "Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it when you use a field newer than the current floor.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            ">=1.4.223"
+          ]
+        }
+      },
+      "required": [
+        "orca"
+      ],
+      "description": "Host versions this plugin supports. Older hosts refuse to load it.",
+      "x-orca-since": "1.4.223"
+    },
+    "pluginApi": {
+      "type": "number",
+      "const": 1,
+      "description": "Major version of the plugin host API this plugin targets.",
+      "x-orca-since": "1.4.223"
+    },
+    "main": {
+      "description": "Node entry run in an out-of-process plugin worker. Requires the `trusted-worker` execution profile.",
+      "x-orca-since": "1.4.223",
+      "examples": [
+        "dist/main.mjs"
+      ],
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 1024,
+      "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$"
+    },
+    "contributes": {
+      "description": "What the plugin adds to Orca. Every point defaults to empty.",
+      "x-orca-since": "1.4.223",
+      "default": {},
+      "type": "object",
+      "properties": {
+        "panels": {
+          "default": [],
+          "description": "Sidebar panels. At most 64.",
+          "x-orca-since": "1.4.223",
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/PanelContribution"
+          }
+        },
+        "commands": {
+          "default": [],
+          "description": "Command palette entries. At most 256.",
+          "x-orca-since": "1.4.223",
+          "maxItems": 256,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CommandContribution"
+          }
+        },
+        "events": {
+          "default": [],
+          "description": "Events delivered to the plugin worker. At most 3.",
+          "x-orca-since": "1.4.223",
+          "maxItems": 3,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EventContribution"
+          }
+        },
+        "languagePacks": {
+          "default": [],
+          "description": "Interface translations. At most 16.",
+          "x-orca-since": "1.4.223",
+          "maxItems": 16,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LanguagePackContribution"
+          }
+        },
+        "keybindings": {
+          "description": "Keyboard shortcuts for contributed commands. At most 256.",
+          "x-orca-since": "1.4.223",
+          "maxItems": 256,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/KeybindingContribution"
+          }
+        },
+        "vmRecipes": {
+          "default": [],
+          "description": "Virtual machine environment recipes. At most 64.",
+          "x-orca-since": "1.4.223",
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/VmRecipeContribution"
+          }
+        },
+        "agents": {
+          "default": [],
+          "description": "Coding agent profiles. At most 64.",
+          "x-orca-since": "1.4.223",
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/AgentProfileContribution"
+          }
+        },
+        "themes": {
+          "default": [],
+          "description": "App color themes. At most 64.",
+          "x-orca-since": "unreleased",
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ThemeContribution"
+          }
+        },
+        "terminalThemes": {
+          "default": [],
+          "description": "Terminal ANSI palettes. At most 64.",
+          "x-orca-since": "unreleased",
+          "maxItems": 64,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ThemeContribution"
+          }
+        },
+        "iconThemes": {
+          "default": [],
+          "description": "File icon themes. At most 32.",
+          "x-orca-since": "unreleased",
+          "maxItems": 32,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ThemeContribution"
+          }
+        },
+        "syntaxes": {
+          "default": [],
+          "description": "Syntax highlighting for editor languages. At most 16.",
+          "x-orca-since": "unreleased",
+          "maxItems": 16,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SyntaxContribution"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "capabilities": {
+      "default": [],
+      "description": "Host APIs the plugin asks the user to grant. At most 32.",
+      "x-orca-since": "1.4.223",
+      "maxItems": 32,
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/Capability"
+      }
+    }
+  },
+  "required": [
+    "manifestVersion",
+    "execution",
+    "id",
+    "publisher",
+    "name",
+    "version",
+    "engines",
+    "pluginApi"
+  ],
+  "additionalProperties": false,
+  "$defs": {
+    "PanelContribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "Panel id, unique within the plugin.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "dashboard"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Title shown on the panel tab and its tooltip.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "Dashboard"
+          ]
+        },
+        "icon": {
+          "description": "Lucide icon name shown in the right-sidebar activity bar.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "layout-dashboard"
+          ],
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "entry": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
+          "description": "HTML file, relative to the plugin root, rendered inside a sandboxed panel frame.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "dist/panel.html"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "entry"
+      ],
+      "description": "A sidebar panel. Requires the `sandboxed-ui` execution profile or higher."
+    },
+    "CommandContribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*$",
+          "description": "Command id, unique within the plugin. Dotted namespaces are allowed.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "jupyter.restartKernel"
+          ]
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "description": "Title shown in the command palette.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "Restart kernel"
+          ]
+        },
+        "context": {
+          "description": "`worktree` hides the command when no worktree is active. Defaults to `global`.",
+          "x-orca-since": "1.4.223",
+          "type": "string",
+          "enum": [
+            "global",
+            "worktree"
+          ]
+        },
+        "action": {
+          "description": "Built-in Orca action this command runs. A command with an action is declarative and never starts the plugin worker; one without needs `main`.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "view.tasks"
+          ],
+          "enum": [
+            "worktree.history.back",
+            "worktree.history.forward",
+            "sidebar.left.toggle",
+            "sidebar.sleepingWorkspaces.toggle",
+            "floatingWorkspace.maximize",
+            "tab.rename",
+            "workspace.rename",
+            "workspace.openBoard",
+            "view.tasks",
+            "sidebar.right.toggle",
+            "sidebar.explorer.toggle",
+            "sidebar.search.toggle",
+            "sidebar.sourceControl.toggle",
+            "sidebar.checks.toggle",
+            "sidebar.ports.toggle"
+          ],
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*$"
+        }
+      },
+      "required": [
+        "id",
+        "title"
+      ],
+      "description": "A command palette entry. Requires the `instructional` execution profile or higher."
+    },
+    "EventContribution": {
+      "type": "object",
+      "properties": {
+        "on": {
+          "type": "string",
+          "enum": [
+            "worktree.created",
+            "worktree.removed",
+            "agent.status.changed"
+          ],
+          "description": "Event delivered to the plugin worker.",
+          "x-orca-since": "1.4.223"
+        }
+      },
+      "required": [
+        "on"
+      ],
+      "description": "An event subscription. Requires `main`, the `trusted-worker` execution profile and the `events:subscribe` capability."
+    },
+    "LanguagePackContribution": {
+      "type": "object",
+      "properties": {
+        "locale": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 35,
+          "pattern": "^[A-Za-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$",
+          "description": "BCP 47 locale the pack translates Orca into.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "pt-BR"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
+          "description": "JSON file of translated interface strings.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "locales/pt-BR.json"
+          ]
+        }
+      },
+      "required": [
+        "locale",
+        "path"
+      ],
+      "additionalProperties": false,
+      "description": "An interface translation."
+    },
+    "KeybindingContribution": {
+      "type": "object",
+      "properties": {
+        "command": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 256,
+          "pattern": "^[A-Za-z0-9]+(?:[._-][A-Za-z0-9]+)*$",
+          "description": "Id of a command this plugin contributes in `contributes.commands`.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "jupyter.restartKernel"
+          ]
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Key chord. `Mod` is Cmd on macOS and Ctrl elsewhere.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "Mod+Shift+K"
+          ]
+        },
+        "when": {
+          "description": "Where the shortcut is active; must match its command's `context`.",
+          "x-orca-since": "1.4.223",
+          "type": "string",
+          "enum": [
+            "global",
+            "worktree"
+          ]
+        }
+      },
+      "required": [
+        "command",
+        "key"
+      ],
+      "additionalProperties": false,
+      "description": "A keyboard shortcut for a command."
+    },
+    "VmRecipeContribution": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
+          "description": "JSON environment recipe file.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "recipes/ubuntu.json"
+          ]
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "description": "A virtual machine environment recipe."
+    },
+    "AgentProfileContribution": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
+          "description": "JSON agent profile file.",
+          "x-orca-since": "1.4.223",
+          "examples": [
+            "agents/reviewer.json"
+          ]
+        }
+      },
+      "required": [
+        "path"
+      ],
+      "additionalProperties": false,
+      "description": "A coding agent profile."
+    },
+    "ThemeContribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "Theme id, unique within its family in this plugin.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "dusk"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Name shown in the theme picker.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "Dusk"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
+          "description": "JSON theme file, at most 16 KiB.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "themes/dusk.json"
+          ]
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "path"
+      ],
+      "additionalProperties": false,
+      "description": "A labelled theme file."
+    },
+    "SyntaxContribution": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string",
+          "maxLength": 64,
+          "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
+          "description": "Language id, unique within the plugin.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "gleam"
+          ]
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "Language name shown in the editor.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "Gleam"
+          ]
+        },
+        "scopeName": {
+          "type": "string",
+          "maxLength": 128,
+          "pattern": "^[A-Za-z][A-Za-z0-9_-]*(?:\\.[A-Za-z0-9_-]+)+$",
+          "description": "The grammar's root TextMate scope.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "source.gleam"
+          ]
+        },
+        "path": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
+          "description": "TextMate grammar JSON file.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "syntaxes/gleam.tmLanguage.json"
+          ]
+        },
+        "configuration": {
+          "description": "Language configuration JSON file: comments, brackets and auto-closing pairs.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            "syntaxes/language-configuration.json"
+          ],
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1024,
+          "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$"
+        },
+        "extensions": {
+          "default": [],
+          "description": "File extensions this language opens, with the dot.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            [
+              ".gleam"
+            ]
+          ],
+          "maxItems": 32,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "maxLength": 64,
+            "pattern": "^\\.[A-Za-z0-9_-]+(?:\\.[A-Za-z0-9_-]+)*$"
+          }
+        },
+        "filenames": {
+          "default": [],
+          "description": "Exact file names this language opens.",
+          "x-orca-since": "unreleased",
+          "examples": [
+            [
+              "gleam.toml"
+            ]
+          ],
+          "maxItems": 32,
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        }
+      },
+      "required": [
+        "id",
+        "label",
+        "scopeName",
+        "path"
+      ],
+      "additionalProperties": false,
+      "description": "Syntax highlighting for one language."
+    },
+    "Capability": {
+      "type": "object",
+      "properties": {
+        "kind": {
+          "type": "string",
+          "enum": [
+            "workspace:read",
+            "terminal:send",
+            "notifications:show",
+            "storage",
+            "secrets",
+            "events:subscribe",
+            "settings:own"
+          ],
+          "description": "Capability granted on user consent.",
+          "x-orca-since": "1.4.223"
+        }
+      },
+      "required": [
+        "kind"
+      ],
+      "additionalProperties": false,
+      "description": "A host API the plugin may call once the user consents."
+    }
+  }
+}

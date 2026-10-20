@@ -38,8 +38,8 @@ export const orcaEngineRangeSchema = z
 const V1 = PLUGIN_SCHEMA_SINCE_V1
 const NEXT = PLUGIN_SCHEMA_SINCE_UNRELEASED
 
-const pluginManifestV1Object = z.object({
-  manifestVersion: z.literal(1),
+// Why one field set: v1 and v2 differ only in the version, `execution` and `$schema`.
+const pluginManifestFields = {
   id: pluginIdSchema.meta(
     pluginFieldDoc('Plugin id, kebab-case. The install identity is `<publisher>.<id>`.', V1, [
       'gleam-syntax'
@@ -123,12 +123,14 @@ const pluginManifestV1Object = z.object({
     .array(pluginCapabilitySchema)
     .max(32)
     .default([])
-    .meta(pluginFieldDoc('Host APIs the plugin asks the user to grant.', V1))
-})
+    .meta(pluginFieldDoc('Host APIs the plugin asks the user to grant. At most 32.', V1))
+}
+
+const pluginManifestV1Object = z.object({ manifestVersion: z.literal(1), ...pluginManifestFields })
 
 // Why strict: v2 declares its execution profile, so unknown keys must not smuggle in behavior.
-export const pluginManifestV2Object = pluginManifestV1Object
-  .extend({
+export const pluginManifestV2Object = z
+  .object({
     $schema: z
       .string()
       .max(2048)
@@ -143,7 +145,8 @@ export const pluginManifestV2Object = pluginManifestV1Object
         NEXT,
         ['data']
       )
-    )
+    ),
+    ...pluginManifestFields
   })
   .strict()
 
