@@ -1,15 +1,46 @@
 import { z } from 'zod'
 import { pluginIdSchema, pluginRelativePathSchema } from './plugin-manifest-fields'
+import { pluginFieldDoc, PLUGIN_SCHEMA_SINCE_V1 } from './plugin-schema-field-docs'
 
 export const PLUGIN_PANEL_LIMIT = 64
 
-export const pluginPanelContributionSchema = z.object({
-  id: pluginIdSchema,
-  title: z.string().min(1).max(256),
-  /** Lucide icon name rendered in the right-sidebar activity bar. */
-  icon: z.string().min(1).max(64).optional(),
-  /** HTML entry rendered inside a sandboxed panel frame. */
-  entry: pluginRelativePathSchema
-})
+export const pluginPanelContributionSchema = z
+  .object({
+    id: pluginIdSchema.meta(
+      pluginFieldDoc('Panel id, unique within the plugin.', PLUGIN_SCHEMA_SINCE_V1, ['dashboard'])
+    ),
+    title: z
+      .string()
+      .min(1)
+      .max(256)
+      .meta(
+        pluginFieldDoc('Title shown on the panel tab and its tooltip.', PLUGIN_SCHEMA_SINCE_V1, [
+          'Dashboard'
+        ])
+      ),
+    icon: z
+      .string()
+      .min(1)
+      .max(64)
+      .optional()
+      .meta(
+        pluginFieldDoc(
+          'Lucide icon name shown in the right-sidebar activity bar.',
+          PLUGIN_SCHEMA_SINCE_V1,
+          ['layout-dashboard']
+        )
+      ),
+    entry: pluginRelativePathSchema.meta(
+      pluginFieldDoc(
+        'HTML file, relative to the plugin root, rendered inside a sandboxed panel frame.',
+        PLUGIN_SCHEMA_SINCE_V1,
+        ['dist/panel.html']
+      )
+    )
+  })
+  .meta({
+    id: 'PanelContribution',
+    description: 'A sidebar panel. Requires the `sandboxed-ui` execution profile or higher.'
+  })
 
 export type PluginPanelContribution = z.infer<typeof pluginPanelContributionSchema>

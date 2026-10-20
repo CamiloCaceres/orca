@@ -5,6 +5,12 @@ import {
   pluginRelativePathSchema
 } from './plugin-manifest-fields'
 import { normalizeKeybinding } from '../keybindings'
+import { pluginCommandContextSchema } from './plugin-command-contribution'
+import {
+  pluginFieldDoc,
+  PLUGIN_SCHEMA_SINCE_UNRELEASED,
+  PLUGIN_SCHEMA_SINCE_V1
+} from './plugin-schema-field-docs'
 
 export const PLUGIN_LANGUAGE_PACK_LIMIT = 16
 export const PLUGIN_KEYBINDING_LIMIT = 256
@@ -25,18 +31,40 @@ export const pluginLocaleIdSchema = z
 
 export const pluginLanguagePackContributionSchema = z
   .object({
-    locale: pluginLocaleIdSchema,
-    path: pluginRelativePathSchema
+    locale: pluginLocaleIdSchema.meta(
+      pluginFieldDoc('BCP 47 locale the pack translates Orca into.', PLUGIN_SCHEMA_SINCE_V1, [
+        'pt-BR'
+      ])
+    ),
+    path: pluginRelativePathSchema.meta(
+      pluginFieldDoc('JSON file of translated interface strings.', PLUGIN_SCHEMA_SINCE_V1, [
+        'locales/pt-BR.json'
+      ])
+    )
   })
   .strict()
+  .meta({ id: 'LanguagePackContribution', description: 'An interface translation.' })
 
 export const pluginKeybindingContributionSchema = z
   .object({
-    command: pluginCommandIdSchema,
+    command: pluginCommandIdSchema.meta(
+      pluginFieldDoc(
+        'Id of a command this plugin contributes in `contributes.commands`.',
+        PLUGIN_SCHEMA_SINCE_V1,
+        ['jupyter.restartKernel']
+      )
+    ),
     key: z
       .string()
       .min(1)
       .max(128)
+      .meta(
+        pluginFieldDoc(
+          'Key chord. `Mod` is Cmd on macOS and Ctrl elsewhere.',
+          PLUGIN_SCHEMA_SINCE_V1,
+          ['Mod+Shift+K']
+        )
+      )
       .transform((value, ctx) => {
         const normalized = normalizeKeybinding(value)
         if (!normalized.ok) {
@@ -45,26 +73,63 @@ export const pluginKeybindingContributionSchema = z
         }
         return normalized.value
       }),
-    when: z.enum(['global', 'worktree']).optional()
+    when: pluginCommandContextSchema
+      .optional()
+      .meta(
+        pluginFieldDoc(
+          "Where the shortcut is active; must match its command's `context`.",
+          PLUGIN_SCHEMA_SINCE_V1
+        )
+      )
   })
   .strict()
+  .meta({ id: 'KeybindingContribution', description: 'A keyboard shortcut for a command.' })
 
 export const pluginVmRecipeContributionSchema = z
-  .object({ path: pluginRelativePathSchema })
+  .object({
+    path: pluginRelativePathSchema.meta(
+      pluginFieldDoc('JSON environment recipe file.', PLUGIN_SCHEMA_SINCE_V1, [
+        'recipes/ubuntu.json'
+      ])
+    )
+  })
   .strict()
+  .meta({ id: 'VmRecipeContribution', description: 'A virtual machine environment recipe.' })
 
 export const pluginAgentProfileContributionSchema = z
-  .object({ path: pluginRelativePathSchema })
+  .object({
+    path: pluginRelativePathSchema.meta(
+      pluginFieldDoc('JSON agent profile file.', PLUGIN_SCHEMA_SINCE_V1, ['agents/reviewer.json'])
+    )
+  })
   .strict()
+  .meta({ id: 'AgentProfileContribution', description: 'A coding agent profile.' })
 
 /** App, terminal and icon themes share one shape: a labelled JSON artifact. */
 export const pluginThemeContributionSchema = z
   .object({
-    id: pluginIdSchema,
-    label: z.string().min(1).max(128),
-    path: pluginRelativePathSchema
+    id: pluginIdSchema.meta(
+      pluginFieldDoc(
+        'Theme id, unique within its family in this plugin.',
+        PLUGIN_SCHEMA_SINCE_UNRELEASED,
+        ['dusk']
+      )
+    ),
+    label: z
+      .string()
+      .min(1)
+      .max(128)
+      .meta(
+        pluginFieldDoc('Name shown in the theme picker.', PLUGIN_SCHEMA_SINCE_UNRELEASED, ['Dusk'])
+      ),
+    path: pluginRelativePathSchema.meta(
+      pluginFieldDoc('JSON theme file, at most 16 KiB.', PLUGIN_SCHEMA_SINCE_UNRELEASED, [
+        'themes/dusk.json'
+      ])
+    )
   })
   .strict()
+  .meta({ id: 'ThemeContribution', description: 'A labelled theme file.' })
 
 export const pluginGrammarScopeSchema = z
   .string()
@@ -74,11 +139,39 @@ export const pluginGrammarScopeSchema = z
 /** One highlighted language: the files it claims and its TextMate grammar. */
 export const pluginSyntaxContributionSchema = z
   .object({
-    id: pluginIdSchema,
-    label: z.string().min(1).max(128),
-    scopeName: pluginGrammarScopeSchema,
-    path: pluginRelativePathSchema,
-    configuration: pluginRelativePathSchema.optional(),
+    id: pluginIdSchema.meta(
+      pluginFieldDoc('Language id, unique within the plugin.', PLUGIN_SCHEMA_SINCE_UNRELEASED, [
+        'gleam'
+      ])
+    ),
+    label: z
+      .string()
+      .min(1)
+      .max(128)
+      .meta(
+        pluginFieldDoc('Language name shown in the editor.', PLUGIN_SCHEMA_SINCE_UNRELEASED, [
+          'Gleam'
+        ])
+      ),
+    scopeName: pluginGrammarScopeSchema.meta(
+      pluginFieldDoc("The grammar's root TextMate scope.", PLUGIN_SCHEMA_SINCE_UNRELEASED, [
+        'source.gleam'
+      ])
+    ),
+    path: pluginRelativePathSchema.meta(
+      pluginFieldDoc('TextMate grammar JSON file.', PLUGIN_SCHEMA_SINCE_UNRELEASED, [
+        'syntaxes/gleam.tmLanguage.json'
+      ])
+    ),
+    configuration: pluginRelativePathSchema
+      .optional()
+      .meta(
+        pluginFieldDoc(
+          'Language configuration JSON file: comments, brackets and auto-closing pairs.',
+          PLUGIN_SCHEMA_SINCE_UNRELEASED,
+          ['syntaxes/language-configuration.json']
+        )
+      ),
     extensions: z
       .array(
         z
@@ -87,7 +180,14 @@ export const pluginSyntaxContributionSchema = z
           .regex(/^\.[A-Za-z0-9_-]+(?:\.[A-Za-z0-9_-]+)*$/, 'must look like .ext')
       )
       .max(32)
-      .default([]),
+      .default([])
+      .meta(
+        pluginFieldDoc(
+          'File extensions this language opens, with the dot.',
+          PLUGIN_SCHEMA_SINCE_UNRELEASED,
+          [['.gleam']]
+        )
+      ),
     filenames: z
       .array(
         z
@@ -105,8 +205,14 @@ export const pluginSyntaxContributionSchema = z
       )
       .max(32)
       .default([])
+      .meta(
+        pluginFieldDoc('Exact file names this language opens.', PLUGIN_SCHEMA_SINCE_UNRELEASED, [
+          ['gleam.toml']
+        ])
+      )
   })
   .strict()
+  .meta({ id: 'SyntaxContribution', description: 'Syntax highlighting for one language.' })
 
 export type PluginLanguagePackContribution = z.infer<typeof pluginLanguagePackContributionSchema>
 export type PluginKeybindingContribution = z.infer<typeof pluginKeybindingContributionSchema>

@@ -58,6 +58,15 @@ describe('pluginManifestSchema boundaries', () => {
     expect(device.error?.issues).toHaveLength(1)
   })
 
+  it('accepts a $schema URL in v2 manifests only as an ignored hint', () => {
+    const $schema = 'https://example.com/orca-plugin.schema.json'
+    const v2 = parsePluginManifest(
+      manifest({ manifestVersion: 2, execution: 'data', contributes: {}, $schema })
+    )
+    expect(v2).toMatchObject({ ok: true, manifest: { $schema } })
+    expect(parsePluginManifest(manifest({ $schema }))).toMatchObject({ ok: true })
+  })
+
   it('rejects duplicate contribution ids', () => {
     const parsed = pluginManifestSchema.safeParse(
       manifest({

@@ -26,6 +26,11 @@ import {
 } from './plugin-event-contribution'
 import type { PluginExecutionProfile } from './plugin-execution-profile'
 import { PLUGIN_PANEL_LIMIT, pluginPanelContributionSchema } from './plugin-panel-contribution'
+import {
+  pluginFieldDoc,
+  PLUGIN_SCHEMA_SINCE_UNRELEASED,
+  PLUGIN_SCHEMA_SINCE_V1
+} from './plugin-schema-field-docs'
 
 /** Every `contributes` key, in manifest order. Adding a point starts here. */
 export const PLUGIN_CONTRIBUTION_POINTS = [
@@ -44,22 +49,89 @@ export const PLUGIN_CONTRIBUTION_POINTS = [
 
 export type PluginContributionPoint = (typeof PLUGIN_CONTRIBUTION_POINTS)[number]
 
-function contributionList<Item extends z.ZodType>(item: Item, limit: number) {
-  return z.array(item).max(limit).default([])
+function contributionList<Item extends z.ZodType>(
+  item: Item,
+  limit: number,
+  description: string,
+  since: string
+) {
+  return z
+    .array(item)
+    .max(limit)
+    .default([])
+    .meta(pluginFieldDoc(`${description} At most ${limit}.`, since))
 }
 
+const V1 = PLUGIN_SCHEMA_SINCE_V1
+const NEXT = PLUGIN_SCHEMA_SINCE_UNRELEASED
+
 export const pluginContributesShape = {
-  panels: contributionList(pluginPanelContributionSchema, PLUGIN_PANEL_LIMIT),
-  commands: contributionList(pluginCommandContributionSchema, PLUGIN_COMMAND_LIMIT),
-  events: contributionList(pluginEventContributionSchema, PLUGIN_EVENT_SUBSCRIPTION_LIMIT),
-  languagePacks: contributionList(pluginLanguagePackContributionSchema, PLUGIN_LANGUAGE_PACK_LIMIT),
-  keybindings: contributionList(pluginKeybindingContributionSchema, PLUGIN_KEYBINDING_LIMIT),
-  vmRecipes: contributionList(pluginVmRecipeContributionSchema, PLUGIN_VM_RECIPE_LIMIT),
-  agents: contributionList(pluginAgentProfileContributionSchema, PLUGIN_AGENT_PROFILE_LIMIT),
-  themes: contributionList(pluginThemeContributionSchema, PLUGIN_THEME_LIMIT),
-  terminalThemes: contributionList(pluginThemeContributionSchema, PLUGIN_TERMINAL_THEME_LIMIT),
-  iconThemes: contributionList(pluginThemeContributionSchema, PLUGIN_ICON_THEME_LIMIT),
-  syntaxes: contributionList(pluginSyntaxContributionSchema, PLUGIN_SYNTAX_LIMIT)
+  panels: contributionList(
+    pluginPanelContributionSchema,
+    PLUGIN_PANEL_LIMIT,
+    'Sidebar panels.',
+    V1
+  ),
+  commands: contributionList(
+    pluginCommandContributionSchema,
+    PLUGIN_COMMAND_LIMIT,
+    'Command palette entries.',
+    V1
+  ),
+  events: contributionList(
+    pluginEventContributionSchema,
+    PLUGIN_EVENT_SUBSCRIPTION_LIMIT,
+    'Events delivered to the plugin worker.',
+    V1
+  ),
+  languagePacks: contributionList(
+    pluginLanguagePackContributionSchema,
+    PLUGIN_LANGUAGE_PACK_LIMIT,
+    'Interface translations.',
+    V1
+  ),
+  keybindings: contributionList(
+    pluginKeybindingContributionSchema,
+    PLUGIN_KEYBINDING_LIMIT,
+    'Keyboard shortcuts for contributed commands.',
+    V1
+  ),
+  vmRecipes: contributionList(
+    pluginVmRecipeContributionSchema,
+    PLUGIN_VM_RECIPE_LIMIT,
+    'Virtual machine environment recipes.',
+    V1
+  ),
+  agents: contributionList(
+    pluginAgentProfileContributionSchema,
+    PLUGIN_AGENT_PROFILE_LIMIT,
+    'Coding agent profiles.',
+    V1
+  ),
+  themes: contributionList(
+    pluginThemeContributionSchema,
+    PLUGIN_THEME_LIMIT,
+    'App color themes.',
+    NEXT
+  ),
+  terminalThemes: contributionList(
+    pluginThemeContributionSchema,
+    PLUGIN_TERMINAL_THEME_LIMIT,
+    'Terminal ANSI palettes.',
+    NEXT
+  ),
+  iconThemes: contributionList(
+    pluginThemeContributionSchema,
+    PLUGIN_ICON_THEME_LIMIT,
+    'File icon themes.',
+    NEXT
+  ),
+  syntaxes: contributionList(
+    pluginSyntaxContributionSchema,
+    PLUGIN_SYNTAX_LIMIT,
+    'Syntax highlighting for editor languages.',
+    NEXT
+  )
 } satisfies Record<PluginContributionPoint, z.ZodType>
 
 type ContributionPointPolicy = {

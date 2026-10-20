@@ -2,6 +2,9 @@ import { z } from 'zod'
 import { isAllowedPluginGitUrl } from './plugin-install-lockfile'
 import { isQualifiedPluginKey } from './plugin-manifest'
 import { pluginCatalogReleaseSchema } from './plugin-catalog-release'
+import { pluginFieldDoc, PLUGIN_SCHEMA_SINCE_UNRELEASED } from './plugin-schema-field-docs'
+
+const NEXT = PLUGIN_SCHEMA_SINCE_UNRELEASED
 
 export const PLUGIN_MARKETPLACE_FILENAME = 'orca-marketplace.json'
 // Why a second file: v1 entries are strict, so shipped clients reject any new field.
@@ -36,25 +39,67 @@ const marketplaceCategorySchema = z
   .max(64)
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'categories must be lowercase slugs')
 
-export const pluginMarketplaceGitSourceSchema = z.strictObject({
-  kind: z.literal('git'),
-  url: z
-    .string()
-    .trim()
-    .min(1)
-    .max(32 * 1024)
-    .refine(isAllowedPluginGitUrl, 'git URL must use HTTPS or SSH'),
-  // Why: marketplace installs must first resolve a named ref to an exact
-  // commit; an omitted remote default would make the listing irreproducible.
-  ref: z.string().trim().min(1).max(4_096)
-})
+export const pluginMarketplaceGitSourceSchema = z
+  .strictObject({
+    kind: z.literal('git').meta(pluginFieldDoc('Source kind. Only `git` is supported.', NEXT)),
+    url: z
+      .string()
+      .trim()
+      .min(1)
+      .max(32 * 1024)
+      .refine(isAllowedPluginGitUrl, 'git URL must use HTTPS or SSH')
+      .meta(
+        pluginFieldDoc('HTTPS or SSH URL of the plugin repository.', NEXT, [
+          'https://github.com/acme/orca-gleam-syntax.git'
+        ])
+      ),
+    // Why: marketplace installs must first resolve a named ref to an exact
+    // commit; an omitted remote default would make the listing irreproducible.
+    ref: z
+      .string()
+      .trim()
+      .min(1)
+      .max(4_096)
+      .meta(
+        pluginFieldDoc(
+          'Branch or tag the author publishes from. A `release` pins the exact commit.',
+          NEXT,
+          ['main']
+        )
+      )
+  })
+  .meta({ id: 'CatalogGitSource', description: 'Where the plugin source lives.' })
+
+// Why regex then refine: the regex is the published `pattern`; the refine adds length and
+// reserved-name rules without reporting a bad key twice.
+const QUALIFIED_PLUGIN_KEY_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*\.[a-z0-9]+(?:-[a-z0-9]+)*$/
 
 const marketplaceEntryFields = {
   /** Canonical `<publisher>.<id>` identity expected in the source manifest. */
-  id: z.string().refine(isQualifiedPluginKey, 'invalid qualified plugin key'),
+  id: z
+    .string()
+    .regex(QUALIFIED_PLUGIN_KEY_RE, 'invalid qualified plugin key')
+    .refine(
+      (key) => !QUALIFIED_PLUGIN_KEY_RE.test(key) || isQualifiedPluginKey(key),
+      'invalid qualified plugin key'
+    )
+    .meta(
+      pluginFieldDoc("`<publisher>.<id>`, matching the plugin's manifest.", NEXT, [
+        'acme.gleam-syntax'
+      ])
+    ),
   source: pluginMarketplaceGitSourceSchema,
-  description: z.string().min(1).max(4_096).optional(),
-  categories: z.array(marketplaceCategorySchema).max(PLUGIN_MARKETPLACE_CATEGORY_LIMIT).default([])
+  description: z
+    .string()
+    .min(1)
+    .max(4_096)
+    .optional()
+    .meta(pluginFieldDoc('Listing text shown in the marketplace.', NEXT)),
+  categories: z
+    .array(marketplaceCategorySchema)
+    .max(PLUGIN_MARKETPLACE_CATEGORY_LIMIT)
+    .default([])
+    .meta(pluginFieldDoc('Lowercase slugs used to filter the marketplace.', NEXT, [['themes']]))
 }
 
 function rejectDuplicateCategories(
@@ -106,8 +151,14 @@ const pluginMarketplaceListingEntrySchema = z
   .superRefine(rejectDuplicateCategories)
 
 const marketplaceHeaderFields = {
-  name: z.string().min(1).max(256),
-  owner: marketplaceOwnerSchema
+  name: z
+    .string()
+    .min(1)
+    .max(256)
+    .meta(pluginFieldDoc('Marketplace display name.', NEXT, ['Orca Plugins'])),
+  owner: marketplaceOwnerSchema.meta(
+    pluginFieldDoc('Account that publishes the marketplace.', NEXT, ['stablyai'])
+  )
 }
 
 export const pluginMarketplaceSchema = z
@@ -123,6 +174,33 @@ export const pluginMarketplaceListingSchema = z
     plugins: z.array(pluginMarketplaceListingEntrySchema).max(PLUGIN_MARKETPLACE_ENTRY_LIMIT)
   })
   .superRefine(rejectDuplicatePluginIds)
+
+/** What authors write in the v2 catalog file; the published JSON Schema is generated from it.
+ *  Runtime parsing uses the lenient pluginMarketplaceV2Schema below. */
+export const pluginMarketplaceV2DocumentSchema = z.object({
+  $schema: z
+    .string()
+    .max(2048)
+    .optional()
+    .meta(pluginFieldDoc('JSON Schema URL for editor completion. Ignored by Orca.', NEXT)),
+  ...marketplaceHeaderFields,
+  plugins: z
+    .array(
+      z
+        .object({
+          ...marketplaceEntryFields,
+          release: pluginCatalogReleaseSchema
+        })
+        .meta({ id: 'CatalogEntry', description: 'One installable plugin.' })
+    )
+    .max(PLUGIN_MARKETPLACE_ENTRY_LIMIT)
+    .meta(
+      pluginFieldDoc(
+        `Listed plugins, at most ${PLUGIN_MARKETPLACE_ENTRY_LIMIT}. An entry this Orca cannot parse is skipped, not fatal.`,
+        NEXT
+      )
+    )
+})
 
 /** Why entries parse one by one: an entry this client cannot install (a newer contribution
  *  type) is skipped instead of hiding every other plugin in the catalog. Duplicate ids are

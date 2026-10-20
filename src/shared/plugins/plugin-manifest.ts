@@ -4,6 +4,11 @@ import { pluginContributesShape } from './plugin-contribution-points'
 import { pluginIdSchema, pluginRelativePathSchema } from './plugin-manifest-fields'
 import { validatePluginManifestContributions } from './plugin-manifest-contribution-validation'
 import {
+  pluginFieldDoc,
+  PLUGIN_SCHEMA_SINCE_UNRELEASED,
+  PLUGIN_SCHEMA_SINCE_V1
+} from './plugin-schema-field-docs'
+import {
   pluginExecutionProfileSchema,
   validatePluginExecutionProfile
 } from './plugin-execution-profile'
@@ -25,42 +30,121 @@ const SEMVER_RE =
 
 // Why: v0 supports only the ">=x.y.z" form. A closed grammar keeps the gate
 // predictable; richer ranges can be added without breaking old manifests.
-const orcaEngineRangeSchema = z
+export const orcaEngineRangeSchema = z
   .string()
   .max(64)
   .regex(/^>=\d+\.\d+\.\d+$/, 'must be a ">=x.y.z" version range')
 
+const V1 = PLUGIN_SCHEMA_SINCE_V1
+const NEXT = PLUGIN_SCHEMA_SINCE_UNRELEASED
+
 const pluginManifestV1Object = z.object({
   manifestVersion: z.literal(1),
-  id: pluginIdSchema,
-  /** Publisher slug; canonical identity is `<publisher>.<id>` — bare-id
-   *  global uniqueness is unverifiable without a registry. */
-  publisher: pluginIdSchema,
-  name: z.string().min(1).max(256),
-  version: z.string().regex(SEMVER_RE, 'must be semver'),
-  description: z.string().max(4096).optional(),
+  id: pluginIdSchema.meta(
+    pluginFieldDoc('Plugin id, kebab-case. The install identity is `<publisher>.<id>`.', V1, [
+      'gleam-syntax'
+    ])
+  ),
+  // Why both ids: bare-id global uniqueness is unverifiable without a registry.
+  publisher: pluginIdSchema.meta(
+    pluginFieldDoc('Publisher slug, kebab-case. Usually your GitHub user or organization.', V1, [
+      'acme'
+    ])
+  ),
+  name: z
+    .string()
+    .min(1)
+    .max(256)
+    .meta(pluginFieldDoc('Display name.', V1, ['Gleam'])),
+  version: z
+    .string()
+    .regex(SEMVER_RE, 'must be semver')
+    .meta(pluginFieldDoc('Plugin version, semver.', V1, ['1.2.0'])),
+  description: z
+    .string()
+    .max(4096)
+    .optional()
+    .meta(pluginFieldDoc('One or two sentences shown in the plugin list.', V1)),
   author: z
-    .object({ name: z.string().min(1).max(256), url: z.string().max(2048).optional() })
-    .optional(),
-  repository: z.string().max(2048).optional(),
-  icon: pluginRelativePathSchema.optional(),
-  /** Minimum host version gate; the host refuses to load below it. */
-  engines: z.object({ orca: orcaEngineRangeSchema }),
-  /** Host-API major version this plugin targets. */
-  pluginApi: z.literal(1),
-  /** Node entry executed inside the out-of-process plugin worker. */
-  main: pluginRelativePathSchema.optional(),
+    .object({
+      name: z
+        .string()
+        .min(1)
+        .max(256)
+        .meta(pluginFieldDoc('Author or organization name.', V1, ['Acme'])),
+      url: z
+        .string()
+        .max(2048)
+        .optional()
+        .meta(pluginFieldDoc('Author homepage.', V1, ['https://example.com']))
+    })
+    .optional()
+    .meta(pluginFieldDoc('Who maintains the plugin.', V1)),
+  repository: z
+    .string()
+    .max(2048)
+    .optional()
+    .meta(
+      pluginFieldDoc('Source repository URL.', V1, ['https://github.com/acme/orca-gleam-syntax'])
+    ),
+  icon: pluginRelativePathSchema
+    .optional()
+    .meta(pluginFieldDoc('Square image shown beside the plugin name.', V1, ['assets/icon.png'])),
+  engines: z
+    .object({
+      orca: orcaEngineRangeSchema.meta(
+        pluginFieldDoc(
+          'Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it when you use a field newer than the current floor.',
+          V1,
+          ['>=1.4.223']
+        )
+      )
+    })
+    .meta(pluginFieldDoc('Host versions this plugin supports. Older hosts refuse to load it.', V1)),
+  pluginApi: z
+    .literal(1)
+    .meta(pluginFieldDoc('Major version of the plugin host API this plugin targets.', V1)),
+  main: pluginRelativePathSchema
+    .optional()
+    .meta(
+      pluginFieldDoc(
+        'Node entry run in an out-of-process plugin worker. Requires the `trusted-worker` execution profile.',
+        V1,
+        ['dist/main.mjs']
+      )
+    ),
   contributes: z
     .object(pluginContributesShape)
     .strict()
     // Why prefault: runs `{}` through the schema, so every family's own default applies.
-    .prefault({}),
-  capabilities: z.array(pluginCapabilitySchema).max(32).default([])
+    .prefault({})
+    .meta(pluginFieldDoc('What the plugin adds to Orca. Every point defaults to empty.', V1)),
+  capabilities: z
+    .array(pluginCapabilitySchema)
+    .max(32)
+    .default([])
+    .meta(pluginFieldDoc('Host APIs the plugin asks the user to grant.', V1))
 })
 
 // Why strict: v2 declares its execution profile, so unknown keys must not smuggle in behavior.
-const pluginManifestV2Object = pluginManifestV1Object
-  .extend({ manifestVersion: z.literal(2), execution: pluginExecutionProfileSchema })
+export const pluginManifestV2Object = pluginManifestV1Object
+  .extend({
+    $schema: z
+      .string()
+      .max(2048)
+      .optional()
+      .meta(pluginFieldDoc('JSON Schema URL for editor completion. Ignored by Orca.', NEXT)),
+    manifestVersion: z
+      .literal(2)
+      .meta(pluginFieldDoc('Manifest format. Use 2 for new plugins.', NEXT)),
+    execution: pluginExecutionProfileSchema.meta(
+      pluginFieldDoc(
+        'Most authority the plugin needs, least first: `data` (themes, syntaxes, translations), `instructional` (commands, shortcuts, recipes, agents), `sandboxed-ui` (panels), `trusted-worker` (`main` and events). Contributions beyond it fail validation.',
+        NEXT,
+        ['data']
+      )
+    )
+  })
   .strict()
 
 export const pluginManifestSchema = z.discriminatedUnion('manifestVersion', [

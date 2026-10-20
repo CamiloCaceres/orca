@@ -8,8 +8,11 @@ import {
   pluginExecutionProfileSchema,
   type PluginExecutionProfile
 } from './plugin-execution-profile'
-import { pluginFileTypeSchema } from './plugin-file-type'
+import { PLUGIN_FILE_TYPE_RE, pluginFileTypeSchema } from './plugin-file-type'
 import type { PluginManifest } from './plugin-manifest'
+import { pluginFieldDoc, PLUGIN_SCHEMA_SINCE_UNRELEASED } from './plugin-schema-field-docs'
+
+const NEXT = PLUGIN_SCHEMA_SINCE_UNRELEASED
 
 // Why only installable types: a catalog entry naming any other type fails to parse, so the
 // v2 catalog drops it instead of listing a plugin this client cannot install.
@@ -36,21 +39,63 @@ const CATALOG_TYPE_PROFILE: Partial<Record<PluginCatalogType, PluginExecutionPro
  *  can add optional fields without breaking clients that predate them. */
 export const pluginCatalogReleaseSchema = z
   .object({
-    version: z.string().min(1).max(128),
+    version: z
+      .string()
+      .min(1)
+      .max(128)
+      .meta(pluginFieldDoc("The manifest's `version` for this release.", NEXT, ['1.2.0'])),
     // Why SHA-1 only: plugin materialization rejects SHA-256 repositories.
-    commit: z.string().regex(/^[0-9a-f]{40}$/),
-    contentHash: z.string().regex(/^[0-9a-f]{64}$/),
-    execution: pluginExecutionProfileSchema,
-    minimumOrca: z.string().regex(/^\d+\.\d+\.\d+$/),
+    commit: z
+      .string()
+      .regex(/^[0-9a-f]{40}$/)
+      .meta(pluginFieldDoc('Full SHA-1 commit Orca checks out for this release.', NEXT)),
+    contentHash: z
+      .string()
+      .regex(/^[0-9a-f]{64}$/)
+      .meta(
+        pluginFieldDoc(
+          "SHA-256 of the plugin's installed files, as Orca computes it at install.",
+          NEXT
+        )
+      ),
+    execution: pluginExecutionProfileSchema.meta(
+      pluginFieldDoc("The manifest's `execution` profile.", NEXT, ['data'])
+    ),
+    minimumOrca: z
+      .string()
+      .regex(/^\d+\.\d+\.\d+$/)
+      .meta(
+        pluginFieldDoc(
+          "The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it.",
+          NEXT,
+          ['1.4.223']
+        )
+      ),
     types: z
       .array(z.enum(PLUGIN_CATALOG_TYPES))
       .min(1)
       .max(PLUGIN_CATALOG_TYPES.length)
-      .refine((types) => new Set(types).size === types.length, 'duplicate contribution type'),
-    /** The plugin's name, so a suggestion can show it before anything is downloaded. */
-    name: z.string().min(1).max(128).optional(),
-    /** Extensions this release can open, for suggesting it when such a file has no viewer. Invalid
-     *  entries are dropped, not fatal, so a newer catalog never hides the plugin. */
+      .refine((types) => new Set(types).size === types.length, 'duplicate contribution type')
+      .meta(
+        pluginFieldDoc(
+          'Every kind of contribution the release carries, matching its manifest exactly.',
+          NEXT,
+          [['syntax']]
+        )
+      ),
+    name: z
+      .string()
+      .min(1)
+      .max(128)
+      .optional()
+      .meta(
+        pluginFieldDoc(
+          "The manifest's `name`, so Orca can suggest the plugin before downloading it.",
+          NEXT,
+          ['Gleam']
+        )
+      ),
+    /** Invalid entries are dropped, not fatal, so a newer catalog never hides the plugin. */
     fileTypes: z
       .array(z.unknown())
       .transform((entries) =>
@@ -59,6 +104,14 @@ export const pluginCatalogReleaseSchema = z
           .slice(0, 32)
       )
       .optional()
+      .meta({
+        ...pluginFieldDoc(
+          'Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer.',
+          NEXT,
+          [['gleam']]
+        ),
+        items: { type: 'string', pattern: PLUGIN_FILE_TYPE_RE.source }
+      })
   })
   .superRefine((release, ctx) => {
     for (const [index, type] of release.types.entries()) {
@@ -71,6 +124,10 @@ export const pluginCatalogReleaseSchema = z
         })
       }
     }
+  })
+  .meta({
+    id: 'CatalogRelease',
+    description: 'The exact release the catalog vouches for. Orca refuses bytes that differ.'
   })
 
 export type PluginCatalogRelease = z.infer<typeof pluginCatalogReleaseSchema>
