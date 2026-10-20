@@ -1,9 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Blocks, RefreshCw, SearchX } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { Blocks } from 'lucide-react'
 import type { PluginHostListEntry } from '../../../../preload/api-types'
 import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip'
 import {
   PluginCatalogLayout,
   type PluginCatalogFilter
@@ -21,7 +20,9 @@ import { PluginMarketplacePreviewDialog } from './PluginMarketplacePreviewDialog
 import { PluginMarketplaceSourceDialog } from './PluginMarketplaceSourceDialog'
 import { usePluginCatalog } from './use-plugin-catalog'
 import { CatalogNotice, PluginCatalogGroups } from './PluginCatalogGroups'
-import { PluginFilterPopover } from './PluginFilterPopover'
+import { PluginListToolbar } from './PluginListToolbar'
+import { PluginNoMatches, PluginPageMissing } from './PluginListEmptyStates'
+import { sortByAttention } from './plugin-status-presentation'
 import { PluginUpdateAllDialog } from './PluginUpdateAllDialog'
 import {
   matchesPluginFilter,
@@ -31,7 +32,7 @@ import {
   type PluginListFilter
 } from '../plugin-catalog/plugin-list-filter'
 import { PluginDetailPage } from './PluginDetailPage'
-import { useOrcaVersion, usePluginPageNavigation } from './use-plugin-page-navigation'
+import { useOrcaVersion, type PluginPageNavigation } from './use-plugin-page-navigation'
 import type { PluginLogsState } from './use-plugin-logs'
 
 function resultCountLabel(count: number): string {
@@ -52,14 +53,17 @@ type PluginManagerProps = {
   busyPluginKeys: ReadonlySet<string>
   handlers: Omit<InstalledRowHandlers, 'onCheckUpdate'>
   onRefreshInstalled: () => Promise<void>
-  onInstalled: (pluginKey: string) => Promise<void>
+  /** Reloads after an install or update and opens review for any that now need it. */
+  onInstalled: (pluginKeys: string | readonly string[]) => Promise<void>
   logsByPlugin: Readonly<Record<string, PluginLogsState>>
   onShowLogs: (pluginKey: string) => void
   onOpenShortcuts: () => void
-  /** A plugin page replaces the whole pane body, so the parent hides its other blocks. */
-  onPageOpenChange: (open: boolean) => void
+  /** Which plugin's page is open; owned by the pane, which hides its header and cards for it. */
+  page: PluginPageNavigation
   sourcesOpen: boolean
   setSourcesOpen: (open: boolean) => void
+  /** Shown under the list unless a search or filter is narrowing it. */
+  footer?: React.ReactNode
 }
 
 export function PluginManager({
@@ -73,30 +77,42 @@ export function PluginManager({
   logsByPlugin,
   onShowLogs,
   onOpenShortcuts,
-  onPageOpenChange,
+  page,
   sourcesOpen,
-  setSourcesOpen
+  setSourcesOpen,
+  footer
 }: PluginManagerProps): React.JSX.Element {
   const [search, setSearch] = useState('')
-  const [filter, setFilter] = useState<PluginCatalogFilter>('all')
+  const [chosenTab, setTab] = useState<PluginCatalogFilter>('all')
   const [listFilter, setListFilter] = useState<PluginListFilter>(NO_PLUGIN_LIST_FILTER)
+  // Why a count: each open mounts a fresh dialog, so its previews and results start clean.
+  const [updateAllOpens, setUpdateAllOpens] = useState(0)
   const [updateAllOpen, setUpdateAllOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(() => new Set())
   const catalog = usePluginCatalog({ installedPlugins: plugins, onInstalled, onRefreshInstalled })
-  const { openKey, open, back } = usePluginPageNavigation()
+  const { openKey, open, back } = page
   const orcaVersion = useOrcaVersion()
-  useEffect(() => onPageOpenChange(openKey !== null), [openKey, onPageOpenChange])
 
-  const entries = useMemo(
-    () => buildPluginListEntries(plugins, catalog.listings),
-    [plugins, catalog.listings]
-  )
+  const entries = useMemo(() => {
+    const built = buildPluginListEntries(plugins, catalog.listings, {
+      sources: catalog.sources,
+      orcaVersion
+    })
+    return {
+      ...built,
+      installed: sortByAttention(built.installed, (entry) => Boolean(entry.updateVersion))
+    }
+  }, [plugins, catalog.listings, catalog.sources, orcaVersion])
   const query = search.trim()
-  const narrowed = Boolean(query) || pluginFilterSize(listFilter) > 0
+  const filterSize = pluginFilterSize(listFilter)
+  const narrowed = Boolean(query) || filterSize > 0
   const matches = (entry: PluginListEntry): boolean =>
     matchesPluginSearch(entry, query) && matchesPluginFilter(entry, listFilter)
   const installed = entries.installed.filter(matches)
   const updates = entries.installed.filter((entry) => entry.updateVersion)
+  // Why: once the last update lands the Updates tab is gone, so the list falls back to Installed.
+  const filter: PluginCatalogFilter =
+    chosenTab === 'updates' && updates.length === 0 ? 'installed' : chosenTab
   const visibleInstalled = filter === 'updates' ? updates.filter(matches) : installed
   const capped = (groupId: string, rows: PluginListEntry[]): PluginListEntry[] =>
     narrowed || filter !== 'all' || expandedGroups.has(groupId)
@@ -175,15 +191,7 @@ export function PluginManager({
           : translate('auto.components.settings.PluginManager.installed', 'Installed')
       }
       showHeading={filter === 'all'}
-      aside={
-        filter === 'updates' && updates.length > 0 ? (
-          <Button variant="outline" size="xs" onClick={() => setUpdateAllOpen(true)}>
-            {translate('auto.components.settings.PluginManager.updateAll', 'Update all…')}
-          </Button>
-        ) : (
-          String(visibleInstalled.length)
-        )
-      }
+      aside={String(visibleInstalled.length)}
       hiddenCount={visibleInstalled.length - capped('installed', visibleInstalled).length}
       onShowAll={showAll('installed')}
     >
@@ -195,22 +203,15 @@ export function PluginManager({
     ? ([...entries.installed, ...entries.available].find((entry) => entry.pluginKey === openKey) ??
       null)
     : null
-  // Why: a plugin removed while its page is open closes the page, so a reinstall starts fresh.
-  const pageGone = openKey !== null && openedEntry === null && !pluginsLoading && !catalog.loading
-  useEffect(() => {
-    if (pageGone) {
-      back()
-    }
-  }, [pageGone, back])
   const dialogs = (
     <>
       <PluginUpdateAllDialog
+        key={updateAllOpens}
         open={updateAllOpen}
         entries={updates}
+        orcaVersion={orcaVersion}
         onClose={() => setUpdateAllOpen(false)}
-        onUpdated={async () => {
-          await onRefreshInstalled()
-        }}
+        onUpdated={onInstalled}
       />
       <PluginMarketplaceSourceDialog
         open={sourcesOpen}
@@ -233,6 +234,14 @@ export function PluginManager({
       />
     </>
   )
+  if (openKey && !openedEntry) {
+    return (
+      <>
+        <PluginPageMissing loading={pluginsLoading || catalog.loading} onBack={back} />
+        {dialogs}
+      </>
+    )
+  }
   if (openedEntry) {
     return (
       <>
@@ -263,66 +272,48 @@ export function PluginManager({
     <>
       <PluginCatalogLayout
         filter={filter}
-        onFilterChange={setFilter}
+        onFilterChange={setTab}
         search={search}
         onSearchChange={setSearch}
         installedCount={plugins.length}
         updateCount={updates.length}
         toolbar={
-          <>
-            <PluginFilterPopover
-              filter={listFilter}
-              categories={pluginFilterCategories([...entries.installed, ...entries.available])}
-              sources={catalog.sources}
-              onChange={setListFilter}
-            />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  disabled={catalog.refreshBusy}
-                  aria-label={translate(
-                    'auto.components.settings.PluginManager.refreshLabel',
-                    'Refresh catalogs'
-                  )}
-                  onClick={() => void catalog.refresh()}
-                >
-                  <RefreshCw className={catalog.refreshBusy ? 'animate-spin' : undefined} />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={4}>
-                {translate(
-                  'auto.components.settings.PluginManager.refreshLabel',
-                  'Refresh catalogs'
-                )}
-              </TooltipContent>
-            </Tooltip>
-          </>
+          <PluginListToolbar
+            updateCount={filter === 'updates' ? updates.length : 0}
+            onUpdateAll={() => {
+              setUpdateAllOpens((count) => count + 1)
+              setUpdateAllOpen(true)
+            }}
+            filter={listFilter}
+            categories={pluginFilterCategories([...entries.installed, ...entries.available])}
+            sources={catalog.sources}
+            onFilterChange={setListFilter}
+            refreshBusy={catalog.refreshBusy}
+            onRefresh={() => void catalog.refresh()}
+          />
         }
       >
-        {nothingMatches ? (
-          <PluginCatalogEmptyState
-            icon={SearchX}
-            title={translate(
-              'auto.components.settings.PluginManager.noResultsTitle',
-              'No plugins match “{{value0}}”',
-              {
-                value0: query
-              }
-            )}
-            description={translate(
-              'auto.components.settings.PluginManager.noResults',
-              'Search looks at names, descriptions, publishers and categories.'
-            )}
-            action={
-              <Button variant="outline" size="sm" onClick={() => setSearch('')}>
-                {translate(
-                  'auto.components.settings.PluginMarketplaceBrowser.clearSearch',
-                  'Clear search'
-                )}
+        {catalog.error && catalog.sources.length > 0 ? (
+          <CatalogNotice
+            standalone
+            tone="error"
+            title={catalog.error}
+            body=""
+            actions={
+              <Button variant="ghost" size="xs" onClick={() => void catalog.refresh()}>
+                {translate('auto.components.settings.PluginManager.retry', 'Retry')}
               </Button>
             }
+          />
+        ) : null}
+        {nothingMatches ? (
+          <PluginNoMatches
+            query={query}
+            filtered={filterSize > 0}
+            onClear={() => {
+              setSearch('')
+              setListFilter(NO_PLUGIN_LIST_FILTER)
+            }}
           />
         ) : filter !== 'all' &&
           !pluginsLoading &&
@@ -339,7 +330,7 @@ export function PluginManager({
               'Browse the catalog for themes, languages and commands, or add one from a folder or Git.'
             )}
             action={
-              <Button variant="outline" size="sm" onClick={() => setFilter('all')}>
+              <Button variant="outline" size="sm" onClick={() => setTab('all')}>
                 {translate(
                   'auto.components.settings.PluginManager.browseAll',
                   'Browse all plugins'
@@ -365,13 +356,14 @@ export function PluginManager({
           </div>
         )}
         <p className="sr-only" aria-live="polite">
-          {query
+          {narrowed
             ? resultCountLabel(
                 visibleInstalled.length + (filter === 'all' ? visibleAvailableCount : 0)
               )
             : ''}
         </p>
       </PluginCatalogLayout>
+      {narrowed ? null : footer}
       {dialogs}
     </>
   )

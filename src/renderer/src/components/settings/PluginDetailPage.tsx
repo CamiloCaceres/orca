@@ -7,9 +7,11 @@ import { Button } from '../ui/button'
 import { PluginCatalogAvatar } from '../plugin-catalog/PluginCatalogAvatar'
 import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
 import { PluginDetailInfo, PluginReleaseNotes } from './PluginDetailInfo'
-import { PluginAccessSection, PluginAddsSection, PluginLogsSection } from './PluginDetailSections'
+import { PluginAddsSection } from './PluginAddsSection'
+import { PluginAccessSection, PluginLogsSection } from './PluginDetailSections'
 import { installedPluginControls, type InstalledRowHandlers } from './PluginManagerRows'
-import { PluginChips } from './plugin-row-parts'
+import { PluginChips } from '../plugin-catalog/PluginChips'
+import type { PluginPagePreview } from './use-plugin-catalog'
 import type { PluginLogsState } from './use-plugin-logs'
 
 type PluginDetailPageProps = {
@@ -18,9 +20,7 @@ type PluginDetailPageProps = {
   orcaVersion: string | null
   logsState: PluginLogsState | undefined
   handlers: InstalledRowHandlers
-  fetchPreview: (
-    listing: NonNullable<PluginListEntry['listing']>
-  ) => Promise<PluginMarketplaceHostInstallPreview | null>
+  fetchPreview: (listing: NonNullable<PluginListEntry['listing']>) => Promise<PluginPagePreview>
   onInstall: (entry: PluginListEntry) => void
   onBack: () => void
   onOpenShortcuts: () => void
@@ -90,6 +90,8 @@ export function PluginDetailPage({
   const listing = entry.listing
   const [preview, setPreview] = useState<PluginMarketplaceHostInstallPreview | null>(null)
   const [previewLoading, setPreviewLoading] = useState(!plugin && Boolean(listing))
+  const [previewFailed, setPreviewFailed] = useState(false)
+  const [previewAttempt, setPreviewAttempt] = useState(0)
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -102,22 +104,25 @@ export function PluginDetailPage({
     }
     let stale = false
     setPreviewLoading(true)
-    void fetchPreview(listing).then((next) => {
+    setPreviewFailed(false)
+    void fetchPreview(listing).then((result) => {
       if (!stale) {
-        setPreview(next)
+        setPreview(result.ok ? result.preview : null)
+        setPreviewFailed(!result.ok)
         setPreviewLoading(false)
       }
     })
     return () => {
       stale = true
     }
-  }, [plugin, listing, fetchPreview])
+  }, [plugin, listing, fetchPreview, previewAttempt])
 
   const controls = plugin
     ? installedPluginControls(plugin, entry, {
         busy,
         canCheckUpdate: plugin.source?.kind === 'marketplace' && Boolean(listing),
-        handlers
+        handlers,
+        inPage: true
       })
     : null
   const tooNew =
@@ -271,10 +276,12 @@ export function PluginDetailPage({
                 kind: capability.kind,
                 description: capability.kind
               })) ??
-              (previewLoading ? null : [])
+              null
             }
             runsCode={plugin?.hasWorker ?? entry.types.includes('worker')}
             loading={previewLoading}
+            failed={!plugin && previewFailed}
+            onRetry={() => setPreviewAttempt((attempt) => attempt + 1)}
           />
           <PluginReleaseNotes entry={entry} />
           {plugin?.hasWorker ? <PluginLogsSection state={logsState} /> : null}

@@ -9,6 +9,7 @@ import type {
   PluginMarketplaceHostSourceState
 } from '../../../../preload/api-types'
 import { PLUGIN_GROUP_ROW_CAP, PluginManager } from './PluginManager'
+import { usePluginPageNavigation } from './use-plugin-page-navigation'
 import type * as PreviewDialogModule from './PluginMarketplacePreviewDialog'
 
 vi.mock('../ui/tooltip', () => ({
@@ -116,36 +117,41 @@ function installApi(overrides: Record<string, unknown> = {}): void {
   })
 }
 
+function Harness({ plugins }: { plugins: PluginHostListEntry[] }): React.JSX.Element {
+  const page = usePluginPageNavigation()
+  return (
+    <PluginManager
+      plugins={plugins}
+      pluginsLoading={false}
+      pluginsError={null}
+      busyPluginKeys={new Set()}
+      handlers={{
+        onOpen: vi.fn(),
+        onReview: vi.fn(),
+        onToggleEnabled: vi.fn(),
+        onRestart: vi.fn(),
+        onViewLogs: vi.fn(),
+        onRollbackRequest: vi.fn(),
+        onRemoveRequest: vi.fn()
+      }}
+      onRefreshInstalled={vi.fn().mockResolvedValue(undefined)}
+      onInstalled={vi.fn().mockResolvedValue(undefined)}
+      logsByPlugin={{}}
+      onShowLogs={vi.fn()}
+      onOpenShortcuts={vi.fn()}
+      page={page}
+      sourcesOpen={false}
+      setSourcesOpen={vi.fn()}
+    />
+  )
+}
+
 async function render(plugins: PluginHostListEntry[] = [installedPlugin]): Promise<HTMLDivElement> {
   const container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
   await act(async () => {
-    root?.render(
-      <PluginManager
-        plugins={plugins}
-        pluginsLoading={false}
-        pluginsError={null}
-        busyPluginKeys={new Set()}
-        handlers={{
-          onOpen: vi.fn(),
-          onReview: vi.fn(),
-          onToggleEnabled: vi.fn(),
-          onRestart: vi.fn(),
-          onViewLogs: vi.fn(),
-          onRollbackRequest: vi.fn(),
-          onRemoveRequest: vi.fn()
-        }}
-        onRefreshInstalled={vi.fn().mockResolvedValue(undefined)}
-        onInstalled={vi.fn().mockResolvedValue(undefined)}
-        logsByPlugin={{}}
-        onShowLogs={vi.fn()}
-        onOpenShortcuts={vi.fn()}
-        onPageOpenChange={vi.fn()}
-        sourcesOpen={false}
-        setSourcesOpen={vi.fn()}
-      />
-    )
+    root?.render(<Harness plugins={plugins} />)
   })
   return container
 }

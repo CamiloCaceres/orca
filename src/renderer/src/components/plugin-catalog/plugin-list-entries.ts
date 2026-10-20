@@ -1,7 +1,9 @@
 import type {
   PluginHostListEntry,
-  PluginMarketplaceHostListing
+  PluginMarketplaceHostListing,
+  PluginMarketplaceHostSourceState
 } from '../../../../preload/api-types'
+import { satisfiesOrcaEngineRange } from '../../../../shared/plugins/plugin-manifest'
 import type { PluginCatalogType } from '../../../../shared/plugins/plugin-catalog-release'
 import { compareAppVersions } from '../../../../shared/app-version'
 import { pluginDisplayNameFromKey } from './plugin-display-name'
@@ -19,8 +21,10 @@ export type PluginListEntry = {
   types: readonly PluginCatalogType[]
   /** Oldest Orca the catalog release supports, e.g. "1.6.0". */
   minimumOrca: string | null
-  /** A newer catalog version than the installed one, if any. */
+  /** A newer catalog version than the installed one that this Orca can run, if any. */
   updateVersion: string | null
+  /** Every catalog that lists this plugin, for filtering by catalog. */
+  catalogIds: readonly string[]
   installed: PluginHostListEntry | null
   listing: PluginMarketplaceHostListing | null
 }
@@ -32,10 +36,16 @@ function catalogVersion(listing: PluginMarketplaceHostListing): string | null {
 
 function newerCatalogVersion(
   plugin: PluginHostListEntry,
-  listing: PluginMarketplaceHostListing | null
+  listing: PluginMarketplaceHostListing | null,
+  orcaVersion: string | null
 ): string | null {
   const version = listing ? catalogVersion(listing) : null
   if (!version || plugin.source?.kind !== 'marketplace') {
+    return null
+  }
+  const minimumOrca = listing?.release?.minimumOrca
+  // Why: an update this Orca can't run isn't one to offer; Orca itself needs updating first.
+  if (minimumOrca && orcaVersion && !satisfiesOrcaEngineRange(orcaVersion, `>=${minimumOrca}`)) {
     return null
   }
   return compareAppVersions(version, plugin.version) > 0 ? version : null
@@ -43,7 +53,11 @@ function newerCatalogVersion(
 
 export function pluginListEntryFromInstalled(
   plugin: PluginHostListEntry,
-  listing: PluginMarketplaceHostListing | null = null
+  listing: PluginMarketplaceHostListing | null = null,
+  {
+    catalogIds = [],
+    orcaVersion = null
+  }: { catalogIds?: readonly string[]; orcaVersion?: string | null } = {}
 ): PluginListEntry {
   return {
     pluginKey: plugin.pluginKey,
@@ -55,13 +69,17 @@ export function pluginListEntryFromInstalled(
     categories: listing?.categories ?? [],
     types: listing?.release?.types ?? [],
     minimumOrca: listing?.release?.minimumOrca ?? null,
-    updateVersion: newerCatalogVersion(plugin, listing),
+    updateVersion: newerCatalogVersion(plugin, listing, orcaVersion),
+    catalogIds,
     installed: plugin,
     listing
   }
 }
 
-export function pluginListEntryFromListing(listing: PluginMarketplaceHostListing): PluginListEntry {
+export function pluginListEntryFromListing(
+  listing: PluginMarketplaceHostListing,
+  catalogIds: readonly string[] = [listing.marketplaceSourceId]
+): PluginListEntry {
   return {
     pluginKey: listing.pluginKey,
     // Why: older catalogs carry no release name; the key is the only name they have.
@@ -74,33 +92,63 @@ export function pluginListEntryFromListing(listing: PluginMarketplaceHostListing
     types: listing.release?.types ?? [],
     minimumOrca: listing.release?.minimumOrca ?? null,
     updateVersion: null,
+    catalogIds,
     installed: null,
     listing
   }
 }
 
+/** The listing from the catalog a plugin was installed from, else the first that lists it. */
+function sourceListing(
+  plugin: PluginHostListEntry,
+  candidates: readonly PluginMarketplaceHostListing[],
+  catalogUrlById: ReadonlyMap<string, string>
+): PluginMarketplaceHostListing | null {
+  const installedFrom = plugin.source?.marketplace?.reference
+  return (
+    (installedFrom
+      ? candidates.find(
+          (listing) => catalogUrlById.get(listing.marketplaceSourceId) === installedFrom
+        )
+      : undefined) ??
+    candidates[0] ??
+    null
+  )
+}
+
 /**
- * Installed plugins first (joined to their listing when a catalog has one), then catalog
- * plugins not installed. A plugin listed by two catalogs keeps the first listing.
+ * Installed plugins first, each joined to the catalog it came from, then catalog plugins not
+ * installed. A plugin listed by two catalogs shows once, under the first.
  */
 export function buildPluginListEntries(
   installed: readonly PluginHostListEntry[],
-  listings: readonly PluginMarketplaceHostListing[]
+  listings: readonly PluginMarketplaceHostListing[],
+  {
+    sources = [],
+    orcaVersion = null
+  }: { sources?: readonly PluginMarketplaceHostSourceState[]; orcaVersion?: string | null } = {}
 ): { installed: PluginListEntry[]; available: PluginListEntry[] } {
-  const listingByKey = new Map<string, PluginMarketplaceHostListing>()
+  const listingsByKey = new Map<string, PluginMarketplaceHostListing[]>()
   for (const listing of listings) {
-    if (!listingByKey.has(listing.pluginKey)) {
-      listingByKey.set(listing.pluginKey, listing)
-    }
+    listingsByKey.set(listing.pluginKey, [...(listingsByKey.get(listing.pluginKey) ?? []), listing])
   }
+  const catalogUrlById = new Map(sources.map((source) => [source.id, source.source.url]))
+  const catalogIdsOf = (pluginKey: string): string[] =>
+    (listingsByKey.get(pluginKey) ?? []).map((listing) => listing.marketplaceSourceId)
   const installedKeys = new Set(installed.map((plugin) => plugin.pluginKey))
   return {
     installed: installed.map((plugin) =>
-      pluginListEntryFromInstalled(plugin, listingByKey.get(plugin.pluginKey) ?? null)
+      pluginListEntryFromInstalled(
+        plugin,
+        sourceListing(plugin, listingsByKey.get(plugin.pluginKey) ?? [], catalogUrlById),
+        { catalogIds: catalogIdsOf(plugin.pluginKey), orcaVersion }
+      )
     ),
-    available: [...listingByKey.values()]
-      .filter((listing) => !installedKeys.has(listing.pluginKey))
-      .map(pluginListEntryFromListing)
+    available: [...listingsByKey.entries()]
+      .filter(([pluginKey]) => !installedKeys.has(pluginKey))
+      .map(([pluginKey, candidates]) =>
+        pluginListEntryFromListing(candidates[0], catalogIdsOf(pluginKey))
+      )
   }
 }
 

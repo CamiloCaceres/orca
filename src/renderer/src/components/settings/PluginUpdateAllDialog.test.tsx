@@ -52,13 +52,18 @@ function entry(pluginKey: string, kinds: string[]): PluginListEntry {
     categories: [],
     types: [],
     minimumOrca: null,
+    catalogIds: [],
     updateVersion: '1.1.0',
     installed: plugin,
     listing: null
   }
 }
 
-function preview(pluginKey: string, kinds: string[]): PluginMarketplaceHostInstallPreview {
+function preview(
+  pluginKey: string,
+  kinds: string[],
+  orca?: string
+): PluginMarketplaceHostInstallPreview {
   // oxlint-disable-next-line typescript/consistent-type-assertions -- SAFETY: partial fixture of a wide wire type; the dialog reads only the fields set here.
   return {
     marketplaceSourceId: 'official',
@@ -66,7 +71,11 @@ function preview(pluginKey: string, kinds: string[]): PluginMarketplaceHostInsta
     pluginKey,
     resolvedCommit: 'r',
     contentHash: 'h',
-    manifest: { version: '1.1.0', capabilities: kinds.map((kind) => ({ kind })) }
+    manifest: {
+      version: '1.1.0',
+      capabilities: kinds.map((kind) => ({ kind })),
+      ...(orca ? { engines: { orca } } : {})
+    }
   } as unknown as PluginMarketplaceHostInstallPreview
 }
 
@@ -76,6 +85,37 @@ afterEach(() => {
   root = null
   document.body.innerHTML = ''
 })
+
+function installApi(plugins: Record<string, unknown>): void {
+  Object.defineProperty(window, 'api', { configurable: true, value: { plugins } })
+}
+
+async function renderDialog(
+  entries: PluginListEntry[],
+  props: { onUpdated?: (keys: string[]) => Promise<void>; orcaVersion?: string } = {}
+): Promise<HTMLDivElement> {
+  const container = document.createElement('div')
+  document.body.appendChild(container)
+  root = createRoot(container)
+  await act(async () => {
+    root?.render(
+      <PluginUpdateAllDialog
+        open
+        entries={entries}
+        orcaVersion={props.orcaVersion}
+        onClose={vi.fn()}
+        onUpdated={props.onUpdated ?? vi.fn().mockResolvedValue(undefined)}
+      />
+    )
+  })
+  return container
+}
+
+function button(container: HTMLElement, text: string): HTMLButtonElement | undefined {
+  return Array.from(container.querySelectorAll('button')).find(
+    (candidate) => candidate.textContent === text
+  )
+}
 
 describe('PluginUpdateAllDialog', () => {
   it('names only access the installed version lacks', () => {
@@ -126,5 +166,87 @@ describe('PluginUpdateAllDialog', () => {
       expect.objectContaining({ pluginKey: 'b' })
     )
     expect(onUpdated).toHaveBeenCalledWith(['b'])
+  })
+
+  it('reads each update once, however often the parent re-renders', async () => {
+    const previewMarketplaceUpdate = vi.fn(({ pluginKey }: { pluginKey: string }) =>
+      Promise.resolve(preview(pluginKey, []))
+    )
+    installApi({ previewMarketplaceUpdate, installMarketplacePlugin: vi.fn() })
+    const onUpdated = vi.fn().mockResolvedValue(undefined)
+    await renderDialog([entry('a', []), entry('b', [])], { onUpdated })
+    for (let index = 0; index < 3; index += 1) {
+      await act(async () => {
+        root?.render(
+          <PluginUpdateAllDialog
+            open
+            entries={[entry('a', []), entry('b', [])]}
+            onClose={vi.fn()}
+            onUpdated={onUpdated}
+          />
+        )
+      })
+    }
+    expect(previewMarketplaceUpdate).toHaveBeenCalledTimes(2)
+  })
+
+  it('names what failed, keeps what updated, and retries only the failures', async () => {
+    const installMarketplacePlugin = vi.fn(({ pluginKey }: { pluginKey: string }) =>
+      Promise.resolve(pluginKey === 'a' ? { ok: false, error: 'boom' } : { ok: true, pluginKey })
+    )
+    installApi({
+      previewMarketplaceUpdate: vi.fn(({ pluginKey }: { pluginKey: string }) =>
+        Promise.resolve(preview(pluginKey, []))
+      ),
+      installMarketplacePlugin
+    })
+    const onUpdated = vi.fn().mockResolvedValue(undefined)
+    const container = await renderDialog([entry('a', []), entry('b', [])], { onUpdated })
+
+    await act(async () => button(container, 'Update 2 plugins')?.click())
+    expect(container.textContent).toContain('Couldn’t update a. The others were updated.')
+    expect(onUpdated).toHaveBeenCalledWith(['b'])
+    expect(container.querySelector('[data-plugin-update="b"]')?.textContent).toContain('Updated')
+
+    installMarketplacePlugin.mockClear()
+    await act(async () => button(container, 'Try again')?.click())
+    expect(installMarketplacePlugin).toHaveBeenCalledTimes(1)
+    expect(installMarketplacePlugin).toHaveBeenCalledWith(
+      expect.objectContaining({ pluginKey: 'a' })
+    )
+  })
+
+  it('says nothing was updated when every update fails', async () => {
+    installApi({
+      previewMarketplaceUpdate: vi.fn(({ pluginKey }: { pluginKey: string }) =>
+        Promise.resolve(preview(pluginKey, []))
+      ),
+      installMarketplacePlugin: vi.fn().mockRejectedValue(new Error('offline'))
+    })
+    const onUpdated = vi.fn().mockResolvedValue(undefined)
+    const container = await renderDialog([entry('a', []), entry('b', [])], { onUpdated })
+
+    await act(async () => button(container, 'Update 2 plugins')?.click())
+    expect(container.textContent).toContain('Couldn’t update a, b. Nothing was updated.')
+    expect(container.textContent).not.toContain('The others were updated.')
+    expect(onUpdated).not.toHaveBeenCalled()
+  })
+
+  it('lists an update that needs a newer Orca without offering it', async () => {
+    installApi({
+      previewMarketplaceUpdate: vi.fn(({ pluginKey }: { pluginKey: string }) =>
+        Promise.resolve(preview(pluginKey, [], pluginKey === 'a' ? '>=9.0.0' : '>=1.0.0'))
+      ),
+      installMarketplacePlugin: vi.fn()
+    })
+    const container = await renderDialog([entry('a', []), entry('b', [])], {
+      orcaVersion: '1.4.0'
+    })
+
+    expect(container.textContent).toContain('Needs Orca 9.0.0 or later.')
+    const checkbox = container.querySelector<HTMLButtonElement>('#plugin-update-a')
+    expect(checkbox?.disabled).toBe(true)
+    expect(checkbox?.getAttribute('aria-checked')).toBe('false')
+    expect(button(container, 'Update 1 plugin')).toBeDefined()
   })
 })

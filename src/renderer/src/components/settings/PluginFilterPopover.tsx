@@ -4,7 +4,14 @@ import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover'
-import { pluginFilterSize, type PluginListFilter } from '../plugin-catalog/plugin-list-filter'
+import {
+  isPluginFilterKind,
+  NO_PLUGIN_LIST_FILTER,
+  pluginFilterSize,
+  type PluginFilterKind,
+  type PluginListFilter
+} from '../plugin-catalog/plugin-list-filter'
+import { pluginDisplayNameFromKey } from '../plugin-catalog/plugin-display-name'
 
 function toggled(set: ReadonlySet<string>, value: string, on: boolean): Set<string> {
   const next = new Set(set)
@@ -14,6 +21,29 @@ function toggled(set: ReadonlySet<string>, value: string, on: boolean): Set<stri
     next.delete(value)
   }
   return next
+}
+
+function kindLabel(kind: PluginFilterKind): string {
+  switch (kind) {
+    case 'themes':
+      return translate('auto.components.settings.PluginFilterPopover.themes', 'Themes')
+    case 'languages':
+      return translate('auto.components.settings.PluginFilterPopover.languages', 'Languages')
+    case 'icons':
+      return translate('auto.components.settings.PluginFilterPopover.icons', 'Icons')
+    case 'commands':
+      return translate('auto.components.settings.PluginFilterPopover.commands', 'Commands & panels')
+    case 'machines':
+      return translate(
+        'auto.components.settings.PluginFilterPopover.machines',
+        'Machines & recipes'
+      )
+  }
+}
+
+// Why: unknown catalog categories are slugs ("music-tools"); show them as words.
+function categoryLabel(category: string): string {
+  return isPluginFilterKind(category) ? kindLabel(category) : pluginDisplayNameFromKey(category)
 }
 
 function FilterOption({
@@ -78,7 +108,7 @@ export function PluginFilterPopover({
               <FilterOption
                 key={category}
                 id={`plugin-filter-category-${category}`}
-                label={category}
+                label={categoryLabel(category)}
                 count={count}
                 checked={filter.categories.has(category)}
                 onChange={(on) =>
@@ -88,7 +118,7 @@ export function PluginFilterPopover({
             ))}
           </div>
         ) : null}
-        {sources.length > 1 ? (
+        {sources.length > 0 ? (
           <div
             role="group"
             aria-label={translate(
@@ -113,18 +143,17 @@ export function PluginFilterPopover({
             ))}
           </div>
         ) : null}
-        {active > 0 ? (
-          <div className="mt-1 border-t border-border pt-1">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="w-full justify-start"
-              onClick={() => onChange({ categories: new Set(), sourceIds: new Set() })}
-            >
-              {translate('auto.components.settings.PluginFilterPopover.clear', 'Clear filters')}
-            </Button>
-          </div>
-        ) : null}
+        <div className="mt-1 border-t border-border pt-1">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start"
+            disabled={active === 0}
+            onClick={() => onChange(NO_PLUGIN_LIST_FILTER)}
+          >
+            {translate('auto.components.settings.PluginFilterPopover.clear', 'Clear filters')}
+          </Button>
+        </div>
       </PopoverContent>
     </Popover>
   )

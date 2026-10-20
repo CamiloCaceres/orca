@@ -22,19 +22,23 @@ export function CatalogNotice({
   tone,
   title,
   body,
-  actions
+  actions,
+  standalone = false
 }: {
   tone: 'warning' | 'error'
   title: string
   body: string
   actions: React.ReactNode
+  /** Its own card, not a strip under a group heading. */
+  standalone?: boolean
 }): React.JSX.Element {
   const Icon = tone === 'warning' ? AlertTriangle : CircleAlert
   return (
     <div
       role="status"
       data-tone={tone}
-      className="flex items-start gap-2.5 border-t border-border px-4 py-2.5 text-xs data-[tone=warning]:bg-status-warning/7"
+      data-standalone={standalone}
+      className="flex items-start gap-2.5 border-t border-border px-4 py-2.5 text-xs data-[standalone=true]:rounded-xl data-[standalone=true]:border data-[standalone=true]:border-border/50 data-[standalone=true]:bg-card/50 data-[tone=warning]:bg-status-warning/7"
     >
       <Icon
         data-tone={tone}
@@ -75,9 +79,8 @@ export function PluginCatalogGroups({
   openSources: () => void
   orcaVersion: string | null
 }): React.JSX.Element | null {
-  const entries = { available }
   const availableBySource = catalog.sources.map((source) => {
-    const rows = entries.available.filter(
+    const rows = available.filter(
       (entry) => entry.listing?.marketplaceSourceId === source.id && matches(entry)
     )
     return { source, rows }
@@ -114,7 +117,7 @@ export function PluginCatalogGroups({
     <>
       {availableBySource.map(({ source, rows }) => {
         const shown = capped(source.id, rows)
-        const listedTotal = entries.available.filter(
+        const listedTotal = available.filter(
           (entry) => entry.listing?.marketplaceSourceId === source.id
         ).length
         if (narrowed && rows.length === 0) {

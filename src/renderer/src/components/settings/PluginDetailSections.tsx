@@ -1,33 +1,8 @@
-import {
-  AlertTriangle,
-  Command,
-  FileCode,
-  Loader2,
-  PanelRight,
-  Server,
-  ShieldCheck
-} from 'lucide-react'
-import type {
-  PluginHostListEntry,
-  PluginMarketplaceHostInstallPreview
-} from '../../../../preload/api-types'
-import { formatKeybinding } from '../../../../shared/keybindings/formatting'
-import type { PluginCatalogType } from '../../../../shared/plugins/plugin-catalog-release'
+import { AlertTriangle, Loader2, RotateCw, ShieldCheck } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
-import { useAppStore } from '@/store'
-import { ShortcutKeyCombo } from '../ShortcutKeyCombo'
 import { Button } from '../ui/button'
-import { shadowedKeybindingTitles } from './PluginKeybindingConsentPreview'
 import { pluginCapabilityDescription } from './plugin-capability-presentation'
-import { contributionSummary } from './PluginMarketplacePreviewDialog'
 import type { PluginLogsState } from './use-plugin-logs'
-
-function shortcutPlatform(): NodeJS.Platform {
-  if (navigator.userAgent.includes('Mac')) {
-    return 'darwin'
-  }
-  return navigator.userAgent.includes('Windows') ? 'win32' : 'linux'
-}
 
 export function DetailSection({
   title,
@@ -51,7 +26,7 @@ export function DetailSection({
   )
 }
 
-function DetailRow({
+export function DetailRow({
   icon,
   title,
   detail,
@@ -61,7 +36,7 @@ function DetailRow({
   icon: React.ReactNode
   title: string
   detail?: React.ReactNode
-  detailTone?: 'default' | 'warning'
+  detailTone?: 'default' | 'warning' | 'destructive'
   trailing?: React.ReactNode
 }): React.JSX.Element {
   return (
@@ -74,7 +49,7 @@ function DetailRow({
         {detail ? (
           <p
             data-tone={detailTone}
-            className="mt-px text-xs text-muted-foreground data-[tone=warning]:text-status-warning"
+            className="mt-px text-xs text-muted-foreground data-[tone=destructive]:text-destructive data-[tone=warning]:text-status-warning"
           >
             {detail}
           </p>
@@ -85,179 +60,48 @@ function DetailRow({
   )
 }
 
-function catalogTypeLabel(type: PluginCatalogType): string {
-  switch (type) {
-    case 'interface-language':
-      return translate(
-        'auto.components.settings.PluginDetailSections.typeLanguagePack',
-        'Interface language'
-      )
-    case 'app-theme':
-      return translate('auto.components.settings.PluginDetailSections.typeAppTheme', 'App theme')
-    case 'terminal-theme':
-      return translate(
-        'auto.components.settings.PluginDetailSections.typeTerminalTheme',
-        'Terminal theme'
-      )
-    case 'icon-theme':
-      return translate(
-        'auto.components.settings.PluginDetailSections.typeIconTheme',
-        'File icon theme'
-      )
-    case 'syntax':
-      return translate(
-        'auto.components.settings.PluginDetailSections.typeSyntax',
-        'Syntax highlighting'
-      )
-    case 'instructions':
-      return translate(
-        'auto.components.settings.PluginDetailSections.typeInstructions',
-        'Agent instructions'
-      )
-    case 'panel':
-      return translate('auto.components.settings.PluginDetailSections.typePanel', 'Sidebar panel')
-    case 'worker':
-      return translate(
-        'auto.components.settings.PluginDetailSections.typeWorker',
-        'Background code'
-      )
-  }
-}
-
-/** What the plugin adds: commands with their shortcuts, panels, recipes, then catalog types. */
-export function PluginAddsSection({
-  plugin,
-  preview,
-  types,
-  onOpenShortcuts
-}: {
-  plugin: PluginHostListEntry | null
-  preview: PluginMarketplaceHostInstallPreview | null
-  types: readonly PluginCatalogType[]
-  onOpenShortcuts: () => void
-}): React.JSX.Element | null {
-  const overrides = useAppStore((state) => state.keybindings)
-  const platform = shortcutPlatform()
-  const commands =
-    plugin?.commands ??
-    preview?.manifest.contributes.commands.map((command) => ({
-      id: command.id,
-      title: command.title,
-      context: 'global' as const,
-      keybindings: preview.manifest.contributes.keybindings
-        .filter((binding) => binding.command === command.id)
-        .map((binding) => ({ key: binding.key, when: 'global' as const }))
-    })) ??
-    []
-  const panels =
-    plugin?.panels.map((panel) => panel.title) ??
-    preview?.manifest.contributes.panels.map((panel) => panel.title) ??
-    []
-  const recipes =
-    plugin?.vmRecipes?.map((recipe) => recipe.name) ??
-    preview?.manifest.contributes.vmRecipes.map((recipe) => recipe.path) ??
-    []
-  // Why: a fetched manifest is exact; catalog types are the fallback for an installed plugin.
-  const summary = preview
-    ? contributionSummary(preview).filter(
-        (item) => !['commands', 'keybindings', 'panels', 'vmRecipes'].includes(item.key)
-      )
-    : []
-  const listedTypes = preview ? [] : types.filter((type) => type !== 'panel' && type !== 'worker')
-  const total =
-    commands.length + panels.length + recipes.length + listedTypes.length + summary.length
-  if (total === 0) {
-    return null
-  }
-  return (
-    <DetailSection
-      title={translate('auto.components.settings.PluginDetailSections.adds', 'Adds to Orca')}
-      count={String(total)}
-    >
-      {summary.map((item) => (
-        <DetailRow key={item.key} icon={<FileCode />} title={item.label} />
-      ))}
-      {listedTypes.map((type) => (
-        <DetailRow key={type} icon={<FileCode />} title={catalogTypeLabel(type)} />
-      ))}
-      {commands.map((command) => {
-        const binding = command.keybindings[0]
-        const shadowed = binding ? shadowedKeybindingTitles(binding.key, platform, overrides) : []
-        return (
-          <DetailRow
-            key={command.id}
-            icon={<Command />}
-            title={command.title}
-            detailTone={shadowed.length > 0 ? 'warning' : 'default'}
-            detail={
-              shadowed.length > 0 ? (
-                <>
-                  {translate(
-                    'auto.components.settings.PluginDetailSections.replaces',
-                    'Replaces your shortcut for {{value0}}',
-                    { value0: shadowed.join(', ') }
-                  )}
-                  {' · '}
-                  <Button variant="link" size="xs" onClick={onOpenShortcuts}>
-                    {translate(
-                      'auto.components.settings.PluginDetailSections.changeShortcuts',
-                      'Change in Shortcuts'
-                    )}
-                  </Button>
-                </>
-              ) : binding?.when === 'worktree' ? (
-                translate(
-                  'auto.components.settings.PluginKeybindingConsentPreview.worktree',
-                  'Runs only while a workspace is active.'
-                )
-              ) : (
-                translate('auto.components.settings.PluginDetailSections.command', 'Command')
-              )
-            }
-            trailing={
-              binding ? <ShortcutKeyCombo keys={formatKeybinding(binding.key, platform)} /> : null
-            }
-          />
-        )
-      })}
-      {panels.map((title) => (
-        <DetailRow
-          key={`panel:${title}`}
-          icon={<PanelRight />}
-          title={title}
-          detail={translate('auto.components.settings.PluginDetailSections.panel', 'Sidebar panel')}
-        />
-      ))}
-      {recipes.map((name) => (
-        <DetailRow
-          key={`recipe:${name}`}
-          icon={<Server />}
-          title={name}
-          detail={translate(
-            'auto.components.settings.PluginDetailSections.recipe',
-            'Machine recipe'
-          )}
-        />
-      ))}
-    </DetailSection>
-  )
-}
-
 /** What the plugin can reach, in the consent dialog's words. */
 export function PluginAccessSection({
   capabilities,
   runsCode,
-  loading
+  loading,
+  failed = false,
+  onRetry
 }: {
   capabilities: readonly { kind: string; description: string }[] | null
   runsCode: boolean
   loading: boolean
+  /** The manifest couldn't be read, so nothing is known about its access. */
+  failed?: boolean
+  onRetry?: () => void
 }): React.JSX.Element {
   return (
     <DetailSection
       title={translate('auto.components.settings.PluginDetailSections.access', 'Can access')}
     >
-      {loading || capabilities === null ? (
+      {failed ? (
+        // Why: an unreadable plugin must never read as one that needs no access.
+        <DetailRow
+          icon={<AlertTriangle />}
+          title={translate(
+            'auto.components.settings.PluginDetailSections.accessFailed',
+            'Couldn’t read what it can access'
+          )}
+          detail={translate(
+            'auto.components.settings.PluginDetailSections.accessFailedDetail',
+            'Orca couldn’t fetch or check this plugin’s files.'
+          )}
+          detailTone="warning"
+          trailing={
+            onRetry ? (
+              <Button variant="ghost" size="xs" onClick={onRetry}>
+                <RotateCw />
+                {translate('auto.components.settings.PluginDetailSections.retry', 'Retry')}
+              </Button>
+            ) : null
+          }
+        />
+      ) : loading || capabilities === null ? (
         <DetailRow
           icon={<Loader2 className="animate-spin" />}
           title={translate(

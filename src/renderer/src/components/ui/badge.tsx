@@ -22,8 +22,6 @@ const badgeVariants = cva(
          *  so it reads as context beside a workspace name rather than as a status of its own. */
         hostContext:
           'h-4 rounded border-border bg-accent px-1.5 text-[10px] leading-none text-muted-foreground dark:border-border/50 dark:bg-accent/80',
-        /** A quiet fact chip beside a name (Bundled, Dev, Unverified): smaller and squarer than `outline`. */
-        tag: 'h-4.5 rounded-sm border-border px-1.5 text-3xs leading-none text-muted-foreground',
         /** A skill or file sitting inline in the chat message box, ringed while selected. */
         promptPill:
           'max-w-full border-border bg-secondary px-1.5 py-0 align-baseline text-muted-foreground data-[selected=true]:ring-1 data-[selected=true]:ring-ring'

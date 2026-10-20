@@ -13061,7 +13061,10 @@
           "noAccessCode": "其代码在沙盒中运行，没有额外的访问权限。",
           "noAccessContent": "仅包含内容，没有会运行的代码。",
           "logs": "日志",
-          "copyLogs": "复制"
+          "copyLogs": "复制",
+          "accessFailed": "无法读取它可以访问的内容",
+          "accessFailedDetail": "Orca 无法获取或检查此插件的文件。",
+          "retry": "重试"
         },
         "PluginManagerRows": {
           "crashedCount": "已连续崩溃 {{value0}} 次。请在插件页面查看日志。",
@@ -13095,13 +13098,20 @@
           "offTitle": "插件已关闭",
           "offBody": "你的插件都不会运行。开启后即可浏览目录并使用已安装的插件。",
           "turnOn": "开启插件",
-          "systemDescription": "一次性关闭所有插件。在你查看并启用之前，不会运行任何内容。"
+          "systemDescription": "一次性关闭所有插件。在你查看并启用之前，不会运行任何内容。",
+          "pausedCount": "已暂停 {{value0}} 个",
+          "pausedUnknown": "已安装的插件已暂停，开启插件后即可恢复。"
         },
         "PluginFilterPopover": {
           "label": "筛选插件",
           "kind": "类别",
           "catalog": "目录",
-          "clear": "清除筛选"
+          "clear": "清除筛选",
+          "themes": "主题",
+          "languages": "语言",
+          "icons": "图标",
+          "commands": "命令和面板",
+          "machines": "机器和配方"
         },
         "PluginUpdateAllDialog": {
           "title": "要更新插件吗？",
@@ -13114,14 +13124,34 @@
           "failed": "无法更新 {{value0}}，其他插件已更新。",
           "cancel": "取消",
           "updateOne": "更新 1 个插件",
-          "updateMany": "更新 {{value0}} 个插件"
+          "updateMany": "更新 {{value0}} 个插件",
+          "failedAll": "无法更新 {{value0}}。没有任何插件被更新。",
+          "close": "关闭",
+          "retry": "重试",
+          "updated": "已更新",
+          "needsOrca": "需要 Orca {{value0}} 或更高版本。请先更新 Orca。"
         },
         "PluginDetailInfo": {
           "previous": "上一版本",
           "updated": "更新于",
           "license": "许可证",
           "homepage": "主页",
-          "whatsNew": "新功能"
+          "whatsNew": "新功能",
+          "hashCopied": "已复制内容哈希",
+          "hashCopyFailed": "无法复制哈希。",
+          "copyHash": "复制内容哈希 {{value0}}"
+        },
+        "PluginListEmptyStates": {
+          "noFilterMatches": "没有与这些筛选条件匹配的插件",
+          "clearBoth": "清除搜索和筛选",
+          "pageGone": "此插件已不再安装或列出。"
+        },
+        "pluginContributions": {
+          "dark": "深色",
+          "light": "浅色",
+          "languageIncomplete": "已翻译 {{value0}}%，不够完整，无法用作 Orca 的语言",
+          "languageCoverage": "界面语言 · 已翻译 {{value0}}%",
+          "agent": "智能体配置"
         }
       },
       "right": {

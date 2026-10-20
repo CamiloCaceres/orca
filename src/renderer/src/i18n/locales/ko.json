@@ -13061,7 +13061,10 @@
           "noAccessCode": "코드는 추가 접근 권한이 없는 샌드박스에서 실행됩니다.",
           "noAccessContent": "콘텐츠 전용입니다. 실행되는 코드가 없습니다.",
           "logs": "로그",
-          "copyLogs": "복사"
+          "copyLogs": "복사",
+          "accessFailed": "접근할 수 있는 항목을 읽을 수 없습니다",
+          "accessFailedDetail": "Orca가 이 플러그인의 파일을 가져오거나 확인할 수 없습니다.",
+          "retry": "다시 시도"
         },
         "PluginManagerRows": {
           "crashedCount": "{{value0}}번 연속으로 충돌했습니다. 플러그인 페이지에서 로그를 확인하세요.",
@@ -13095,13 +13098,20 @@
           "offTitle": "플러그인이 꺼져 있습니다",
           "offBody": "플러그인이 아무것도 실행되지 않습니다. 켜면 카탈로그를 둘러보고 설치한 항목을 사용할 수 있습니다.",
           "turnOn": "플러그인 켜기",
-          "systemDescription": "모든 플러그인을 한 번에 끕니다. 검토하고 사용하도록 설정하기 전에는 아무것도 실행되지 않습니다."
+          "systemDescription": "모든 플러그인을 한 번에 끕니다. 검토하고 사용하도록 설정하기 전에는 아무것도 실행되지 않습니다.",
+          "pausedCount": "{{value0}}개 일시 중지됨",
+          "pausedUnknown": "설치된 플러그인은 일시 중지되었으며 플러그인을 켜면 다시 사용할 수 있습니다."
         },
         "PluginFilterPopover": {
           "label": "플러그인 필터",
           "kind": "카테고리",
           "catalog": "카탈로그",
-          "clear": "필터 지우기"
+          "clear": "필터 지우기",
+          "themes": "테마",
+          "languages": "언어",
+          "icons": "아이콘",
+          "commands": "명령 및 패널",
+          "machines": "머신 및 레시피"
         },
         "PluginUpdateAllDialog": {
           "title": "플러그인을 업데이트할까요?",
@@ -13114,14 +13124,34 @@
           "failed": "{{value0}}을(를) 업데이트할 수 없습니다. 나머지는 업데이트되었습니다.",
           "cancel": "취소",
           "updateOne": "플러그인 1개 업데이트",
-          "updateMany": "플러그인 {{value0}}개 업데이트"
+          "updateMany": "플러그인 {{value0}}개 업데이트",
+          "failedAll": "{{value0}}을(를) 업데이트할 수 없습니다. 아무것도 업데이트되지 않았습니다.",
+          "close": "닫기",
+          "retry": "다시 시도",
+          "updated": "업데이트됨",
+          "needsOrca": "Orca {{value0}} 이상이 필요합니다. 먼저 Orca를 업데이트하세요."
         },
         "PluginDetailInfo": {
           "previous": "이전 버전",
           "updated": "업데이트",
           "license": "라이선스",
           "homepage": "홈페이지",
-          "whatsNew": "새로운 기능"
+          "whatsNew": "새로운 기능",
+          "hashCopied": "콘텐츠 해시를 복사했습니다",
+          "hashCopyFailed": "해시를 복사할 수 없습니다.",
+          "copyHash": "콘텐츠 해시 {{value0}} 복사"
+        },
+        "PluginListEmptyStates": {
+          "noFilterMatches": "이 필터와 일치하는 플러그인이 없습니다",
+          "clearBoth": "검색 및 필터 지우기",
+          "pageGone": "이 플러그인은 더 이상 설치되어 있거나 목록에 없습니다."
+        },
+        "pluginContributions": {
+          "dark": "다크",
+          "light": "라이트",
+          "languageIncomplete": "{{value0}}% 번역됨. Orca 언어로 사용하기에는 너무 불완전합니다",
+          "languageCoverage": "인터페이스 언어 · {{value0}}% 번역됨",
+          "agent": "에이전트 프로필"
         }
       },
       "right": {

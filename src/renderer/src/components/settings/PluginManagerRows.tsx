@@ -15,14 +15,9 @@ import {
 import { invalidPluginErrorMessage } from './plugin-error-presentation'
 import { usePluginRollbackVersion } from './use-plugin-rollback-version'
 import { satisfiesOrcaEngineRange } from '../../../../shared/plugins/plugin-manifest'
-import {
-  copyPluginId,
-  DetailsItem,
-  MoreButton,
-  PluginChips,
-  StatusWord,
-  statusWordFor
-} from './plugin-row-parts'
+import { copyPluginId, DetailsItem, MoreButton } from './PluginRowMenu'
+import { PluginChips } from '../plugin-catalog/PluginChips'
+import { StatusWord, statusWordFor } from '../plugin-catalog/PluginStatusWord'
 
 export type InstalledRowHandlers = {
   onOpen: (pluginKey: string) => void
@@ -53,8 +48,15 @@ export function installedPluginControls(
   {
     busy,
     canCheckUpdate,
-    handlers
-  }: { busy: boolean; canCheckUpdate: boolean; handlers: InstalledRowHandlers }
+    handlers,
+    inPage = false
+  }: {
+    busy: boolean
+    canCheckUpdate: boolean
+    handlers: InstalledRowHandlers
+    /** On the plugin's own page, so "Details" would reopen it. */
+    inPage?: boolean
+  }
 ): InstalledPluginControls {
   const kind = pluginStatusKind(plugin)
   const needsReview = pluginNeedsReview(plugin)
@@ -196,8 +198,8 @@ export function installedPluginControls(
     ),
     more: (
       <MoreButton name={plugin.name}>
-        <DetailsItem onSelect={() => handlers.onOpen(plugin.pluginKey)} />
-        {plugin.hasWorker ? (
+        {inPage ? null : <DetailsItem onSelect={() => handlers.onOpen(plugin.pluginKey)} />}
+        {plugin.hasWorker && !inPage ? (
           <DropdownMenuItem onSelect={() => handlers.onViewLogs(plugin.pluginKey)}>
             <FileText />
             {translate('auto.components.settings.PluginSettingsRow.viewLogs', 'View logs')}

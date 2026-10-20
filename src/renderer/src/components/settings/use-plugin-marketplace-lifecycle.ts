@@ -29,7 +29,8 @@ export function usePluginMarketplaceLifecycle({
 }: PluginMarketplaceLifecycleOptions): {
   rollbackPlugin: PluginHostListEntry | null
   rollbackError: string | null
-  reloadAfterMutation: (pluginKey: string) => Promise<void>
+  /** Reloads, then opens review for the first changed plugin that now needs it. */
+  reloadAfterMutation: (pluginKeys: string | readonly string[]) => Promise<void>
   requestRollback: (pluginKey: string) => void
   cancelRollback: () => void
   confirmRollback: (pluginKey: string) => Promise<void>
@@ -45,16 +46,20 @@ export function usePluginMarketplaceLifecycle({
     }
   }, [mounted, rollbackPlugin, rollbackPluginId])
 
-  const reloadAfterMutation = async (pluginKey: string): Promise<void> => {
+  const reloadAfterMutation = async (pluginKeys: string | readonly string[]): Promise<void> => {
+    const changed = new Set(typeof pluginKeys === 'string' ? [pluginKeys] : pluginKeys)
     try {
       const nextPlugins = await window.api.plugins.list()
       if (!mountedRef.current) {
         return
       }
       applyCompletedMutation(nextPlugins)
-      const changedPlugin = nextPlugins.find((plugin) => plugin.pluginKey === pluginKey)
-      if (changedPlugin?.needsReconsent || changedPlugin?.status === 'pending') {
-        setConsentPluginId(pluginKey)
+      const needsReview = nextPlugins.find(
+        (plugin) =>
+          changed.has(plugin.pluginKey) && (plugin.needsReconsent || plugin.status === 'pending')
+      )
+      if (needsReview) {
+        setConsentPluginId(needsReview.pluginKey)
       }
     } catch (cause) {
       if (mountedRef.current) {

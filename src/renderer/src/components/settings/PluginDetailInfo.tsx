@@ -1,4 +1,5 @@
 import { ArrowUpRight } from 'lucide-react'
+import { toast } from 'sonner'
 import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
 import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
@@ -16,6 +17,51 @@ function InfoRow({ label, value, mono = false }: { label: string; value: string;
         title={value}
       >
         {value}
+      </dd>
+    </div>
+  )
+}
+
+// Why: a 64-character hash breaks the column; both ends are enough to compare by eye.
+function middleEllipsis(value: string): string {
+  return value.length > 12 ? `${value.slice(0, 4)}…${value.slice(-4)}` : value
+}
+
+async function copyContentHash(hash: string): Promise<void> {
+  try {
+    await window.api.ui.writeClipboardText(hash)
+    toast.success(
+      translate('auto.components.settings.PluginDetailInfo.hashCopied', 'Content hash copied')
+    )
+  } catch {
+    toast.error(
+      translate(
+        'auto.components.settings.PluginDetailInfo.hashCopyFailed',
+        "Couldn't copy the hash."
+      )
+    )
+  }
+}
+
+function HashRow({ label, hash }: { label: string; hash: string }) {
+  return (
+    <div className="flex items-center justify-between gap-3 py-0.5 text-xs">
+      <dt className="shrink-0 text-muted-foreground">{label}</dt>
+      <dd className="min-w-0">
+        <Button
+          variant="ghost"
+          size="xs"
+          className="-mr-2"
+          title={hash}
+          aria-label={translate(
+            'auto.components.settings.PluginDetailInfo.copyHash',
+            'Copy content hash {{value0}}',
+            { value0: hash }
+          )}
+          onClick={() => void copyContentHash(hash)}
+        >
+          <span className="font-mono">{middleEllipsis(hash)}</span>
+        </Button>
       </dd>
     </div>
   )
@@ -121,10 +167,9 @@ export function PluginDetailInfo({
           mono
         />
         {plugin?.source?.contentHash ? (
-          <InfoRow
+          <HashRow
             label={translate('auto.components.settings.PluginDetailPage.content', 'Content')}
-            value={plugin.source.contentHash}
-            mono
+            hash={plugin.source.contentHash}
           />
         ) : null}
       </dl>

@@ -8,15 +8,30 @@ function isBackShortcut(event: KeyboardEvent): boolean {
   )
 }
 
+// Why: Alt+← moves the caret in a field, and a dialog over the page owns its own keys.
+function belongsToFieldOrDialog(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) {
+    return false
+  }
+  return (
+    target.isContentEditable ||
+    target.closest('input, textarea, select, [role="dialog"], [role="alertdialog"]') !== null
+  )
+}
+
+export type PluginPageNavigation = {
+  openKey: string | null
+  open: (pluginKey: string) => void
+  back: () => void
+  /** Goes back only if this plugin's page is the one open; stable across renders. */
+  leave: (pluginKey: string) => void
+}
+
 /**
  * Which plugin's page is open, and the way back: the back link, Alt+← or ⌘[ on Mac. Going back
  * returns focus to that plugin's name in the list. Esc stays with Settings.
  */
-export function usePluginPageNavigation(): {
-  openKey: string | null
-  open: (pluginKey: string) => void
-  back: () => void
-} {
+export function usePluginPageNavigation(): PluginPageNavigation {
   const [openKey, setOpenKey] = useState<string | null>(null)
   const [returnKey, setReturnKey] = useState<string | null>(null)
 
@@ -25,7 +40,11 @@ export function usePluginPageNavigation(): {
       return
     }
     const onKeyDown = (event: KeyboardEvent): void => {
-      if (isBackShortcut(event)) {
+      if (
+        isBackShortcut(event) &&
+        !event.defaultPrevented &&
+        !belongsToFieldOrDialog(event.target)
+      ) {
         event.preventDefault()
         setReturnKey(openKey)
         setOpenKey(null)
@@ -52,7 +71,12 @@ export function usePluginPageNavigation(): {
     setReturnKey(openKeyRef.current)
     setOpenKey(null)
   }, [])
-  return { openKey, open: setOpenKey, back }
+  const leave = useCallback((pluginKey: string) => {
+    if (openKeyRef.current === pluginKey) {
+      setOpenKey(null)
+    }
+  }, [])
+  return { openKey, open: setOpenKey, back, leave }
 }
 
 /** This Orca's version, for "Needs Orca X" checks; null until known. */

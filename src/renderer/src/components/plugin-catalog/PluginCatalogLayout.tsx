@@ -64,20 +64,14 @@ export function PluginCatalogLayout({
                 {installedCount}
               </span>
             </TabsTrigger>
-            {/* Why: hidden rather than removed, so the search field doesn't move when updates come and go. */}
-            <TabsTrigger
-              value="updates"
-              disabled={updateCount === 0}
-              aria-hidden={updateCount === 0}
-              tabIndex={updateCount === 0 ? -1 : undefined}
-              data-empty={updateCount === 0}
-              className="data-[empty=true]:invisible"
-            >
-              {translate('auto.components.pluginCatalog.PluginCatalogLayout.updates', 'Updates')}
-              <span className="text-xs font-normal tabular-nums text-muted-foreground">
-                {updateCount}
-              </span>
-            </TabsTrigger>
+            {updateCount > 0 ? (
+              <TabsTrigger value="updates">
+                {translate('auto.components.pluginCatalog.PluginCatalogLayout.updates', 'Updates')}
+                <span className="text-xs font-normal tabular-nums text-muted-foreground">
+                  {updateCount}
+                </span>
+              </TabsTrigger>
+            ) : null}
           </TabsList>
         </Tabs>
         <div className="relative min-w-56 grow @max-xl/plugin-list:order-last @max-xl/plugin-list:basis-full">

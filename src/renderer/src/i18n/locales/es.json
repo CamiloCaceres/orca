@@ -13056,7 +13056,10 @@
           "noAccessCode": "Su código se ejecuta en un entorno aislado sin acceso adicional.",
           "noAccessContent": "Solo contenido. No tiene código que se ejecute.",
           "logs": "Registros",
-          "copyLogs": "Copiar"
+          "copyLogs": "Copiar",
+          "accessFailed": "No se pudo leer a qué puede acceder",
+          "accessFailedDetail": "Orca no pudo obtener ni comprobar los archivos de este plugin.",
+          "retry": "Reintentar"
         },
         "PluginManagerRows": {
           "crashedCount": "Falló {{value0}} veces seguidas. Consulta sus registros en la página del plugin.",
@@ -13090,13 +13093,20 @@
           "offTitle": "Los plugins están desactivados",
           "offBody": "No se ejecuta nada de tus plugins. Actívalos para explorar el catálogo y usar lo que instalaste.",
           "turnOn": "Activar plugins",
-          "systemDescription": "Desactiva todos los plugins a la vez. No se ejecuta nada hasta que lo revises y lo actives."
+          "systemDescription": "Desactiva todos los plugins a la vez. No se ejecuta nada hasta que lo revises y lo actives.",
+          "pausedCount": "{{value0}} en pausa",
+          "pausedUnknown": "Tus plugins instalados están en pausa y volverán cuando actives los plugins."
         },
         "PluginFilterPopover": {
           "label": "Filtrar plugins",
           "kind": "Categoría",
           "catalog": "Catálogo",
-          "clear": "Borrar filtros"
+          "clear": "Borrar filtros",
+          "themes": "Temas",
+          "languages": "Lenguajes",
+          "icons": "Iconos",
+          "commands": "Comandos y paneles",
+          "machines": "Máquinas y recetas"
         },
         "PluginUpdateAllDialog": {
           "title": "¿Actualizar plugins?",
@@ -13109,14 +13119,34 @@
           "failed": "No se pudo actualizar {{value0}}. Los demás se actualizaron.",
           "cancel": "Cancelar",
           "updateOne": "Actualizar 1 plugin",
-          "updateMany": "Actualizar {{value0}} plugins"
+          "updateMany": "Actualizar {{value0}} plugins",
+          "failedAll": "No se pudo actualizar {{value0}}. No se actualizó nada.",
+          "close": "Cerrar",
+          "retry": "Reintentar",
+          "updated": "Actualizado",
+          "needsOrca": "Requiere Orca {{value0}} o posterior. Actualiza Orca primero."
         },
         "PluginDetailInfo": {
           "previous": "Anterior",
           "updated": "Actualizado",
           "license": "Licencia",
           "homepage": "Página web",
-          "whatsNew": "Novedades"
+          "whatsNew": "Novedades",
+          "hashCopied": "Hash de contenido copiado",
+          "hashCopyFailed": "No se pudo copiar el hash.",
+          "copyHash": "Copiar hash de contenido {{value0}}"
+        },
+        "PluginListEmptyStates": {
+          "noFilterMatches": "Ningún plugin coincide con estos filtros",
+          "clearBoth": "Borrar búsqueda y filtros",
+          "pageGone": "Este plugin ya no está instalado ni listado."
+        },
+        "pluginContributions": {
+          "dark": "Oscuro",
+          "light": "Claro",
+          "languageIncomplete": "{{value0}} % traducido, demasiado incompleto para usarlo como idioma de Orca",
+          "languageCoverage": "Idioma de la interfaz · {{value0}} % traducido",
+          "agent": "Perfil de agente"
         }
       },
       "right": {

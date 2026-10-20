@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { Puzzle } from 'lucide-react'
 import type { PluginHostListEntry } from '../../../../preload/api-types'
 import { translate } from '@/i18n/i18n'
@@ -11,9 +10,10 @@ import { PluginDevelopmentSection } from './PluginDevelopmentSection'
 import { PluginFileTypeSuggestionSetting } from './PluginFileTypeSuggestionSetting'
 import { PluginManager } from './PluginManager'
 import type { InstalledRowHandlers } from './PluginManagerRows'
-import { PluginChips } from './plugin-row-parts'
+import { PluginChips } from '../plugin-catalog/PluginChips'
 import { SettingsRow, SettingsSwitch } from './SettingsFormControls'
 import type { PluginLogsState } from './use-plugin-logs'
+import type { PluginPageNavigation } from './use-plugin-page-navigation'
 
 type PluginSettingsOverviewProps = {
   featureEnabled: boolean
@@ -28,13 +28,14 @@ type PluginSettingsOverviewProps = {
   handlers: Omit<InstalledRowHandlers, 'onCheckUpdate'>
   onToggleFeature: () => void
   onRefresh: () => Promise<void>
-  onMarketplaceInstalled: (pluginKey: string) => Promise<void>
+  onMarketplaceInstalled: (pluginKeys: string | readonly string[]) => Promise<void>
   onUpdateDevPaths: (paths: string[]) => Promise<void>
   logsByPlugin: Readonly<Record<string, PluginLogsState>>
   onShowLogs: (pluginKey: string) => void
   onOpenShortcuts: () => void
   sourcesOpen: boolean
   setSourcesOpen: (open: boolean) => void
+  page: PluginPageNavigation
 }
 
 /** The Settings body card; the section body is transparent so each block draws its own. */
@@ -91,7 +92,11 @@ function PluginsOffState({
         <SettingsCard className="@container/plugin-list overflow-hidden">
           <PluginListGroup
             title={translate('auto.components.settings.PluginManager.installed', 'Installed')}
-            aside={String(plugins.length)}
+            aside={translate(
+              'auto.components.settings.PluginSettingsOverview.pausedCount',
+              '{{value0}} paused',
+              { value0: plugins.length }
+            )}
           >
             {plugins.map((plugin) => {
               const entry = pluginListEntryFromInstalled(plugin)
@@ -108,7 +113,15 @@ function PluginsOffState({
             })}
           </PluginListGroup>
         </SettingsCard>
-      ) : null}
+      ) : (
+        // Why: an older host lists nothing while plugins are off; say they're paused, not gone.
+        <SettingsCard className="px-5 py-4 text-sm text-muted-foreground">
+          {translate(
+            'auto.components.settings.PluginSettingsOverview.pausedUnknown',
+            'Your installed plugins are paused and will be back when you turn plugins on.'
+          )}
+        </SettingsCard>
+      )}
     </>
   )
 }
@@ -132,9 +145,10 @@ export function PluginSettingsOverview({
   onShowLogs,
   onOpenShortcuts,
   sourcesOpen,
-  setSourcesOpen
+  setSourcesOpen,
+  page
 }: PluginSettingsOverviewProps): React.JSX.Element {
-  const [pageOpen, setPageOpen] = useState(false)
+  const pageOpen = page.openKey !== null
   return (
     <>
       {featureEnabled && pageOpen ? null : featureEnabled ? (
@@ -179,19 +193,19 @@ export function PluginSettingsOverview({
           logsByPlugin={logsByPlugin}
           onShowLogs={onShowLogs}
           onOpenShortcuts={onOpenShortcuts}
-          onPageOpenChange={setPageOpen}
+          page={page}
           sourcesOpen={sourcesOpen}
           setSourcesOpen={setSourcesOpen}
+          footer={
+            <SettingsCard className="px-7 py-4">
+              <PluginDevelopmentSection
+                paths={devPaths}
+                busy={devPathsBusy}
+                onChange={onUpdateDevPaths}
+              />
+            </SettingsCard>
+          }
         />
-      ) : null}
-      {featureEnabled && !pageOpen ? (
-        <SettingsCard className="px-7 py-4">
-          <PluginDevelopmentSection
-            paths={devPaths}
-            busy={devPathsBusy}
-            onChange={onUpdateDevPaths}
-          />
-        </SettingsCard>
       ) : null}
     </>
   )

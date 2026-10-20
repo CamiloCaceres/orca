@@ -73,3 +73,27 @@ export function pluginStatusLabel(kind: PluginStatusKind): string {
       return translate('auto.components.settings.PluginSettingsRow.enabled', 'Enabled')
   }
 }
+
+const NEEDS_ATTENTION: ReadonlySet<PluginStatusKind> = new Set([
+  'blocked',
+  'review',
+  'error',
+  'invalid'
+])
+
+/** Installed order: plugins that need the user first, then pending updates, then the rest. */
+export function sortByAttention<T extends { installed: PluginHostListEntry | null }>(
+  entries: readonly T[],
+  hasUpdate: (entry: T) => boolean
+): T[] {
+  const rank = (entry: T): number =>
+    entry.installed && NEEDS_ATTENTION.has(pluginStatusKind(entry.installed))
+      ? 0
+      : hasUpdate(entry)
+        ? 1
+        : 2
+  return entries
+    .map((entry, index) => ({ entry, index, rank: rank(entry) }))
+    .sort((a, b) => a.rank - b.rank || a.index - b.index)
+    .map(({ entry }) => entry)
+}

@@ -9,6 +9,11 @@ import { translate } from '@/i18n/i18n'
 import { usePluginPreviewRequestStore } from '@/store/plugin-preview-request'
 import type { PluginMarketplacePreviewMode } from './PluginMarketplacePreviewDialog'
 
+/** A plugin page's manifest read; a failure means nothing is known, not "nothing needed". */
+export type PluginPagePreview =
+  | { ok: true; preview: PluginMarketplaceHostInstallPreview }
+  | { ok: false }
+
 function marketplaceError(cause: unknown, fallback: string): string {
   console.warn('[plugins] marketplace action failed:', cause)
   return fallback
@@ -214,13 +219,9 @@ export function usePluginCatalog({
   )
 
   // Why: the plugin page reads the same preview the install dialog would, without opening it.
-  const previewCacheRef = useRef(
-    new Map<string, Promise<PluginMarketplaceHostInstallPreview | null>>()
-  )
+  const previewCacheRef = useRef(new Map<string, Promise<PluginPagePreview>>())
   const fetchPreview = useCallback(
-    (
-      listing: PluginMarketplaceHostListing
-    ): Promise<PluginMarketplaceHostInstallPreview | null> => {
+    (listing: PluginMarketplaceHostListing): Promise<PluginPagePreview> => {
       const key = `${listing.marketplaceSourceId}:${listing.pluginKey}:${listing.marketplaceCommit}`
       let request = previewCacheRef.current.get(key)
       if (!request) {
@@ -229,10 +230,12 @@ export function usePluginCatalog({
             marketplaceSourceId: listing.marketplaceSourceId,
             pluginKey: listing.pluginKey
           })
-          .catch((cause: unknown) => {
+          .then((preview): PluginPagePreview => ({ ok: true, preview }))
+          .catch((cause: unknown): PluginPagePreview => {
             console.warn('[plugins] plugin page preview failed:', cause)
+            // Why: only successes are cached, so Retry asks again.
             previewCacheRef.current.delete(key)
-            return null
+            return { ok: false }
           })
         previewCacheRef.current.set(key, request)
       }
