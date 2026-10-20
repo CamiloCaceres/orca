@@ -47,6 +47,17 @@ describe('pluginManifestSchema boundaries', () => {
     expect(parsePluginManifest(manifest({ version: '1.0.0-alpha.1+build.5' })).ok).toBe(true)
   })
 
+  it('reports one specific issue per bad id or path', () => {
+    const reserved = pluginManifestSchema.safeParse(manifest({ id: 'constructor' }))
+    expect(reserved.error?.issues.map((issue) => issue.message)).toEqual([
+      'must not be a reserved name'
+    ])
+    const badPath = pluginManifestSchema.safeParse(manifest({ main: '../escape.js' }))
+    expect(badPath.error?.issues).toHaveLength(1)
+    const device = pluginManifestSchema.safeParse(manifest({ main: 'dist/CON.js' }))
+    expect(device.error?.issues).toHaveLength(1)
+  })
+
   it('rejects duplicate contribution ids', () => {
     const parsed = pluginManifestSchema.safeParse(
       manifest({
