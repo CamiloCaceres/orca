@@ -80,7 +80,7 @@ export function PluginCatalogLayout({
             </TabsTrigger>
           </TabsList>
         </Tabs>
-        <div className="relative min-w-56 flex-1 @max-xl/plugin-list:order-last @max-xl/plugin-list:basis-full">
+        <div className="relative min-w-56 grow @max-xl/plugin-list:order-last @max-xl/plugin-list:basis-full">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input
             value={search}
