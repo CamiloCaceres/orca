@@ -6,6 +6,7 @@ import {
   pluginMarketplaceV2Schema,
   type PluginMarketplace
 } from '../../shared/plugins/plugin-marketplace'
+import { formatPluginSchemaIssues } from '../../shared/plugins/plugin-schema-issues'
 import { gitExecFileAsyncBuffer } from '../git/runner'
 import { readPluginGitCommit } from './plugin-git-repository'
 import type { PluginMarketplaceRegisteredSource } from './plugin-marketplace-store'
@@ -81,14 +82,20 @@ async function readMarketplaceAtCommit(
 }
 
 export function parsePluginMarketplaceIndex(filename: string, bytes: Buffer): PluginMarketplace {
+  let raw: unknown
   try {
-    const raw: unknown = JSON.parse(bytes.toString('utf8'))
-    return filename === PLUGIN_MARKETPLACE_V2_FILENAME
-      ? pluginMarketplaceV2Schema.parse(raw)
-      : pluginMarketplaceSchema.parse(raw)
+    raw = JSON.parse(bytes.toString('utf8'))
   } catch (error) {
     throw new Error(
       `invalid ${filename}: ${error instanceof Error ? error.message : String(error)}`
     )
   }
+  const parsed =
+    filename === PLUGIN_MARKETPLACE_V2_FILENAME
+      ? pluginMarketplaceV2Schema.safeParse(raw)
+      : pluginMarketplaceSchema.safeParse(raw)
+  if (!parsed.success) {
+    throw new Error(`invalid ${filename}: ${formatPluginSchemaIssues(parsed.error.issues)}`)
+  }
+  return parsed.data
 }

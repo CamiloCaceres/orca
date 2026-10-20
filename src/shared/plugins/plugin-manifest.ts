@@ -3,6 +3,7 @@ import { pluginCapabilitySchema } from './plugin-capabilities'
 import { pluginContributesShape } from './plugin-contribution-points'
 import { pluginIdSchema, pluginRelativePathSchema } from './plugin-manifest-fields'
 import { validatePluginManifestContributions } from './plugin-manifest-contribution-validation'
+import { formatPluginSchemaIssues } from './plugin-schema-issues'
 import {
   pluginFieldDoc,
   PLUGIN_SCHEMA_SINCE_UNRELEASED,
@@ -190,9 +191,7 @@ export function parsePluginManifest(raw: unknown): PluginManifestParseResult {
   if (parsed.success) {
     return { ok: true, manifest: parsed.data }
   }
-  const issue = parsed.error.issues[0]
-  const path = issue?.path.join('.') || '(root)'
-  return { ok: false, error: `${path}: ${issue?.message ?? 'invalid manifest'}` }
+  return { ok: false, error: formatPluginSchemaIssues(parsed.error.issues) }
 }
 
 /** v0 engines gate: supports the ">=x.y.z" grammar the schema enforces.
