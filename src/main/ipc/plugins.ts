@@ -70,7 +70,7 @@ const logsArgsSchema = z.object({ pluginKey: z.string().min(1) })
 
 // Why re-exported: moved to ../plugins/plugin-client-list so the runtime RPC can reach
 // it without ipcMain. Existing importers of this path keep working.
-import { listPluginsForClients } from '../plugins/plugin-client-list'
+import { listPluginsForClients, readInstalledPluginManifest } from '../plugins/plugin-client-list'
 
 export function canRemoveInstalledPlugin(
   pluginService: PluginService,
@@ -112,6 +112,10 @@ export function registerPluginHandlers(
   // Why: startup discovery is fire-and-forget; every handler awaits it so an
   // early renderer fetch can't observe the empty pre-discovery list.
   ipcMain.handle('plugins:list', async () => listPluginsForClients(pluginService))
+  ipcMain.handle('plugins:getInstalledManifest', async (_event, args: unknown) => {
+    const { pluginKey } = logsArgsSchema.parse(args)
+    return readInstalledPluginManifest(pluginService, pluginKey)
+  })
   ipcMain.handle('plugins:listLanguagePacks', async () => {
     await pluginService.whenReady()
     return pluginService.contentPacks.languagePacks.list()

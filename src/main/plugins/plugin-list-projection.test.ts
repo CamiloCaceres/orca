@@ -273,4 +273,41 @@ describe('buildPluginList I/O', () => {
     expect(entry?.source?.kind).toBe('git')
     expect(fsCalls.count).toBe(0)
   })
+
+  it('reports the catalog ref a marketplace install came from', async () => {
+    const plugin: ValidDiscoveredPlugin = {
+      pluginKey: 'orca-samples.demo',
+      rootDir: join(tmpdir(), 'plugins', 'orca-samples.demo', 'a'.repeat(64)),
+      manifest,
+      consentFingerprint: 'sha256-current',
+      contentHash: 'a'.repeat(64),
+      isDev: false
+    }
+    const lock = emptyPluginLockfile()
+    lock.plugins[plugin.pluginKey] = {
+      pluginKey: plugin.pluginKey,
+      version: '1.0.0',
+      source: {
+        kind: 'marketplace',
+        marketplace: {
+          url: 'https://github.com/acme/catalog.git',
+          ref: 'stable',
+          resolvedCommit: 'f'.repeat(40)
+        },
+        plugin: { url: 'https://github.com/orca-samples/demo.git', ref: 'main' }
+      },
+      resolvedCommit: 'c'.repeat(40),
+      contentHash: 'a'.repeat(64),
+      consentFingerprint: 'sha256-current',
+      installedAt: 1
+    }
+
+    const [entry] = await buildPluginList(serviceWith(plugin), lock)
+
+    expect(entry?.source?.marketplace).toEqual({
+      reference: 'https://github.com/acme/catalog.git',
+      ref: 'stable',
+      resolvedCommit: 'f'.repeat(40)
+    })
+  })
 })

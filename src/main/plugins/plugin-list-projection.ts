@@ -5,7 +5,7 @@ import {
 import { needsReconsent } from '../../shared/plugins/plugin-consent-state'
 import { pluginPanelTabKey } from '../../shared/plugins/plugin-manifest'
 import type { PluginLockfile } from '../../shared/plugins/plugin-install-lockfile'
-import { isInvalidDiscoveredPlugin } from './plugin-discovery'
+import { isInvalidDiscoveredPlugin, type DiscoveredPlugin } from './plugin-discovery'
 import type { PluginService } from './plugin-service'
 import { listPluginVmRecipeCommands } from '../../shared/plugins/plugin-vm-recipe-artifact'
 import type { PluginCommandAliasActionId } from '../../shared/plugins/plugin-command-actions'
@@ -81,20 +81,21 @@ export type PluginListEntry = {
     reference: string
     resolvedCommit: string | null
     contentHash: string
-    marketplace?: { reference: string; resolvedCommit: string }
+    marketplace?: { reference: string; ref: string; resolvedCommit: string }
   }
 }
 
 export async function buildPluginList(
   service: PluginService,
-  lock: PluginLockfile
+  lock: PluginLockfile,
+  discovered: readonly DiscoveredPlugin[] = service.getDiscovered()
 ): Promise<PluginListEntry[]> {
   const consents = {
     pluginConsents: service.options.getPluginConsents(),
     disabledPlugins: service.options.getDisabledPlugins()
   }
   return mapWithConcurrency(
-    service.getDiscovered(),
+    discovered,
     PLUGIN_LIST_PROJECTION_CONCURRENCY,
     async (plugin, index): Promise<PluginListEntry> => {
       if (isInvalidDiscoveredPlugin(plugin)) {
@@ -224,6 +225,7 @@ export async function buildPluginList(
                   ? {
                       marketplace: {
                         reference: lockEntry.source.marketplace.url,
+                        ref: lockEntry.source.marketplace.ref,
                         resolvedCommit: lockEntry.source.marketplace.resolvedCommit
                       }
                     }

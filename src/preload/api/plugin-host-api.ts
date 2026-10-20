@@ -17,6 +17,7 @@ import type { PluginLanguagePackRegistration } from '../../shared/plugins/plugin
 import type { PluginChangeEvent } from '../../shared/plugins/plugin-change-event'
 import type { PluginManifest } from '../../shared/plugins/plugin-manifest'
 import type { PluginMarketplaceGitSource } from '../../shared/plugins/plugin-marketplace'
+import type { PluginCatalogRelease } from '../../shared/plugins/plugin-catalog-release'
 
 /** Panel contribution as surfaced by the main-process plugin service. */
 export type PluginHostPanel = {
@@ -84,7 +85,8 @@ export type PluginHostListEntry = {
     reference: string
     resolvedCommit: string | null
     contentHash: string
-    marketplace?: { reference: string; resolvedCommit: string }
+    /** `ref` is the catalog's ref, so a client can join to the exact catalog source. */
+    marketplace?: { reference: string; ref?: string; resolvedCommit: string }
   }
 }
 
@@ -136,6 +138,8 @@ export type PluginMarketplaceHostListing = {
   official: boolean
   bundled: boolean
   blockedByKillList?: { reason: string; advisoryUrl?: string }
+  /** The release record a v2 catalog vouches for; absent for v1 catalogs. */
+  release?: PluginCatalogRelease
   /** Release details from a v2 catalog; all absent for v1 catalogs. */
   name?: string
   version?: string
@@ -225,6 +229,8 @@ export type PluginsApi = {
   rollbackMarketplacePlugin: (args: { pluginKey: string }) => Promise<PluginHostInstallResult>
   /** Version a rollback would restore, or null. Read on demand so listing plugins stays I/O-free. */
   getRollbackVersion: (args: { pluginKey: string }) => Promise<string | null>
+  /** An installed plugin's parsed manifest, read on demand; works while the plugin system is off. */
+  getInstalledManifest: (args: { pluginKey: string }) => Promise<PluginManifest | null>
   remove: (args: { pluginKey: string }) => Promise<PluginHostListEntry[]>
   getLogs: (args: { pluginKey: string }) => Promise<PluginHostLogLine[]>
   /** Re-discovers after settings edits (feature flag, dev paths). */
