@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-marketplace.v2.schema.json",
+  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/v2/orca-marketplace.schema.json",
   "title": "Orca plugin catalog",
   "description": "The orca-marketplace.v2.json file that lists installable plugin releases.",
   "type": "object",
   "properties": {
     "$schema": {
       "description": "JSON Schema URL for editor completion. Ignored by Orca.",
-      "x-orca-since": "unreleased",
+      "x-orca-since": "1.4.232",
       "type": "string",
       "maxLength": 2048
     },
@@ -16,7 +16,7 @@
       "minLength": 1,
       "maxLength": 256,
       "description": "Marketplace display name.",
-      "x-orca-since": "unreleased",
+      "x-orca-since": "1.4.232",
       "examples": [
         "Orca Plugins"
       ]
@@ -27,7 +27,7 @@
       "maxLength": 128,
       "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$",
       "description": "Account that publishes the marketplace.",
-      "x-orca-since": "unreleased",
+      "x-orca-since": "1.4.232",
       "examples": [
         "stablyai"
       ]
@@ -39,7 +39,7 @@
         "$ref": "#/$defs/CatalogEntry"
       },
       "description": "Listed plugins, at most 2048. An entry this Orca cannot parse is skipped, not fatal.",
-      "x-orca-since": "unreleased"
+      "x-orca-since": "1.4.232"
     }
   },
   "required": [
@@ -55,7 +55,7 @@
           "type": "string",
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
           "description": "`<publisher>.<id>`, matching the plugin's manifest.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "acme.gleam-syntax"
           ]
@@ -65,7 +65,7 @@
         },
         "description": {
           "description": "Listing text shown in the marketplace.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "type": "string",
           "minLength": 1,
           "maxLength": 4096
@@ -73,7 +73,7 @@
         "categories": {
           "default": [],
           "description": "Lowercase slugs used to filter the marketplace.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             [
               "themes"
@@ -106,14 +106,14 @@
           "type": "string",
           "const": "git",
           "description": "Source kind. Only `git` is supported.",
-          "x-orca-since": "unreleased"
+          "x-orca-since": "1.4.232"
         },
         "url": {
           "type": "string",
           "minLength": 1,
           "maxLength": 32768,
           "description": "HTTPS or SSH URL of the plugin repository.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "https://github.com/acme/orca-gleam-syntax.git"
           ]
@@ -123,7 +123,7 @@
           "minLength": 1,
           "maxLength": 4096,
           "description": "Branch or tag the author publishes from. A `release` pins the exact commit.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "main"
           ]
@@ -145,7 +145,7 @@
           "minLength": 1,
           "maxLength": 128,
           "description": "The manifest's `version` for this release.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "1.2.0"
           ]
@@ -154,13 +154,13 @@
           "type": "string",
           "pattern": "^[0-9a-f]{40}$",
           "description": "Full SHA-1 commit Orca checks out for this release.",
-          "x-orca-since": "unreleased"
+          "x-orca-since": "1.4.232"
         },
         "contentHash": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$",
           "description": "SHA-256 of the plugin's installed files, as Orca computes it at install.",
-          "x-orca-since": "unreleased"
+          "x-orca-since": "1.4.232"
         },
         "execution": {
           "type": "string",
@@ -171,7 +171,7 @@
             "trusted-worker"
           ],
           "description": "The manifest's `execution` profile.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "data"
           ]
@@ -180,7 +180,7 @@
           "type": "string",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "description": "The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "1.4.223"
           ]
@@ -203,7 +203,7 @@
             ]
           },
           "description": "Every kind of contribution the release carries, matching its manifest exactly.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             [
               "syntax"
@@ -212,7 +212,7 @@
         },
         "name": {
           "description": "The manifest's `name`, so Orca can suggest the plugin before downloading it.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "Gleam"
           ],
@@ -222,7 +222,7 @@
         },
         "fileTypes": {
           "description": "Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "items": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9+_-]{0,15}$"

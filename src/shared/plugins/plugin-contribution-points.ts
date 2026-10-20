@@ -28,7 +28,7 @@ import type { PluginExecutionProfile } from './plugin-execution-profile'
 import { PLUGIN_PANEL_LIMIT, pluginPanelContributionSchema } from './plugin-panel-contribution'
 import {
   pluginFieldDoc,
-  PLUGIN_SCHEMA_SINCE_UNRELEASED,
+  PLUGIN_MANIFEST_V2_SINCE,
   PLUGIN_SCHEMA_SINCE_V1
 } from './plugin-schema-field-docs'
 
@@ -63,7 +63,7 @@ function contributionList<Item extends z.ZodType>(
 }
 
 const V1 = PLUGIN_SCHEMA_SINCE_V1
-const NEXT = PLUGIN_SCHEMA_SINCE_UNRELEASED
+const NEXT = PLUGIN_MANIFEST_V2_SINCE
 
 export const pluginContributesShape = {
   panels: contributionList(

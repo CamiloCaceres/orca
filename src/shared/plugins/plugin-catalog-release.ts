@@ -10,9 +10,9 @@ import {
 } from './plugin-execution-profile'
 import { PLUGIN_FILE_TYPE_RE, pluginFileTypeSchema } from './plugin-file-type'
 import type { PluginManifest } from './plugin-manifest'
-import { pluginFieldDoc, PLUGIN_SCHEMA_SINCE_UNRELEASED } from './plugin-schema-field-docs'
+import { pluginFieldDoc, PLUGIN_MANIFEST_V2_SINCE } from './plugin-schema-field-docs'
 
-const NEXT = PLUGIN_SCHEMA_SINCE_UNRELEASED
+const NEXT = PLUGIN_MANIFEST_V2_SINCE
 
 // Why only installable types: a catalog entry naming any other type fails to parse, so the
 // v2 catalog drops it instead of listing a plugin this client cannot install.

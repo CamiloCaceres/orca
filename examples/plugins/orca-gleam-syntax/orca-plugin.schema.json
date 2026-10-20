@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-plugin.schema.json",
+  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/v2/orca-plugin.schema.json",
   "title": "Orca plugin manifest",
   "description": "The orca-plugin.json file at the root of an Orca plugin (manifest format 2).",
   "type": "object",
   "properties": {
     "$schema": {
       "description": "JSON Schema URL for editor completion. Ignored by Orca.",
-      "x-orca-since": "unreleased",
+      "x-orca-since": "1.4.232",
       "type": "string",
       "maxLength": 2048
     },
@@ -15,7 +15,7 @@
       "type": "number",
       "const": 2,
       "description": "Manifest format. Use 2 for new plugins.",
-      "x-orca-since": "unreleased"
+      "x-orca-since": "1.4.232"
     },
     "execution": {
       "type": "string",
@@ -26,7 +26,7 @@
         "trusted-worker"
       ],
       "description": "Most authority the plugin needs, least first: `data` (themes, syntaxes, translations), `instructional` (commands, shortcuts, recipes, agents), `sandboxed-ui` (panels), `trusted-worker` (`main` and events). Contributions beyond it fail validation.",
-      "x-orca-since": "unreleased",
+      "x-orca-since": "1.4.232",
       "examples": [
         "data"
       ]
@@ -240,7 +240,7 @@
         "themes": {
           "default": [],
           "description": "App color themes. At most 64.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "maxItems": 64,
           "type": "array",
           "items": {
@@ -250,7 +250,7 @@
         "terminalThemes": {
           "default": [],
           "description": "Terminal ANSI palettes. At most 64.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "maxItems": 64,
           "type": "array",
           "items": {
@@ -260,7 +260,7 @@
         "iconThemes": {
           "default": [],
           "description": "File icon themes. At most 32.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "maxItems": 32,
           "type": "array",
           "items": {
@@ -270,7 +270,7 @@
         "syntaxes": {
           "default": [],
           "description": "Syntax highlighting for editor languages. At most 16.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "maxItems": 16,
           "type": "array",
           "items": {
@@ -566,7 +566,7 @@
           "maxLength": 64,
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
           "description": "Theme id, unique within its family in this plugin.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "dusk"
           ]
@@ -576,7 +576,7 @@
           "minLength": 1,
           "maxLength": 128,
           "description": "Name shown in the theme picker.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "Dusk"
           ]
@@ -587,7 +587,7 @@
           "maxLength": 1024,
           "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
           "description": "JSON theme file, at most 16 KiB.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "themes/dusk.json"
           ]
@@ -609,7 +609,7 @@
           "maxLength": 64,
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
           "description": "Language id, unique within the plugin.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "gleam"
           ]
@@ -619,7 +619,7 @@
           "minLength": 1,
           "maxLength": 128,
           "description": "Language name shown in the editor.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "Gleam"
           ]
@@ -629,7 +629,7 @@
           "maxLength": 128,
           "pattern": "^[A-Za-z][A-Za-z0-9_-]*(?:\\.[A-Za-z0-9_-]+)+$",
           "description": "The grammar's root TextMate scope.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "source.gleam"
           ]
@@ -640,14 +640,14 @@
           "maxLength": 1024,
           "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
           "description": "TextMate grammar JSON file.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "syntaxes/gleam.tmLanguage.json"
           ]
         },
         "configuration": {
           "description": "Language configuration JSON file: comments, brackets and auto-closing pairs.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             "syntaxes/language-configuration.json"
           ],
@@ -659,7 +659,7 @@
         "extensions": {
           "default": [],
           "description": "File extensions this language opens, with the dot.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             [
               ".gleam"
@@ -676,7 +676,7 @@
         "filenames": {
           "default": [],
           "description": "Exact file names this language opens.",
-          "x-orca-since": "unreleased",
+          "x-orca-since": "1.4.232",
           "examples": [
             [
               "gleam.toml"

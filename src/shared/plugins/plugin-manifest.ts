@@ -6,7 +6,7 @@ import { validatePluginManifestContributions } from './plugin-manifest-contribut
 import { formatPluginSchemaIssues } from './plugin-schema-issues'
 import {
   pluginFieldDoc,
-  PLUGIN_SCHEMA_SINCE_UNRELEASED,
+  PLUGIN_MANIFEST_V2_SINCE,
   PLUGIN_SCHEMA_SINCE_V1
 } from './plugin-schema-field-docs'
 import {
@@ -37,7 +37,7 @@ export const orcaEngineRangeSchema = z
   .regex(/^>=\d+\.\d+\.\d+$/, 'must be a ">=x.y.z" version range')
 
 const V1 = PLUGIN_SCHEMA_SINCE_V1
-const NEXT = PLUGIN_SCHEMA_SINCE_UNRELEASED
+const NEXT = PLUGIN_MANIFEST_V2_SINCE
 
 // Why one field set: v1 and v2 differ only in the version, `execution` and `$schema`.
 const pluginManifestFields = {

@@ -81,7 +81,7 @@ function fieldTable(schema: JsonSchema, defs: Record<string, JsonSchema>): strin
 /** Author reference rendered from the published JSON Schema, so prose and schema never drift. */
 export function renderPluginSchemaReference(
   schema: JsonSchema,
-  options: { file: string; schemaFile: string; sinceNote: string }
+  options: { file: string; schemaFile: string; sinceNote: string; appendix?: readonly string[] }
 ): string {
   const defs = schema.$defs ?? {}
   const lines = [
@@ -100,6 +100,9 @@ export function renderPluginSchemaReference(
   ]
   for (const [name, fragment] of Object.entries(defs)) {
     lines.push('', `## ${name}`, '', fragment.description ?? '', '', ...fieldTable(fragment, defs))
+  }
+  if (options.appendix) {
+    lines.push('', ...options.appendix)
   }
   return `${lines.join('\n')}\n`
 }

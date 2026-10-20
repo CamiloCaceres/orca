@@ -2,9 +2,9 @@ import { z } from 'zod'
 import { isAllowedPluginGitUrl } from './plugin-install-lockfile'
 import { isQualifiedPluginKey } from './plugin-manifest'
 import { pluginCatalogReleaseSchema } from './plugin-catalog-release'
-import { pluginFieldDoc, PLUGIN_SCHEMA_SINCE_UNRELEASED } from './plugin-schema-field-docs'
+import { pluginFieldDoc, PLUGIN_MANIFEST_V2_SINCE } from './plugin-schema-field-docs'
 
-const NEXT = PLUGIN_SCHEMA_SINCE_UNRELEASED
+const NEXT = PLUGIN_MANIFEST_V2_SINCE
 
 export const PLUGIN_MARKETPLACE_FILENAME = 'orca-marketplace.json'
 // Why a second file: v1 entries are strict, so shipped clients reject any new field.

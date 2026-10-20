@@ -1,8 +1,9 @@
 /** First release whose host read manifest v1 and its first seven contribution points. */
 export const PLUGIN_SCHEMA_SINCE_V1 = '1.4.223'
-// Why a sentinel: manifest v2 and catalog v2 ship in no release yet; the release that ships
-// them replaces this with its version.
-export const PLUGIN_SCHEMA_SINCE_UNRELEASED = 'unreleased'
+/** First release that reads manifest v2, the v2 catalog and the fields that arrived with them:
+ *  the release after the latest tag when v2 landed. A test fails once a tag at or above it
+ *  ships without v2, so the release that does ship v2 bumps this once if needed. */
+export const PLUGIN_MANIFEST_V2_SINCE = '1.4.232'
 
 type PluginFieldDoc = {
   description: string

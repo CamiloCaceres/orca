@@ -4,17 +4,17 @@
 
 The orca-marketplace.v2.json file that lists installable plugin releases.
 
-Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-marketplace.v2.schema.json"` to `orca-marketplace.v2.json` for completion and inline errors in your editor.
+Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/v2/orca-marketplace.schema.json"` to `orca-marketplace.v2.json` for completion and inline errors in your editor.
 `Since` is the first Orca release that reads the field. Older releases ignore fields they do not know.
 
 ## Fields
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `$schema` | string | no | unreleased | JSON Schema URL for editor completion. Ignored by Orca. |
-| `name` | string | yes | unreleased | Marketplace display name. Example: `"Orca Plugins"` |
-| `owner` | string | yes | unreleased | Account that publishes the marketplace. Example: `"stablyai"` |
-| `plugins` | [CatalogEntry](#catalogentry)[] | yes | unreleased | Listed plugins, at most 2048. An entry this Orca cannot parse is skipped, not fatal. |
+| `$schema` | string | no | 1.4.232 | JSON Schema URL for editor completion. Ignored by Orca. |
+| `name` | string | yes | 1.4.232 | Marketplace display name. Example: `"Orca Plugins"` |
+| `owner` | string | yes | 1.4.232 | Account that publishes the marketplace. Example: `"stablyai"` |
+| `plugins` | [CatalogEntry](#catalogentry)[] | yes | 1.4.232 | Listed plugins, at most 2048. An entry this Orca cannot parse is skipped, not fatal. |
 
 ## CatalogEntry
 
@@ -22,10 +22,10 @@ One installable plugin.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | unreleased | `<publisher>.<id>`, matching the plugin's manifest. Example: `"acme.gleam-syntax"` |
+| `id` | string | yes | 1.4.232 | `<publisher>.<id>`, matching the plugin's manifest. Example: `"acme.gleam-syntax"` |
 | `source` | [CatalogGitSource](#cataloggitsource) | yes |  | Where the plugin source lives. |
-| `description` | string | no | unreleased | Listing text shown in the marketplace. |
-| `categories` | string[] | no | unreleased | Lowercase slugs used to filter the marketplace. Example: `["themes"]` |
+| `description` | string | no | 1.4.232 | Listing text shown in the marketplace. |
+| `categories` | string[] | no | 1.4.232 | Lowercase slugs used to filter the marketplace. Example: `["themes"]` |
 | `release` | [CatalogRelease](#catalogrelease) | yes |  | The exact release the catalog vouches for. Orca refuses bytes that differ. |
 
 ## CatalogGitSource
@@ -34,9 +34,9 @@ Where the plugin source lives.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `kind` | `"git"` | yes | unreleased | Source kind. Only `git` is supported. |
-| `url` | string | yes | unreleased | HTTPS or SSH URL of the plugin repository. Example: `"https://github.com/acme/orca-gleam-syntax.git"` |
-| `ref` | string | yes | unreleased | Branch or tag the author publishes from. A `release` pins the exact commit. Example: `"main"` |
+| `kind` | `"git"` | yes | 1.4.232 | Source kind. Only `git` is supported. |
+| `url` | string | yes | 1.4.232 | HTTPS or SSH URL of the plugin repository. Example: `"https://github.com/acme/orca-gleam-syntax.git"` |
+| `ref` | string | yes | 1.4.232 | Branch or tag the author publishes from. A `release` pins the exact commit. Example: `"main"` |
 
 ## CatalogRelease
 
@@ -44,11 +44,11 @@ The exact release the catalog vouches for. Orca refuses bytes that differ.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `version` | string | yes | unreleased | The manifest's `version` for this release. Example: `"1.2.0"` |
-| `commit` | string | yes | unreleased | Full SHA-1 commit Orca checks out for this release. |
-| `contentHash` | string | yes | unreleased | SHA-256 of the plugin's installed files, as Orca computes it at install. |
-| `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | unreleased | The manifest's `execution` profile. Example: `"data"` |
-| `minimumOrca` | string | yes | unreleased | The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it. Example: `"1.4.223"` |
-| `types` | (`"interface-language"` \| `"app-theme"` \| `"terminal-theme"` \| `"icon-theme"` \| `"syntax"` \| `"instructions"` \| `"panel"` \| `"worker"`)[] | yes | unreleased | Every kind of contribution the release carries, matching its manifest exactly. Example: `["syntax"]` |
-| `name` | string | no | unreleased | The manifest's `name`, so Orca can suggest the plugin before downloading it. Example: `"Gleam"` |
-| `fileTypes` | string[] | no | unreleased | Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer. |
+| `version` | string | yes | 1.4.232 | The manifest's `version` for this release. Example: `"1.2.0"` |
+| `commit` | string | yes | 1.4.232 | Full SHA-1 commit Orca checks out for this release. |
+| `contentHash` | string | yes | 1.4.232 | SHA-256 of the plugin's installed files, as Orca computes it at install. |
+| `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | 1.4.232 | The manifest's `execution` profile. Example: `"data"` |
+| `minimumOrca` | string | yes | 1.4.232 | The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it. Example: `"1.4.223"` |
+| `types` | (`"interface-language"` \| `"app-theme"` \| `"terminal-theme"` \| `"icon-theme"` \| `"syntax"` \| `"instructions"` \| `"panel"` \| `"worker"`)[] | yes | 1.4.232 | Every kind of contribution the release carries, matching its manifest exactly. Example: `["syntax"]` |
+| `name` | string | no | 1.4.232 | The manifest's `name`, so Orca can suggest the plugin before downloading it. Example: `"Gleam"` |
+| `fileTypes` | string[] | no | 1.4.232 | Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer. |

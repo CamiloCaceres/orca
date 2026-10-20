@@ -4,16 +4,16 @@
 
 The orca-plugin.json file at the root of an Orca plugin (manifest format 2).
 
-Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-plugin.schema.json"` to `orca-plugin.json` for completion and inline errors in your editor.
+Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/v2/orca-plugin.schema.json"` to `orca-plugin.json` for completion and inline errors in your editor.
 `Since` is the first Orca release that reads the field; raise `engines.orca` when you use a newer one.
 
 ## Fields
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `$schema` | string | no | unreleased | JSON Schema URL for editor completion. Ignored by Orca. |
-| `manifestVersion` | `2` | yes | unreleased | Manifest format. Use 2 for new plugins. |
-| `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | unreleased | Most authority the plugin needs, least first: `data` (themes, syntaxes, translations), `instructional` (commands, shortcuts, recipes, agents), `sandboxed-ui` (panels), `trusted-worker` (`main` and events). Contributions beyond it fail validation. Example: `"data"` |
+| `$schema` | string | no | 1.4.232 | JSON Schema URL for editor completion. Ignored by Orca. |
+| `manifestVersion` | `2` | yes | 1.4.232 | Manifest format. Use 2 for new plugins. |
+| `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | 1.4.232 | Most authority the plugin needs, least first: `data` (themes, syntaxes, translations), `instructional` (commands, shortcuts, recipes, agents), `sandboxed-ui` (panels), `trusted-worker` (`main` and events). Contributions beyond it fail validation. Example: `"data"` |
 | `id` | string | yes | 1.4.223 | Plugin id, kebab-case. The install identity is `<publisher>.<id>`. Example: `"gleam-syntax"` |
 | `publisher` | string | yes | 1.4.223 | Publisher slug, kebab-case. Usually your GitHub user or organization. Example: `"acme"` |
 | `name` | string | yes | 1.4.223 | Display name. Example: `"Gleam"` |
@@ -36,10 +36,10 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `contributes.keybindings` | [KeybindingContribution](#keybindingcontribution)[] | no | 1.4.223 | Keyboard shortcuts for contributed commands. At most 256. |
 | `contributes.vmRecipes` | [VmRecipeContribution](#vmrecipecontribution)[] | no | 1.4.223 | Virtual machine environment recipes. At most 64. |
 | `contributes.agents` | [AgentProfileContribution](#agentprofilecontribution)[] | no | 1.4.223 | Coding agent profiles. At most 64. |
-| `contributes.themes` | [ThemeContribution](#themecontribution)[] | no | unreleased | App color themes. At most 64. |
-| `contributes.terminalThemes` | [ThemeContribution](#themecontribution)[] | no | unreleased | Terminal ANSI palettes. At most 64. |
-| `contributes.iconThemes` | [ThemeContribution](#themecontribution)[] | no | unreleased | File icon themes. At most 32. |
-| `contributes.syntaxes` | [SyntaxContribution](#syntaxcontribution)[] | no | unreleased | Syntax highlighting for editor languages. At most 16. |
+| `contributes.themes` | [ThemeContribution](#themecontribution)[] | no | 1.4.232 | App color themes. At most 64. |
+| `contributes.terminalThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.232 | Terminal ANSI palettes. At most 64. |
+| `contributes.iconThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.232 | File icon themes. At most 32. |
+| `contributes.syntaxes` | [SyntaxContribution](#syntaxcontribution)[] | no | 1.4.232 | Syntax highlighting for editor languages. At most 16. |
 | `capabilities` | [Capability](#capability)[] | no | 1.4.223 | Host APIs the plugin asks the user to grant. At most 32. |
 
 ## PanelContribution
@@ -113,9 +113,9 @@ A labelled theme file.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | unreleased | Theme id, unique within its family in this plugin. Example: `"dusk"` |
-| `label` | string | yes | unreleased | Name shown in the theme picker. Example: `"Dusk"` |
-| `path` | string | yes | unreleased | JSON theme file, at most 16 KiB. Example: `"themes/dusk.json"` |
+| `id` | string | yes | 1.4.232 | Theme id, unique within its family in this plugin. Example: `"dusk"` |
+| `label` | string | yes | 1.4.232 | Name shown in the theme picker. Example: `"Dusk"` |
+| `path` | string | yes | 1.4.232 | JSON theme file, at most 16 KiB. Example: `"themes/dusk.json"` |
 
 ## SyntaxContribution
 
@@ -123,13 +123,13 @@ Syntax highlighting for one language.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | unreleased | Language id, unique within the plugin. Example: `"gleam"` |
-| `label` | string | yes | unreleased | Language name shown in the editor. Example: `"Gleam"` |
-| `scopeName` | string | yes | unreleased | The grammar's root TextMate scope. Example: `"source.gleam"` |
-| `path` | string | yes | unreleased | TextMate grammar JSON file. Example: `"syntaxes/gleam.tmLanguage.json"` |
-| `configuration` | string | no | unreleased | Language configuration JSON file: comments, brackets and auto-closing pairs. Example: `"syntaxes/language-configuration.json"` |
-| `extensions` | string[] | no | unreleased | File extensions this language opens, with the dot. Example: `[".gleam"]` |
-| `filenames` | string[] | no | unreleased | Exact file names this language opens. Example: `["gleam.toml"]` |
+| `id` | string | yes | 1.4.232 | Language id, unique within the plugin. Example: `"gleam"` |
+| `label` | string | yes | 1.4.232 | Language name shown in the editor. Example: `"Gleam"` |
+| `scopeName` | string | yes | 1.4.232 | The grammar's root TextMate scope. Example: `"source.gleam"` |
+| `path` | string | yes | 1.4.232 | TextMate grammar JSON file. Example: `"syntaxes/gleam.tmLanguage.json"` |
+| `configuration` | string | no | 1.4.232 | Language configuration JSON file: comments, brackets and auto-closing pairs. Example: `"syntaxes/language-configuration.json"` |
+| `extensions` | string[] | no | 1.4.232 | File extensions this language opens, with the dot. Example: `[".gleam"]` |
+| `filenames` | string[] | no | 1.4.232 | Exact file names this language opens. Example: `["gleam.toml"]` |
 
 ## Capability
 
@@ -138,3 +138,11 @@ A host API the plugin may call once the user consents.
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
 | `kind` | `"workspace:read"` \| `"terminal:send"` \| `"notifications:show"` \| `"storage"` \| `"secrets"` \| `"events:subscribe"` \| `"settings:own"` | yes | 1.4.223 | Capability granted on user consent. |
+
+## Legacy format 1
+
+Orca still loads `"manifestVersion": 1` manifests (read since 1.4.223), but new plugins should use format 2. Format 1 differs in three ways:
+
+- It has no `execution` field. Orca derives the least profile that can run what the manifest declares.
+- Unknown top-level keys are ignored instead of rejected.
+- The published JSON Schema does not describe it, so editors offer no completion for it.
