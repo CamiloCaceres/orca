@@ -8,14 +8,19 @@ import {
   type MutableRefObject
 } from 'react'
 import { createPortal } from 'react-dom'
+import { cn } from '@/lib/utils'
 import { useAppStore } from '@/store'
 import { translate } from '@/i18n/i18n'
 import { normalizeExternalBrowserUrl } from '../../../../../shared/browser-url'
 import { resolveBrowserSourceUnifiedTab } from '@/lib/browser-workspace-source-resolution'
 import type { BrowserPageContextMenuState } from '../describe-page/browser-page-types'
+import { BrowserPageExtensionMenuItems } from './browser-page-extension-menu-items'
 
 // `focus:` rather than `focus-visible:` — items are only ever focused programmatically
 // while the menu is open, so every focus here is keyboard navigation.
+// Why no overflow-hidden: an extension's submenu opens beside the panel and must not be clipped.
+const MENU_PANEL_CLASS =
+  'min-w-[13rem] rounded-[11px] border border-black/14 bg-[rgba(255,255,255,0.82)] p-1 text-black shadow-[0_16px_36px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl dark:border-white/14 dark:bg-[rgba(0,0,0,0.72)] dark:text-white dark:shadow-[0_20px_44px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.04)]'
 const MENU_ITEM_CLASS =
   'relative flex w-full cursor-default items-center gap-2 rounded-[7px] px-2 py-0.5 text-[12px] leading-5 font-medium outline-none select-none hover:bg-black/8 focus:bg-black/8 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-white/14 dark:focus:bg-white/14'
 
@@ -51,7 +56,8 @@ export function BrowserPageContextMenu({
         y,
         linkUrl: event.linkUrl,
         pageUrl: event.pageUrl,
-        selectionText: event.selectionText ?? ''
+        selectionText: event.selectionText ?? '',
+        extensionMenu: event.extensionMenu
       })
     })
   }, [browserPageId])
@@ -81,7 +87,12 @@ export function BrowserPageContextMenu({
     if (!el) {
       return []
     }
-    return [...el.querySelectorAll<HTMLButtonElement>('[role="menuitem"]:not(:disabled)')]
+    // Why :scope chain: items inside an extension's submenu navigate within that submenu.
+    return [
+      ...el.querySelectorAll<HTMLButtonElement>(
+        ':scope > [role^="menuitem"]:not(:disabled), :scope > div:not([role]) > [role^="menuitem"]:not(:disabled)'
+      )
+    ]
   }, [])
 
   useEffect(() => {
@@ -179,7 +190,7 @@ export function BrowserPageContextMenu({
         onKeyDown={handleMenuKeyDown}
         data-testid="browser-context-menu"
         style={{ left: contextMenu.x, top: contextMenu.y }}
-        className="fixed z-50 min-w-[13rem] overflow-hidden rounded-[11px] border border-black/14 bg-[rgba(255,255,255,0.82)] p-1 text-black shadow-[0_16px_36px_rgba(0,0,0,0.24),inset_0_1px_0_rgba(255,255,255,0.14)] backdrop-blur-2xl dark:border-white/14 dark:bg-[rgba(0,0,0,0.72)] dark:text-white dark:shadow-[0_20px_44px_rgba(0,0,0,0.42),inset_0_1px_0_rgba(255,255,255,0.04)]"
+        className={cn('fixed z-50', MENU_PANEL_CLASS)}
       >
         {contextMenu.linkUrl ? (
           <>
@@ -315,6 +326,16 @@ export function BrowserPageContextMenu({
           {translate('auto.components.browser.pane.BrowserPane.1b179ab561', 'Copy Page URL')}
         </button>
         <div className="my-1 h-px bg-border/70" />
+        {contextMenu.extensionMenu ? (
+          <BrowserPageExtensionMenuItems
+            // Why keyed: each right-click starts with every submenu closed.
+            key={contextMenu.extensionMenu.token}
+            menu={contextMenu.extensionMenu}
+            itemClassName={MENU_ITEM_CLASS}
+            panelClassName={MENU_PANEL_CLASS}
+            onDone={closeMenu}
+          />
+        ) : null}
         <button
           role="menuitem"
           className={MENU_ITEM_CLASS}

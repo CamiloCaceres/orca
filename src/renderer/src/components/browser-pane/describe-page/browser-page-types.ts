@@ -1,3 +1,4 @@
+import type { BrowserExtensionContextMenuPayload } from '../../../../../shared/browser-extension-context-menu-types'
 import type { Dispatch, MutableRefObject, SetStateAction } from 'react'
 import type { BrowserGrabPayload } from '../../../../../shared/browser-grab-types'
 import type { BrowserPage as BrowserPageState } from '../../../../../shared/browser-workspace-types'
@@ -27,6 +28,7 @@ export type BrowserPageContextMenuState = {
   linkUrl: string | null
   pageUrl: string
   selectionText: string
+  extensionMenu?: BrowserExtensionContextMenuPayload
 }
 
 export type BrowserPageGrabToastState = {

@@ -20,6 +20,7 @@ import { BrowserUserAgentSetting } from './BrowserUserAgentSetting'
 import { SettingsSubsectionHeader } from './SettingsFormControls'
 import { BrowserSessionCookiesSection } from './BrowserSessionCookiesSection'
 import { BrowserNewProfileDialog } from './BrowserNewProfileDialog'
+import { BrowserExtensionsSection } from './BrowserExtensionsSection'
 import {
   createBrowserHomePageDraftState,
   resolveBrowserHomePageDraftState
@@ -28,6 +29,7 @@ import { buildSidebarHostOptions } from '../sidebar/sidebar-host-options'
 import { getHostDisplayLabelOverrides } from '../../../../shared/host-setting-overrides'
 import {
   getSettingsFocusedExecutionHostId,
+  LOCAL_EXECUTION_HOST_ID,
   type ExecutionHostId
 } from '../../../../shared/execution-host'
 import { isMacUserAgent } from '@/components/terminal-pane/pane-helpers'
@@ -74,6 +76,7 @@ export function BrowserPane({
   const defaultBrowserSessionProfileId = useAppStore((s) => s.defaultBrowserSessionProfileId)
   const setDefaultBrowserSessionProfileId = useAppStore((s) => s.setDefaultBrowserSessionProfileId)
   const defaultProfile = browserSessionProfiles.find((p) => p.id === 'default')
+  const selectedProfileId = defaultBrowserSessionProfileId ?? 'default'
   const nonDefaultProfiles = browserSessionProfiles.filter((p) => p.scope !== 'default')
   const persistedHomePageDraft = browserDefaultUrl ?? ''
   const [homePageDraftState, setHomePageDraftState] = useState(() =>
@@ -312,6 +315,18 @@ export function BrowserPane({
           onSelectHost={selectBrowserSessionHost}
           onSelectDefaultProfile={() => setDefaultBrowserSessionProfileId(null)}
           onSelectProfile={setDefaultBrowserSessionProfileId}
+        />
+      ) : null}
+
+      {/* Why local only: release 1 runs extensions in this computer's browser profiles. */}
+      {settings.experimentalBrowserExtensions === true &&
+      selectedBrowserSessionHostId === LOCAL_EXECUTION_HOST_ID ? (
+        <BrowserExtensionsSection
+          profileId={selectedProfileId}
+          profileLabel={
+            browserSessionProfiles.find((profile) => profile.id === selectedProfileId)?.label ??
+            selectedProfileId
+          }
         />
       ) : null}
 

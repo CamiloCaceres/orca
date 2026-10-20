@@ -9,6 +9,8 @@ import { BrowserChromeToolbar } from './browser-chrome-toolbar'
 import { BrowserImportHintButton } from './BrowserImportHintButton'
 import { BrowserReloadControl } from './browser-reload-control'
 import { BrowserToolbarMenu } from './BrowserToolbarMenu'
+import { BrowserExtensionToolbar } from './browser-extension-toolbar'
+import { useBrowserExtensionToolbar } from './use-browser-extension-toolbar'
 import { SshEgressIndicator } from './browser-egress-indicator'
 import { destroyPersistentWebview } from '../host-guest/webview-registry'
 import {
@@ -130,6 +132,11 @@ export function BrowserPageToolbar({
     canOpenSourceFile && localHtmlFilePath !== null
       ? () => openBrowserFileSource(worktreeId, localHtmlFilePath)
       : null
+  const extensionToolbar = useBrowserExtensionToolbar(
+    browserPageId,
+    isActive,
+    `${currentBrowserUrl}\n${loading}`
+  )
 
   return (
     <BrowserChromeToolbar
@@ -194,6 +201,17 @@ export function BrowserPageToolbar({
       importControl={(compact) => (
         <BrowserImportHintButton profileId={sessionProfileId} compact={compact} />
       )}
+      extensionActions={
+        extensionToolbar &&
+        // oxlint-disable-next-line react-doctor/no-unstable-nested-components -- BrowserChromeToolbar calls this as a function, so BrowserExtensionToolbar stays one stable component.
+        ((compact) => (
+          <BrowserExtensionToolbar
+            browserPageId={browserPageId}
+            state={extensionToolbar}
+            compact={compact}
+          />
+        ))
+      }
       elementTools={{
         activeIntent: grab.state !== 'idle' ? grabIntent : null,
         onStartIntent: startGrabIntent,

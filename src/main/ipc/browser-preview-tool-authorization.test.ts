@@ -145,7 +145,23 @@ const BROWSER_PAGE_CHANNELS = [
   'browser:session:importFromBrowser',
   // Process-wide identity: reads/writes the host's own user-agent choice, never a viewed guest.
   'browser:identity:get',
-  'browser:identity:set'
+  'browser:identity:set',
+  // Extension management and the toolbar's extension buttons: browser-page tabs only.
+  'browserExtensions:list',
+  'browserExtensions:setEnabled',
+  'browserExtensions:remove',
+  'browserExtensions:loadUnpacked',
+  'browserExtensions:reload',
+  'browserExtensions:openOptions',
+  'browserExtensions:reviewUpdate',
+  'browserExtensions:installFromWebStore',
+  'browserExtensions:respondInstallPrompt',
+  'browserExtensions:contextMenuClick',
+  'browserExtensions:actionContextMenu',
+  'browserExtensions:toolbarState',
+  'browserExtensions:setPinned',
+  'browserExtensions:activateAction',
+  'browserExtensions:pageIcon'
 ]
 
 type Handler = (event: { sender: Electron.WebContents }, args: unknown) => unknown

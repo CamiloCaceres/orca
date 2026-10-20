@@ -6,6 +6,7 @@ import {
 } from '../../shared/browser-url'
 import { readGuestNavigationState } from './browser-guest-navigation-state'
 import type { ResolveRenderer } from './browser-guest-renderer-target'
+import { buildBrowserExtensionPageContextMenu } from './extensions/browser-extension-context-menu-host'
 
 export function setupGuestContextMenu(args: {
   browserTabId: string
@@ -39,7 +40,8 @@ export function setupGuestContextMenu(args: {
       linkUrl,
       // Why: forward the native selection so the renderer can Copy it directly, bypassing pages that suppress copy via oncopy handlers.
       selectionText: params.selectionText ?? '',
-      ...navigationState
+      ...navigationState,
+      extensionMenu: buildBrowserExtensionPageContextMenu(guest, params) ?? undefined
     })
   }
 

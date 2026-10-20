@@ -18,15 +18,12 @@ import {
 } from './browser-session-cookie-staging'
 import {
   BROWSER_SESSION_META_FILE_NAME,
+  forgetBrowserSessionProfileMeta,
   loadBrowserSessionMeta,
   persistBrowserSessionMeta
 } from './browser-session-meta-store'
 import type { BrowserSessionMeta } from './browser-session-meta-store'
-import {
-  forgetBrowserSessionPartitionConfiguration,
-  installBrowserSessionPartitionPolicies,
-  retireBrowserSessionUserAgentPolicy
-} from './browser-session-partition-policies'
+import { installBrowserSessionPartitionPolicies } from './browser-session-partition-policies'
 import {
   isValidPersistedBrowserSessionProfile,
   inspectRetiredBrowserSessionProfileUserAgentModes
@@ -35,12 +32,16 @@ import {
   clearBrowserRoutePartitionPolicies,
   installBrowserRoutePartitionPolicies
 } from './browser-session-route-policies'
-import { retireProxySessionApplication } from '../network/proxy-settings'
-import { invalidateBrowserSessionProxyApplication } from './browser-session-proxy'
-import { retireFailedBrowserSessionProfile } from './browser-session-profile-retirement'
-import { cancelBrowserWebAuthnAccountRequestsForSession } from './browser-webauthn-account-picker'
+import {
+  retireDeletedBrowserSessionProfile,
+  retireFailedBrowserSessionProfile
+} from './browser-session-profile-retirement'
 import { getCanonicalUserDataPath } from '../persistence/loading-store/user-data-path'
 import { markBrowserIdentityMigrationNoticePending } from './browser-identity-mode-store'
+import { attachBrowserExtensionsToProfileSession } from './extensions/browser-extension-session-loader'
+
+type ExtensionIdListKey = 'enabledExtensionIdsByProfileId' | 'pinnedExtensionIdsByProfileId'
+type ExtensionIdListUpdate = (byProfile: Record<string, string[]>) => Record<string, string[]>
 
 export type BrowserSessionRegistryProfileOptions = {
   orcaProfileId: string
@@ -137,6 +138,34 @@ class BrowserSessionRegistry {
     void installBrowserSessionPartitionPolicies(defaultProfile).catch(() => {
       console.warn('[proxy] Failed to apply proxy to browser partition', defaultProfile.partition)
     })
+    this.attachExtensions(defaultProfile)
+  }
+
+  // Why here and not in the partition installer: that installer also serves route, SSH and
+  // doc-preview partitions, and release 1 runs extensions only in local browser profiles.
+  private attachExtensions(profile: BrowserSessionProfile): void {
+    attachBrowserExtensionsToProfileSession(profile, this.getEnabledExtensionIds(profile.id))
+  }
+
+  getEnabledExtensionIds(profileId: string): string[] {
+    return this.loadPersistedMeta().enabledExtensionIdsByProfileId[profileId] ?? []
+  }
+
+  updateEnabledExtensionIds(update: ExtensionIdListUpdate): void {
+    this.updateExtensionIdList('enabledExtensionIdsByProfileId', update)
+  }
+
+  getPinnedExtensionIds(profileId: string): string[] {
+    return this.loadPersistedMeta().pinnedExtensionIdsByProfileId[profileId] ?? []
+  }
+
+  updatePinnedExtensionIds(update: ExtensionIdListUpdate): void {
+    this.updateExtensionIdList('pinnedExtensionIdsByProfileId', update)
+  }
+
+  private updateExtensionIdList(key: ExtensionIdListKey, update: ExtensionIdListUpdate): void {
+    const next: Pick<BrowserSessionMeta, ExtensionIdListKey> = this.loadPersistedMeta()
+    this.persistMeta({ [key]: update(next[key]) })
   }
 
   // Why: must run before any session.fromPartition() so CookieMonster reads the staged cookies instead of overwriting them from its in-memory DB.
@@ -244,6 +273,7 @@ class BrowserSessionRegistry {
     }
     this.profiles.set(id, profile)
     this.persistProfiles()
+    this.attachExtensions(profile)
     return profile
   }
 
@@ -272,34 +302,10 @@ class BrowserSessionRegistry {
     }
     this.profiles.delete(profileId)
     this.persistProfiles()
-    const meta = this.loadPersistedMeta()
-    const pendingCookieImports = { ...meta.pendingCookieImports }
-    delete pendingCookieImports[profile.partition]
-    const defaultPendingImport = pendingCookieImports[this.defaultPartition]
-    this.persistMeta({
-      pendingCookieImports,
-      pendingCookieDbPath: typeof defaultPendingImport === 'string' ? defaultPendingImport : null
-    })
-
-    // Why: clear the partition's storage so deleting a profile doesn't leave orphaned cookies/cache behind.
-    try {
-      const sess = session.fromPartition(profile.partition)
-      forgetBrowserSessionPartitionConfiguration(profile.partition)
-      retireBrowserSessionUserAgentPolicy(sess)
-      invalidateBrowserSessionProxyApplication(sess)
-      const release = retireProxySessionApplication(sess)
-      // Why: persistent partitions can retain service workers after every WebContents dies, so a retired session's deny policies must remain permanent.
-      cancelBrowserWebAuthnAccountRequestsForSession(sess)
-      try {
-        await release
-      } catch {
-        console.warn('[proxy] Failed to release proxy from browser partition', profile.partition)
-      }
-      await sess.clearStorageData()
-      await sess.clearCache()
-    } catch {
-      // Why: cleanup is best-effort — the profile is already out of the registry, so will-attach-webview blocks it regardless.
-    }
+    this.persistMeta(
+      forgetBrowserSessionProfileMeta(this.loadPersistedMeta(), profile, this.defaultPartition)
+    )
+    await retireDeletedBrowserSessionProfile(profile)
     return true
   }
 
@@ -338,6 +344,7 @@ class BrowserSessionRegistry {
         void installBrowserSessionPartitionPolicies(profile).catch(() => {
           console.warn('[proxy] Failed to apply proxy to browser partition', profile.partition)
         })
+        this.attachExtensions(profile)
       }
     }
   }

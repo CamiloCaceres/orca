@@ -179,6 +179,16 @@ export function createBrowserTabActions(
       if (ORCA_LAYOUT_OWNER_IS_MAIN) {
         recordBrowserTabOpen(get(), browserTab)
       }
+      // Why: activating by creation must reach main like a tab switch does, or main's active tab lags the UI.
+      // Main ignores a page id it never registered, so a paired-runtime page needs no owner lookup.
+      if (
+        (options?.activate ?? true) &&
+        !page.browserRuntimeEnvironmentId &&
+        typeof window !== 'undefined' &&
+        window.api?.browser
+      ) {
+        window.api.browser.notifyActiveTabChanged({ browserPageId: page.id }).catch(() => {})
+      }
       return browserTab
     },
 

@@ -1,3 +1,5 @@
+import type { BrowserExtensionContextMenuPayload } from './browser-extension-context-menu-types'
+
 export type BrowserPermissionDeniedEvent = {
   browserPageId: string
   /** Electron permission string (e.g. "media", "notifications"). */
@@ -56,6 +58,8 @@ export type BrowserContextMenuRequestedEvent = {
   selectionText: string
   canGoBack: boolean
   canGoForward: boolean
+  /** Browser-extension items for this right-click (local extension profiles only). */
+  extensionMenu?: BrowserExtensionContextMenuPayload
 }
 
 export type BrowserContextMenuDismissedEvent = {
