@@ -96,6 +96,12 @@ const installed: PluginHostListEntry = {
 }
 
 let root: Root | null = null
+const install = {
+  phaseOf: () => null,
+  install: vi.fn().mockResolvedValue(undefined),
+  undo: vi.fn().mockResolvedValue(undefined),
+  dismiss: vi.fn()
+}
 
 async function render(
   entry: PluginListEntry,
@@ -122,7 +128,8 @@ async function render(
           onRemoveRequest: vi.fn()
         }}
         fetchPreview={fetchPreview}
-        onInstall={vi.fn()}
+        install={install}
+        onConsent={vi.fn().mockResolvedValue(undefined)}
         onBack={vi.fn()}
         onOpenShortcuts={vi.fn()}
       />
@@ -160,7 +167,19 @@ describe('PluginDetailPage', () => {
     )
     expect(container.textContent).toContain('Minimal Icons')
     expect(container.textContent).toContain('File icon theme')
-    expect(container.textContent).toContain('Nothing outside its own files')
+    // Why from the release: install refuses bytes whose profile differs from it.
+    expect(container.textContent).toContain('Can’t reach anything outside its own files')
+  })
+
+  it('installs a content-only plugin in one click from its page', async () => {
+    const container = await render(pluginListEntryFromListing(listing), () =>
+      Promise.resolve({ ok: true, preview })
+    )
+    const button = Array.from(container.querySelectorAll('button')).find(
+      (candidate) => candidate.textContent === 'Install'
+    )
+    await act(async () => button?.click())
+    expect(install.install).toHaveBeenCalledWith(listing)
   })
 
   it('never claims no access when the plugin could not be read, and retries', async () => {
@@ -168,16 +187,24 @@ describe('PluginDetailPage', () => {
       .fn<(target: PluginMarketplaceHostListing) => Promise<PluginPagePreview>>()
       .mockResolvedValueOnce({ ok: false })
       .mockResolvedValueOnce({ ok: true, preview })
-    const container = await render(pluginListEntryFromListing(listing), fetchPreview)
+    // Why no release: an older catalog vouches for no profile, so only the files can say.
+    const container = await render(
+      pluginListEntryFromListing({ ...listing, release: undefined }),
+      fetchPreview
+    )
     expect(container.textContent).toContain('Couldn’t read what it can access')
-    expect(container.textContent).not.toContain('Nothing outside its own files')
+    expect(container.textContent).not.toContain('outside its own files')
+    const installButton = Array.from(container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Install & enable')
+    )
+    expect(installButton?.disabled).toBe(true)
 
     const retry = Array.from(container.querySelectorAll('button')).find(
       (button) => button.textContent === 'Retry'
     )
     await act(async () => retry?.click())
     expect(fetchPreview).toHaveBeenCalledTimes(2)
-    expect(container.textContent).toContain('Nothing outside its own files')
+    expect(container.textContent).toContain('Can’t reach anything outside its own files')
   })
 
   it('names an installed plugin’s syntax and says when its grammar failed', async () => {

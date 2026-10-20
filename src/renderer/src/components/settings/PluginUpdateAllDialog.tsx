@@ -288,7 +288,7 @@ function CandidateRow({
     )
   } else if (needsOrca) {
     note = (
-      <p className="mt-0.5 text-xs text-status-warning">
+      <p className="mt-0.5 text-xs text-status-warning-text">
         {translate(
           'auto.components.settings.PluginUpdateAllDialog.needsOrca',
           'Needs Orca {{value0}} or later. Update Orca first.',
@@ -300,7 +300,7 @@ function CandidateRow({
     note = (
       <ul className="mt-1.5 space-y-0.5 border-l-2 border-status-warning pl-2 text-xs">
         {added.map((kind) => (
-          <li key={kind} className="text-status-warning">
+          <li key={kind} className="text-status-warning-text">
             {translate(
               'auto.components.settings.PluginUpdateAllDialog.newAccess',
               'New access: {{value0}}',

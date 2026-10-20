@@ -12156,7 +12156,8 @@
           "remove": "Remove",
           "pathLabel": "Development plugin folder path",
           "placeholder": "/Users/you/plugins/my-plugin or C:\\Users\\you\\plugins\\my-plugin",
-          "add": "Add path"
+          "add": "Add path",
+          "dialogTitle": "Development folders"
         },
         "PluginInstallDialog": {
           "localRequired": "Enter the plugin folder path.",
@@ -13302,7 +13303,8 @@
           "browseAll": "Browse all plugins",
           "resultCount": "{{value0}} plugins match",
           "resultCountOne": "1 plugin matches",
-          "updateAll": "Update all…"
+          "updateAll": "Update all…",
+          "installedElsewhere": "Installed outside a catalog"
         },
         "PluginDetailPage": {
           "bundled": "Bundled with Orca",
@@ -13324,7 +13326,10 @@
           "categories": "Categories",
           "pluginId": "Plugin ID",
           "content": "Content",
-          "repository": "Repository"
+          "repository": "Repository",
+          "newerTitle": "Newer version available",
+          "newerBody": "The catalog changed while this page was open. Show the newer version to review it.",
+          "showNewer": "Show it"
         },
         "PluginDetailSections": {
           "typeLanguagePack": "Interface language",
@@ -13386,7 +13391,8 @@
           "turnOn": "Turn on plugins",
           "systemDescription": "Turns every plugin off at once. Nothing runs until you review and enable it.",
           "pausedCount": "{{value0}} paused",
-          "pausedUnknown": "Your installed plugins are paused and will be back when you turn plugins on."
+          "pausedUnknown": "Your installed plugins are paused and will be back when you turn plugins on.",
+          "offShort": "Nothing from your plugins runs."
         },
         "PluginFilterPopover": {
           "label": "Filter plugins",
@@ -13438,6 +13444,41 @@
           "languageIncomplete": "{{value0}}% translated, too incomplete to use as Orca’s language",
           "languageCoverage": "Interface language · {{value0}}% translated",
           "agent": "Agent profile"
+        },
+        "PluginCardAction": {
+          "installed": "Installed",
+          "undoLabel": "Undo installing {{value0}}",
+          "undo": "Undo",
+          "installing": "Installing…",
+          "reviewLabel": "Review and install {{value0}}",
+          "review": "Review & install",
+          "retry": "Try again"
+        },
+        "PluginInstallConsent": {
+          "install": "Install & enable",
+          "installHeading": "If you install {{value0}}, it can:",
+          "enableHeading": "If you enable {{value0}}, it can:",
+          "noOtherAccess": "It asks for no other access.",
+          "keepOff": "Keep off"
+        },
+        "PluginPageAction": {
+          "failedTitle": "Couldn’t install {{value0}}",
+          "contentOnly": "Can’t reach anything outside its own files"
+        },
+        "PluginSettingsMenu": {
+          "label": "Plugin settings",
+          "development": "Development folders…",
+          "turnOff": "Turn off plugins",
+          "turnOffDetail": "Nothing from any plugin runs until you turn them back on."
+        },
+        "PluginThemeUseNow": {
+          "label": "Use now:"
+        },
+        "usePluginInstallAction": {
+          "mismatch": "The download didn’t match what the catalog published, so nothing was installed.",
+          "catalogChanged": "The catalog changed since this page opened. Refresh it, then try again.",
+          "blocked": "Orca’s safety list blocks this plugin.",
+          "downloadFailed": "Couldn’t download this plugin. Check your connection, then try again. Nothing was installed."
         }
       },
       "right": {

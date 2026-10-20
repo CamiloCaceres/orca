@@ -41,14 +41,6 @@ vi.mock('../ui/dropdown-menu', () => ({
 }))
 vi.mock('./PluginMarketplaceSourceDialog', () => ({ PluginMarketplaceSourceDialog: () => null }))
 
-function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
-  let resolve: (value: T) => void = () => undefined
-  const promise = new Promise<T>((done) => {
-    resolve = done
-  })
-  return { promise, resolve }
-}
-
 const SOURCE_ID = 'a'.repeat(32)
 const MARKETPLACE_COMMIT = 'b'.repeat(40)
 const PLUGIN_COMMIT = 'c'.repeat(40)
@@ -151,6 +143,7 @@ function installApi(overrides: Record<string, unknown> = {}): void {
         previewMarketplaceUpdate: vi.fn().mockResolvedValue(preview),
         getRollbackVersion: vi.fn().mockResolvedValue(null),
         getInstalledManifest: vi.fn().mockResolvedValue(null),
+        consent: vi.fn().mockResolvedValue([]),
         installMarketplacePlugin: vi.fn().mockResolvedValue({
           ok: true,
           pluginKey: listing.pluginKey,
@@ -200,6 +193,8 @@ function Harness({
       page={page}
       sourcesOpen={false}
       setSourcesOpen={vi.fn()}
+      onUndoInstall={vi.fn().mockResolvedValue(undefined)}
+      onConsent={vi.fn().mockResolvedValue(undefined)}
     />
   )
 }
@@ -241,20 +236,53 @@ afterEach(() => {
 })
 
 describe('PluginManager catalog', () => {
-  it('reviews the exact bytes it will install and hands the install to review', async () => {
+  it('installs a content-only plugin in one click and lets main decide it turns on', async () => {
+    const themeListing: PluginMarketplaceHostListing = {
+      ...listing,
+      release: {
+        version: '1.0.0',
+        commit: PLUGIN_COMMIT,
+        contentHash: 'd'.repeat(64),
+        execution: 'data',
+        minimumOrca: '1.0.0',
+        types: ['app-theme']
+      }
+    }
+    installApi({ listMarketplacePlugins: vi.fn().mockResolvedValue([themeListing]) })
     const { onInstalled } = await render()
     await act(async () => button('Install').click())
 
-    expect(window.api.plugins.previewMarketplacePlugin).toHaveBeenCalledWith({
+    expect(window.api.plugins.installMarketplacePlugin).toHaveBeenCalledWith({
       marketplaceSourceId: SOURCE_ID,
-      pluginKey: listing.pluginKey
+      marketplaceCommit: MARKETPLACE_COMMIT,
+      pluginKey: listing.pluginKey,
+      resolvedCommit: PLUGIN_COMMIT,
+      enableIfData: true
     })
-    await act(async () => button('Install plugin').click())
+    expect(window.api.plugins.consent).not.toHaveBeenCalled()
+    expect(buttons('Install plugin')).toHaveLength(0)
+    expect(onInstalled).toHaveBeenCalledWith(listing.pluginKey)
+  })
+
+  it('reviews a plugin that runs code on its page and approves exactly what it showed', async () => {
+    const { onInstalled } = await render()
+    await act(async () => button('Review & install').click())
+    expect(document.body.textContent).toContain('If you install Worktree Notes, it can:')
+    expect(document.body.textContent).toContain(
+      'Its worker runs as a normal process with full access to your files, network, and other processes.'
+    )
+
+    await act(async () => button('Install & enable').click())
     expect(window.api.plugins.installMarketplacePlugin).toHaveBeenCalledWith({
       marketplaceSourceId: SOURCE_ID,
       marketplaceCommit: MARKETPLACE_COMMIT,
       pluginKey: listing.pluginKey,
       resolvedCommit: PLUGIN_COMMIT
+    })
+    expect(window.api.plugins.consent).toHaveBeenCalledWith({
+      pluginKey: listing.pluginKey,
+      reviewedFingerprint: preview.consentFingerprint,
+      decision: 'approve'
     })
     expect(onInstalled).toHaveBeenCalledWith(listing.pluginKey)
   })
@@ -270,11 +298,15 @@ describe('PluginManager catalog', () => {
     const { container } = await render()
     expect(container.textContent).toContain('Known credential theft')
     expect(buttons('Install')).toHaveLength(0)
+    expect(buttons('Review & install')).toHaveLength(0)
     expect(window.api.plugins.previewMarketplacePlugin).not.toHaveBeenCalled()
   })
 
   it('says when an update preview matches the installed bytes', async () => {
-    await render([installedPlugin(preview.contentHash)])
+    const { container } = await render([installedPlugin(preview.contentHash)])
+    await act(async () =>
+      container.querySelector<HTMLButtonElement>('[data-plugin-row-name]')?.click()
+    )
     await act(async () => button('Check for update').click())
 
     expect(window.api.plugins.previewMarketplaceUpdate).toHaveBeenCalledWith({
@@ -282,35 +314,6 @@ describe('PluginManager catalog', () => {
     })
     expect(document.body.textContent).toContain('This exact plugin content is already installed.')
     expect(buttons('Update plugin')).toHaveLength(0)
-  })
-
-  it('does not let an older preview response replace the latest one', async () => {
-    const first = deferred<PluginMarketplaceHostInstallPreview>()
-    const second = deferred<PluginMarketplaceHostInstallPreview>()
-    const other: PluginMarketplaceHostListing = { ...listing, pluginKey: 'example.tasks' }
-    installApi({
-      listMarketplacePlugins: vi.fn().mockResolvedValue([listing, other]),
-      previewMarketplacePlugin: vi
-        .fn()
-        .mockReturnValueOnce(first.promise)
-        .mockReturnValueOnce(second.promise)
-    })
-    await render()
-    await act(async () => {
-      const [a, b] = buttons('Install')
-      a?.click()
-      b?.click()
-    })
-    await act(async () =>
-      second.resolve({
-        ...preview,
-        ...other,
-        manifest: { ...preview.manifest, id: 'tasks', name: 'Worktree Tasks' }
-      })
-    )
-    await act(async () => first.resolve(preview))
-    expect(document.body.textContent).toContain('Worktree Tasks')
-    expect(document.body.textContent).not.toContain('Worktree Notes')
   })
 
   it('opens a preview asked for from outside Settings, once', async () => {

@@ -143,6 +143,8 @@ function Harness({ plugins }: { plugins: PluginHostListEntry[] }): React.JSX.Ele
       page={page}
       sourcesOpen={false}
       setSourcesOpen={vi.fn()}
+      onUndoInstall={vi.fn().mockResolvedValue(undefined)}
+      onConsent={vi.fn().mockResolvedValue(undefined)}
     />
   )
 }
@@ -173,19 +175,17 @@ afterEach(() => {
 })
 
 describe('PluginManager', () => {
-  it('lists each plugin once: installed first, then its catalog, capped with Show more', async () => {
+  it('lists each plugin once, in catalog order, capped with Show more', async () => {
     const container = await render()
     const rows = Array.from(container.querySelectorAll('[data-plugin-key]')).map((row) =>
       row.getAttribute('data-plugin-key')
     )
+    // Why one grid: an installed catalog plugin keeps its card, so installing never moves it.
     expect(rows.filter((key) => key === 'stablyai.orca-nord-theme')).toHaveLength(1)
-    expect(rows[0]).toBe('stablyai.orca-nord-theme')
-    expect(rows).toHaveLength(1 + PLUGIN_GROUP_ROW_CAP)
+    expect(rows).toHaveLength(PLUGIN_GROUP_ROW_CAP)
 
-    await act(async () => buttonNamed(container, 'Show 2 more')?.click())
-    expect(container.querySelectorAll('[data-plugin-key]')).toHaveLength(
-      1 + PLUGIN_GROUP_ROW_CAP + 2
-    )
+    await act(async () => buttonNamed(container, 'Show 3 more')?.click())
+    expect(container.querySelectorAll('[data-plugin-key]')).toHaveLength(PLUGIN_GROUP_ROW_CAP + 3)
   })
 
   it('offers a newer catalog version as the row action and counts it under Updates', async () => {

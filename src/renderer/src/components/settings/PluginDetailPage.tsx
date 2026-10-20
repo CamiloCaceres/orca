@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
-import { BadgeCheck, ChevronLeft, CircleAlert, Info, TriangleAlert } from 'lucide-react'
+import { BadgeCheck, ChevronLeft, Undo2 } from 'lucide-react'
 import type { PluginMarketplaceHostInstallPreview } from '../../../../preload/api-types'
 import { satisfiesOrcaEngineRange } from '../../../../shared/plugins/plugin-manifest'
 import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
-import { PluginCatalogAvatar } from '../plugin-catalog/PluginCatalogAvatar'
 import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
+import { PluginDetailAlert as Alert } from './PluginDetailAlert'
+import { PluginPageAction } from './PluginPageAction'
+import { PluginThemeUseNow } from './PluginThemeUseNow'
+import type { usePluginInstallAction } from './use-plugin-install-action'
 import { PluginDetailInfo, PluginReleaseNotes } from './PluginDetailInfo'
 import { PluginAddsSection } from './PluginAddsSection'
 import { PluginAccessSection, PluginLogsSection } from './PluginDetailSections'
@@ -23,7 +26,12 @@ type PluginDetailPageProps = {
   logsState: PluginLogsState | undefined
   handlers: InstalledRowHandlers
   fetchPreview: (listing: NonNullable<PluginListEntry['listing']>) => Promise<PluginPagePreview>
-  onInstall: (entry: PluginListEntry) => void
+  install: ReturnType<typeof usePluginInstallAction>
+  onConsent: (
+    pluginKey: string,
+    reviewedFingerprint: string,
+    decision: 'approve' | 'keep-disabled'
+  ) => Promise<void>
   onBack: () => void
   onOpenShortcuts: () => void
 }
@@ -42,40 +50,6 @@ function sourceLabel(entry: PluginListEntry): string {
   return entry.listing?.marketplaceName ?? ''
 }
 
-function Alert({
-  tone,
-  title,
-  body,
-  action
-}: {
-  tone: 'info' | 'warning' | 'destructive'
-  title: string
-  body: string
-  action?: React.ReactNode
-}): React.JSX.Element {
-  const Icon = tone === 'info' ? Info : tone === 'warning' ? TriangleAlert : CircleAlert
-  return (
-    <div
-      role="status"
-      data-tone={tone}
-      className="mt-5 flex items-start gap-2.5 rounded-xl border border-border bg-muted/40 px-3.5 py-3 text-sm data-[tone=destructive]:border-destructive/35 data-[tone=destructive]:bg-destructive/7 data-[tone=warning]:border-status-warning/45 data-[tone=warning]:bg-status-warning/7"
-    >
-      <Icon
-        aria-hidden="true"
-        data-tone={tone}
-        className="mt-0.5 size-4 shrink-0 data-[tone=destructive]:text-destructive data-[tone=warning]:text-status-warning"
-      />
-      <div className="min-w-0 flex-1">
-        <p data-tone={tone} className="font-medium data-[tone=destructive]:text-destructive">
-          {title}
-        </p>
-        <p className="mt-0.5 text-xs text-muted-foreground">{body}</p>
-      </div>
-      {action}
-    </div>
-  )
-}
-
 /** One plugin's page: what it adds, what it can reach, where it came from, and its logs. */
 export function PluginDetailPage({
   entry,
@@ -84,12 +58,21 @@ export function PluginDetailPage({
   logsState,
   handlers,
   fetchPreview,
-  onInstall,
+  install,
+  onConsent,
   onBack,
   onOpenShortcuts
 }: PluginDetailPageProps): React.JSX.Element {
   const plugin = entry.installed
-  const listing = entry.listing
+  // Why pinned: a catalog refresh mid-view must never swap the rows above an armed button.
+  const [pinned, setPinned] = useState(entry.listing)
+  const listing = plugin ? entry.listing : pinned
+  const newerListed =
+    !plugin &&
+    entry.listing !== null &&
+    pinned !== null &&
+    (entry.listing.release?.commit ?? entry.listing.marketplaceCommit) !==
+      (pinned.release?.commit ?? pinned.marketplaceCommit)
   const [preview, setPreview] = useState<PluginMarketplaceHostInstallPreview | null>(null)
   const [previewLoading, setPreviewLoading] = useState(!plugin && Boolean(listing))
   const [previewFailed, setPreviewFailed] = useState(false)
@@ -105,6 +88,7 @@ export function PluginDetailPage({
       return
     }
     let stale = false
+    setPreview(null)
     setPreviewLoading(true)
     setPreviewFailed(false)
     void fetchPreview(listing).then((result) => {
@@ -183,15 +167,35 @@ export function PluginDetailPage({
         body={typeof controls.description === 'string' ? controls.description : ''}
       />
     )
-  } else if (controls?.kind === 'review') {
+  } else if (!plugin && listing?.blockedByKillList) {
+    alert = (
+      <Alert
+        tone="destructive"
+        title={translate('auto.components.settings.PluginSettingsRow.blocked', 'Blocked')}
+        body={translate(
+          'auto.components.settings.PluginMarketplaceListingRow.blocked',
+          "Blocked by Orca's safety list: {{value0}}",
+          { value0: listing.blockedByKillList.reason }
+        )}
+      />
+    )
+  } else if (newerListed) {
     alert = (
       <Alert
         tone="info"
-        title={translate('auto.components.settings.PluginSettingsRow.needsReview', 'Needs review')}
-        body={translate(
-          'auto.components.settings.PluginDetailPage.reviewBody',
-          'Review what it adds and what it can reach, then enable it. Nothing runs before that.'
+        title={translate(
+          'auto.components.settings.PluginDetailPage.newerTitle',
+          'Newer version available'
         )}
+        body={translate(
+          'auto.components.settings.PluginDetailPage.newerBody',
+          'The catalog changed while this page was open. Show the newer version to review it.'
+        )}
+        action={
+          <Button variant="outline" size="xs" onClick={() => setPinned(entry.listing)}>
+            {translate('auto.components.settings.PluginDetailPage.showNewer', 'Show it')}
+          </Button>
+        }
       />
     )
   } else if (!plugin && tooNew) {
@@ -222,9 +226,8 @@ export function PluginDetailPage({
         <ChevronLeft />
         {translate('auto.components.settings.PluginDetailPage.back', 'Plugins')}
       </Button>
-      <div className="mt-4 grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-start gap-x-3.5 @max-xl/plugin-detail:grid-cols-[2.75rem_minmax(0,1fr)]">
-        <PluginCatalogAvatar name={entry.name} className="size-11 rounded-xl text-xs" />
-        <div className="min-w-0">
+      <div className="mt-4 flex flex-wrap items-start gap-x-4 gap-y-3">
+        <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h3
               id="plugin-detail-heading"
@@ -251,53 +254,83 @@ export function PluginDetailPage({
               .filter(Boolean)
               .join(' · ')}
           </p>
-          {controls ? <div className="mt-2">{controls.status}</div> : null}
+          {controls && controls.kind !== 'review' ? (
+            <div className="mt-2">{controls.status}</div>
+          ) : null}
         </div>
-        <div className="flex items-center gap-2 @max-xl/plugin-detail:col-start-2 @max-xl/plugin-detail:mt-3">
-          {controls ? (
-            <>
-              {controls.action}
-              {controls.toggle}
-              {controls.more}
-            </>
-          ) : (
-            <Button
-              size="sm"
-              disabled={tooNew || Boolean(listing?.blockedByKillList)}
-              onClick={() => onInstall(entry)}
-            >
-              {translate('auto.components.settings.PluginDetailPage.install', 'Install…')}
-            </Button>
-          )}
-        </div>
+        {controls?.kind === 'review' ? (
+          // Why: a plugin waiting for review can still be removed; the consent below decides the rest.
+          <div className="flex items-center gap-2">{controls.more}</div>
+        ) : controls ? (
+          <div className="flex items-center gap-2">
+            {install.phaseOf(entry.pluginKey)?.kind === 'undoable' ? (
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={translate(
+                  'auto.components.settings.PluginCardAction.undoLabel',
+                  'Undo installing {{value0}}',
+                  { value0: name }
+                )}
+                onClick={() => void install.undo(entry.pluginKey)}
+              >
+                <Undo2 />
+                {translate('auto.components.settings.PluginCardAction.undo', 'Undo')}
+              </Button>
+            ) : (
+              controls.action
+            )}
+            {controls.toggle}
+            {controls.more}
+          </div>
+        ) : null}
       </div>
+      {description ? <p className="mt-4 max-w-prose text-sm leading-6">{description}</p> : null}
+      {plugin && controls?.kind !== 'review' ? (
+        <PluginThemeUseNow pluginKey={plugin.pluginKey} />
+      ) : null}
+      <PluginPageAction
+        entry={entry}
+        name={name}
+        listing={listing}
+        execution={execution}
+        preview={preview}
+        previewFailed={previewFailed}
+        onRetryPreview={() => setPreviewAttempt((attempt) => attempt + 1)}
+        unavailable={tooNew || Boolean(listing?.blockedByKillList)}
+        busy={busy}
+        install={install}
+        onConsent={onConsent}
+      />
       {alert}
       <div className="mt-2 grid grid-cols-[minmax(0,1fr)_14.5rem] gap-7 @max-2xl/plugin-detail:grid-cols-1 @max-2xl/plugin-detail:gap-0">
         <div className="min-w-0">
-          {description ? <p className="mt-5 max-w-prose text-sm leading-6">{description}</p> : null}
           <PluginAddsSection
             plugin={plugin}
             preview={preview}
             types={entry.types}
             onOpenShortcuts={onOpenShortcuts}
           />
-          <PluginAccessSection
-            capabilities={
-              plugin?.capabilities ??
-              preview?.manifest.capabilities.map((capability) => ({
-                kind: capability.kind,
-                description: capability.kind
-              })) ??
-              null
-            }
-            execution={execution}
-            loading={
-              previewLoading ||
-              (plugin !== null && execution === null && installedManifest === undefined)
-            }
-            failed={!plugin && previewFailed}
-            onRetry={() => setPreviewAttempt((attempt) => attempt + 1)}
-          />
+          {/* Why installed only: before install, and while it waits for review, the consent above says this. */}
+          {plugin && controls?.kind !== 'review' ? (
+            <PluginAccessSection
+              capabilities={
+                plugin?.capabilities ??
+                preview?.manifest.capabilities.map((capability) => ({
+                  kind: capability.kind,
+                  description: capability.kind
+                })) ??
+                null
+              }
+              execution={execution}
+              loading={
+                previewLoading ||
+                (plugin !== null && execution === null && installedManifest === undefined)
+              }
+              failed={!plugin && previewFailed}
+              onRetry={() => setPreviewAttempt((attempt) => attempt + 1)}
+            />
+          ) : null}
           <PluginReleaseNotes entry={entry} />
           {plugin?.hasWorker ? <PluginLogsSection state={logsState} /> : null}
         </div>

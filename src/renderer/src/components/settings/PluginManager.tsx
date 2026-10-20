@@ -19,6 +19,8 @@ import { InstalledPluginRow, type InstalledRowHandlers } from './PluginManagerRo
 import { PluginMarketplacePreviewDialog } from './PluginMarketplacePreviewDialog'
 import { PluginMarketplaceSourceDialog } from './PluginMarketplaceSourceDialog'
 import { usePluginCatalog } from './use-plugin-catalog'
+import { usePluginHoverPrefetch } from './use-plugin-hover-prefetch'
+import { usePluginInstallAction } from './use-plugin-install-action'
 import { CatalogNotice, PluginCatalogGroups } from './PluginCatalogGroups'
 import { PluginListToolbar } from './PluginListToolbar'
 import { PluginNoMatches, PluginPageMissing } from './PluginListEmptyStates'
@@ -62,8 +64,13 @@ type PluginManagerProps = {
   page: PluginPageNavigation
   sourcesOpen: boolean
   setSourcesOpen: (open: boolean) => void
-  /** Shown under the list unless a search or filter is narrowing it. */
-  footer?: React.ReactNode
+  /** Removes a plugin installed moments ago, keeping its page open. */
+  onUndoInstall: (pluginKey: string) => Promise<void>
+  onConsent: (
+    pluginKey: string,
+    reviewedFingerprint: string,
+    decision: 'approve' | 'keep-disabled'
+  ) => Promise<void>
 }
 
 export function PluginManager({
@@ -80,7 +87,8 @@ export function PluginManager({
   page,
   sourcesOpen,
   setSourcesOpen,
-  footer
+  onUndoInstall,
+  onConsent
 }: PluginManagerProps): React.JSX.Element {
   const [search, setSearch] = useState('')
   const [chosenTab, setTab] = useState<PluginCatalogFilter>('all')
@@ -91,6 +99,12 @@ export function PluginManager({
   const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(() => new Set())
   const catalog = usePluginCatalog({ installedPlugins: plugins, onInstalled, onRefreshInstalled })
   const { openKey, open, back } = page
+  const install = usePluginInstallAction({
+    fetchPreview: catalog.fetchPreview,
+    onInstalled,
+    onUndo: onUndoInstall
+  })
+  const prefetch = usePluginHoverPrefetch(catalog.fetchPreview)
   const orcaVersion = useOrcaVersion()
 
   const entries = useMemo(() => {
@@ -108,7 +122,10 @@ export function PluginManager({
   const narrowed = Boolean(query) || filterSize > 0
   const matches = (entry: PluginListEntry): boolean =>
     matchesPluginSearch(entry, query) && matchesPluginFilter(entry, listFilter)
-  const installed = entries.installed.filter(matches)
+  // Why: on the All tab catalog plugins keep their card, so only the rest are listed above them.
+  const installed = entries.installed.filter(
+    (entry) => matches(entry) && (chosenTab !== 'all' || !entry.listing)
+  )
   const updates = entries.installed.filter((entry) => entry.updateVersion)
   // Why: once the last update lands the Updates tab is gone, so the list falls back to Installed.
   const filter: PluginCatalogFilter =
@@ -147,7 +164,21 @@ export function PluginManager({
     />
   )
 
-  const visibleAvailableCount = entries.available.filter(
+  const cardHandlers = {
+    install,
+    prefetch,
+    openEntry,
+    orcaVersion,
+    onUpdate: (entry: PluginListEntry) => {
+      if (entry.listing) {
+        void catalog.openPreview(entry.listing, true)
+      }
+    }
+  }
+  const visibleAvailableCount = [
+    ...entries.available,
+    ...entries.installed.filter((entry) => entry.listing)
+  ].filter(
     (entry) =>
       catalog.sources.some((source) => source.id === entry.listing?.marketplaceSourceId) &&
       matches(entry)
@@ -188,7 +219,12 @@ export function PluginManager({
       title={
         filter === 'updates'
           ? translate('auto.components.settings.PluginManager.updatesTitle', 'Updates')
-          : translate('auto.components.settings.PluginManager.installed', 'Installed')
+          : filter === 'all'
+            ? translate(
+                'auto.components.settings.PluginManager.installedElsewhere',
+                'Installed outside a catalog'
+              )
+            : translate('auto.components.settings.PluginManager.installed', 'Installed')
       }
       showHeading={filter === 'all'}
       aside={String(visibleInstalled.length)}
@@ -246,6 +282,7 @@ export function PluginManager({
     return (
       <>
         <PluginDetailPage
+          key={openedEntry.pluginKey}
           entry={openedEntry}
           busy={
             busyPluginKeys.has(openedEntry.pluginKey) ||
@@ -255,11 +292,8 @@ export function PluginManager({
           logsState={logsByPlugin[openedEntry.pluginKey]}
           handlers={rowHandlers}
           fetchPreview={catalog.fetchPreview}
-          onInstall={(target) => {
-            if (target.listing) {
-              void catalog.openPreview(target.listing, false, true)
-            }
-          }}
+          install={install}
+          onConsent={onConsent}
           onBack={back}
           onOpenShortcuts={onOpenShortcuts}
         />
@@ -338,21 +372,29 @@ export function PluginManager({
               </Button>
             }
           />
-        ) : (
-          <div className="overflow-hidden rounded-xl border border-border/50 bg-card/50 shadow-xs">
-            {installedGroup}
+        ) : filter === 'all' ? (
+          <div className="@container/plugin-catalog space-y-8">
+            {installedGroup ? (
+              <div className="overflow-hidden rounded-xl border border-border/50 bg-card/50 shadow-xs">
+                {installedGroup}
+              </div>
+            ) : null}
             <PluginCatalogGroups
               catalog={catalog}
               available={entries.available}
+              installed={entries.installed}
+              cardHandlers={cardHandlers}
               matches={matches}
               narrowed={narrowed}
               filter={filter}
               capped={capped}
               showAll={showAll}
-              openEntry={openEntry}
               openSources={() => setSourcesOpen(true)}
-              orcaVersion={orcaVersion}
             />
+          </div>
+        ) : (
+          <div className="overflow-hidden rounded-xl border border-border/50 bg-card/50 shadow-xs">
+            {installedGroup}
           </div>
         )}
         <p className="sr-only" aria-live="polite">
@@ -363,7 +405,6 @@ export function PluginManager({
             : ''}
         </p>
       </PluginCatalogLayout>
-      {narrowed ? null : footer}
       {dialogs}
     </>
   )

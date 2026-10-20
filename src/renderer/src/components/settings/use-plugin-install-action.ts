@@ -1,0 +1,186 @@
+import { useCallback, useEffect, useRef, useState } from 'react'
+import type {
+  PluginMarketplaceHostInstallPreview,
+  PluginMarketplaceHostListing
+} from '../../../../preload/api-types'
+import { pluginExecutionProfile } from '../../../../shared/plugins/plugin-execution-profile'
+import { translate } from '@/i18n/i18n'
+import { pluginInstallErrorMessage } from './plugin-error-presentation'
+import type { PluginPagePreview } from './use-plugin-catalog'
+
+/** How long a content-only install offers Undo in place. */
+export const PLUGIN_INSTALL_UNDO_MS = 10_000
+
+export type PluginInstallPhase =
+  | { kind: 'installing' }
+  | { kind: 'error'; message: string }
+  /** Installed and turned on by main as content only; Undo removes it. */
+  | { kind: 'undoable' }
+
+function catalogInstallErrorMessage(cause: unknown): string {
+  const detail = (cause instanceof Error ? cause.message : String(cause)).toLowerCase()
+  if (/(do not match|does not match|no longer matches)/.test(detail)) {
+    return translate(
+      'auto.components.settings.usePluginInstallAction.mismatch',
+      'The download didn’t match what the catalog published, so nothing was installed.'
+    )
+  }
+  if (detail.includes('marketplace changed')) {
+    return translate(
+      'auto.components.settings.usePluginInstallAction.catalogChanged',
+      'The catalog changed since this page opened. Refresh it, then try again.'
+    )
+  }
+  if (detail.includes('safety list')) {
+    return translate(
+      'auto.components.settings.usePluginInstallAction.blocked',
+      'Orca’s safety list blocks this plugin.'
+    )
+  }
+  return pluginInstallErrorMessage(cause)
+}
+
+const downloadFailed = (): string =>
+  translate(
+    'auto.components.settings.usePluginInstallAction.downloadFailed',
+    'Couldn’t download this plugin. Check your connection, then try again. Nothing was installed.'
+  )
+
+/**
+ * One action to install a catalog plugin, shared by its card and its page. Main turns a plugin on
+ * only when its verified manifest is content only; for anything else this approves exactly the
+ * fingerprint the page showed, and main refuses if what installed differs.
+ */
+export function usePluginInstallAction({
+  fetchPreview,
+  onInstalled,
+  onUndo
+}: {
+  fetchPreview: (listing: PluginMarketplaceHostListing) => Promise<PluginPagePreview>
+  /** Reloads the list; opens review on the page for any plugin still waiting for it. */
+  onInstalled: (pluginKey: string) => Promise<void>
+  onUndo: (pluginKey: string) => Promise<void>
+}): {
+  phaseOf: (pluginKey: string) => PluginInstallPhase | null
+  install: (
+    listing: PluginMarketplaceHostListing,
+    /** The page's consent: approve this fingerprint after install. Absent for content only. */
+    approve?: { preview: PluginMarketplaceHostInstallPreview }
+  ) => Promise<void>
+  undo: (pluginKey: string) => Promise<void>
+  dismiss: (pluginKey: string) => void
+} {
+  const [phases, setPhases] = useState<Readonly<Record<string, PluginInstallPhase>>>({})
+  const mountedRef = useRef(true)
+  const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
+
+  useEffect(() => {
+    mountedRef.current = true
+    const timers = timersRef.current
+    return () => {
+      mountedRef.current = false
+      timers.forEach((timer) => clearTimeout(timer))
+      timers.clear()
+    }
+  }, [])
+
+  const setPhase = useCallback((pluginKey: string, phase: PluginInstallPhase | null) => {
+    if (!mountedRef.current) {
+      return
+    }
+    setPhases((current) => {
+      const next = { ...current }
+      if (phase) {
+        next[pluginKey] = phase
+      } else {
+        delete next[pluginKey]
+      }
+      return next
+    })
+  }, [])
+
+  const dismiss = useCallback(
+    (pluginKey: string) => {
+      clearTimeout(timersRef.current.get(pluginKey))
+      timersRef.current.delete(pluginKey)
+      setPhase(pluginKey, null)
+    },
+    [setPhase]
+  )
+
+  const install = useCallback(
+    async (
+      listing: PluginMarketplaceHostListing,
+      approve?: { preview: PluginMarketplaceHostInstallPreview }
+    ): Promise<void> => {
+      const pluginKey = listing.pluginKey
+      dismiss(pluginKey)
+      setPhase(pluginKey, { kind: 'installing' })
+      const read = approve
+        ? { ok: true as const, preview: approve.preview }
+        : await fetchPreview(listing)
+      if (!read.ok) {
+        setPhase(pluginKey, { kind: 'error', message: downloadFailed() })
+        return
+      }
+      const { preview } = read
+      const execution = listing.release?.execution ?? pluginExecutionProfile(preview.manifest)
+      try {
+        const result = await window.api.plugins.installMarketplacePlugin({
+          marketplaceSourceId: preview.marketplaceSourceId,
+          marketplaceCommit: preview.marketplaceCommit,
+          pluginKey,
+          resolvedCommit: preview.resolvedCommit,
+          ...(execution === 'data' ? { enableIfData: true as const } : {})
+        })
+        if (!result.ok) {
+          throw new Error(result.error)
+        }
+        // Why recipes wait: their command lines are read from the installed files, so they are
+        // reviewed on the page after install rather than approved unseen.
+        if (
+          approve &&
+          execution !== 'data' &&
+          preview.manifest.contributes.vmRecipes.length === 0
+        ) {
+          await window.api.plugins
+            .consent({
+              pluginKey,
+              reviewedFingerprint: approve.preview.consentFingerprint,
+              decision: 'approve'
+            })
+            .catch((cause: unknown) => {
+              // Why: a mismatch leaves it pending, and the page then shows what it now asks for.
+              console.warn('[plugins] approval after install was refused:', cause)
+            })
+        }
+        await onInstalled(pluginKey)
+        // Why strict false: a missing field is an older host that left it pending.
+        if (result.needsReview === false) {
+          setPhase(pluginKey, { kind: 'undoable' })
+          timersRef.current.set(
+            pluginKey,
+            setTimeout(() => dismiss(pluginKey), PLUGIN_INSTALL_UNDO_MS)
+          )
+        } else {
+          setPhase(pluginKey, null)
+        }
+      } catch (cause) {
+        console.warn('[plugins] catalog install failed:', cause)
+        setPhase(pluginKey, { kind: 'error', message: catalogInstallErrorMessage(cause) })
+      }
+    },
+    [dismiss, fetchPreview, onInstalled, setPhase]
+  )
+
+  const undo = useCallback(
+    async (pluginKey: string): Promise<void> => {
+      dismiss(pluginKey)
+      await onUndo(pluginKey)
+    },
+    [dismiss, onUndo]
+  )
+
+  const phaseOf = useCallback((pluginKey: string) => phases[pluginKey] ?? null, [phases])
+  return { phaseOf, install, undo, dismiss }
+}

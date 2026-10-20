@@ -32,13 +32,16 @@ export function DetailRow({
   title,
   detail,
   detailTone = 'default',
-  trailing
+  trailing,
+  wrap = false
 }: {
   icon: React.ReactNode
   title: string
   detail?: React.ReactNode
   detailTone?: 'default' | 'warning' | 'destructive'
   trailing?: React.ReactNode
+  /** Sentences, such as a trust warning, wrap instead of truncating. */
+  wrap?: boolean
 }): React.JSX.Element {
   return (
     <div className="flex min-h-10 items-center gap-3 border-t border-border px-3.5 py-2 text-sm first:border-t-0">
@@ -46,11 +49,13 @@ export function DetailRow({
         {icon}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate">{title}</p>
+        <p data-wrap={wrap} className="truncate data-[wrap=true]:whitespace-normal">
+          {title}
+        </p>
         {detail ? (
           <p
             data-tone={detailTone}
-            className="mt-px text-xs text-muted-foreground data-[tone=destructive]:text-destructive data-[tone=warning]:text-status-warning"
+            className="mt-px text-xs text-muted-foreground data-[tone=destructive]:text-destructive data-[tone=warning]:text-status-warning-text"
           >
             {detail}
           </p>
@@ -67,6 +72,7 @@ function executionProfileRow(execution: PluginExecutionProfile): React.JSX.Eleme
     return (
       <DetailRow
         icon={<AlertTriangle />}
+        wrap
         title={translate(
           'auto.components.settings.PluginConsentDialog.warning',
           'Its worker runs as a normal process with full access to your files, network, and other processes.'
@@ -78,6 +84,7 @@ function executionProfileRow(execution: PluginExecutionProfile): React.JSX.Eleme
     return (
       <DetailRow
         icon={<AlertTriangle />}
+        wrap
         title={translate(
           'auto.components.settings.PluginConsentDialog.instructionalWarning',
           'Its commands and instructions can take actions when you or an agent use them.'
@@ -155,7 +162,7 @@ export function PluginAccessSection({
           icon={<ShieldCheck />}
           title={translate(
             'auto.components.settings.PluginDetailSections.noAccess',
-            'Nothing outside its own files'
+            'Can’t reach anything outside its own files'
           )}
           detail={
             execution === 'sandboxed-ui'
