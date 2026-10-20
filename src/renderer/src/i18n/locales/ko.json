@@ -12987,7 +12987,8 @@
         "PluginAddMenu": {
           "add": "플러그인 추가",
           "folder": "폴더에서…",
-          "git": "Git URL에서…"
+          "git": "Git URL에서…",
+          "sources": "카탈로그 소스…"
         },
         "PluginManager": {
           "verified": "확인됨",

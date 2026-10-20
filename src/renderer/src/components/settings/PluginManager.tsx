@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Blocks, RefreshCw, SearchX, Settings2 } from 'lucide-react'
+import { Blocks, RefreshCw, SearchX } from 'lucide-react'
 import type { PluginHostListEntry } from '../../../../preload/api-types'
 import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
@@ -58,6 +58,8 @@ type PluginManagerProps = {
   onOpenShortcuts: () => void
   /** A plugin page replaces the whole pane body, so the parent hides its other blocks. */
   onPageOpenChange: (open: boolean) => void
+  sourcesOpen: boolean
+  setSourcesOpen: (open: boolean) => void
 }
 
 export function PluginManager({
@@ -71,11 +73,12 @@ export function PluginManager({
   logsByPlugin,
   onShowLogs,
   onOpenShortcuts,
-  onPageOpenChange
+  onPageOpenChange,
+  sourcesOpen,
+  setSourcesOpen
 }: PluginManagerProps): React.JSX.Element {
   const [search, setSearch] = useState('')
   const [filter, setFilter] = useState<PluginCatalogFilter>('all')
-  const [sourcesOpen, setSourcesOpen] = useState(false)
   const [listFilter, setListFilter] = useState<PluginListFilter>(NO_PLUGIN_LIST_FILTER)
   const [updateAllOpen, setUpdateAllOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(() => new Set())
@@ -273,27 +276,6 @@ export function PluginManager({
               sources={catalog.sources}
               onChange={setListFilter}
             />
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label={translate(
-                    'auto.components.settings.PluginManager.sourcesLabel',
-                    'Catalog sources'
-                  )}
-                  onClick={() => setSourcesOpen(true)}
-                >
-                  <Settings2 />
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top" sideOffset={4}>
-                {translate(
-                  'auto.components.settings.PluginManager.sourcesLabel',
-                  'Catalog sources'
-                )}
-              </TooltipContent>
-            </Tooltip>
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button

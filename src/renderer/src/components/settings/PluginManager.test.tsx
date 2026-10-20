@@ -139,6 +139,8 @@ async function render(plugins: PluginHostListEntry[] = [installedPlugin]): Promi
         onShowLogs={vi.fn()}
         onOpenShortcuts={vi.fn()}
         onPageOpenChange={vi.fn()}
+        sourcesOpen={false}
+        setSourcesOpen={vi.fn()}
       />
     )
   })

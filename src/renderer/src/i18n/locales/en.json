@@ -13273,7 +13273,8 @@
         "PluginAddMenu": {
           "add": "Add plugin",
           "folder": "From a folder…",
-          "git": "From a Git URL…"
+          "git": "From a Git URL…",
+          "sources": "Catalog sources…"
         },
         "PluginManager": {
           "verified": "verified",

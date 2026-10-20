@@ -36,6 +36,7 @@ export function PluginsSettingsSection({
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [installKind, setInstallKind] = useState<'local-path' | 'git' | null>(null)
+  const [sourcesOpen, setSourcesOpen] = useState(false)
   const [consentPluginId, setConsentPluginId] = useState<string | null>(null)
   const [removePluginId, setRemovePluginId] = useState<string | null>(null)
   const [busyPluginKeys, setBusyPluginKeys] = useState<Set<string>>(() => new Set())
@@ -340,7 +341,11 @@ export function PluginsSettingsSection({
       {...sectionPresentation}
       bodyClassName="space-y-6 rounded-none border-0 bg-transparent p-0 shadow-none"
       headerAction={
-        <PluginAddMenu disabled={!featureEnabled || featureBusy} onChoose={setInstallKind} />
+        <PluginAddMenu
+          disabled={!featureEnabled || featureBusy}
+          onChoose={setInstallKind}
+          onSources={() => setSourcesOpen(true)}
+        />
       }
     >
       <PluginSettingsOverview
@@ -373,6 +378,8 @@ export function PluginsSettingsSection({
         onUpdateDevPaths={updateDevPaths}
         logsByPlugin={pluginLogs.logsByPlugin}
         onShowLogs={pluginLogs.showLogs}
+        sourcesOpen={sourcesOpen}
+        setSourcesOpen={setSourcesOpen}
         onOpenShortcuts={() =>
           useAppStore.getState().openSettingsTarget({ pane: 'shortcuts', repoId: null })
         }

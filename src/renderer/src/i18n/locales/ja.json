@@ -12987,7 +12987,8 @@
         "PluginAddMenu": {
           "add": "プラグインを追加",
           "folder": "フォルダーから…",
-          "git": "Git URL から…"
+          "git": "Git URL から…",
+          "sources": "カタログのソース…"
         },
         "PluginManager": {
           "verified": "検証済み",

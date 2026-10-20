@@ -33,6 +33,8 @@ type PluginSettingsOverviewProps = {
   logsByPlugin: Readonly<Record<string, PluginLogsState>>
   onShowLogs: (pluginKey: string) => void
   onOpenShortcuts: () => void
+  sourcesOpen: boolean
+  setSourcesOpen: (open: boolean) => void
 }
 
 /** The Settings body card; the section body is transparent so each block draws its own. */
@@ -128,7 +130,9 @@ export function PluginSettingsOverview({
   onUpdateDevPaths,
   logsByPlugin,
   onShowLogs,
-  onOpenShortcuts
+  onOpenShortcuts,
+  sourcesOpen,
+  setSourcesOpen
 }: PluginSettingsOverviewProps): React.JSX.Element {
   const [pageOpen, setPageOpen] = useState(false)
   return (
@@ -176,6 +180,8 @@ export function PluginSettingsOverview({
           onShowLogs={onShowLogs}
           onOpenShortcuts={onOpenShortcuts}
           onPageOpenChange={setPageOpen}
+          sourcesOpen={sourcesOpen}
+          setSourcesOpen={setSourcesOpen}
         />
       ) : null}
       {featureEnabled && !pageOpen ? (

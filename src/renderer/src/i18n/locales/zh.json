@@ -12987,7 +12987,8 @@
         "PluginAddMenu": {
           "add": "添加插件",
           "folder": "从文件夹…",
-          "git": "从 Git URL…"
+          "git": "从 Git URL…",
+          "sources": "目录来源…"
         },
         "PluginManager": {
           "verified": "已验证",
