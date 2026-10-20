@@ -1,3 +1,4 @@
+import { pluginHostVersion } from '../../../../shared/plugins/plugin-host-version'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 function isBackShortcut(event: KeyboardEvent): boolean {
@@ -79,7 +80,9 @@ export function usePluginPageNavigation(): PluginPageNavigation {
   return { openKey, open: setOpenKey, back, leave }
 }
 
-/** This Orca's version, for "Needs Orca X" checks; null until known. */
+/** The version plugins are gated against, for "Needs Orca X" checks; null until known. Why not
+ *  the raw app version: main gates on pluginHostVersion, and a development build's package version
+ *  lags the fields it already reads, so the two must agree. */
 export function useOrcaVersion(): string | null {
   const [version, setVersion] = useState<string | null>(null)
   useEffect(() => {
@@ -88,7 +91,7 @@ export function useOrcaVersion(): string | null {
       .getVersion()
       .then((value) => {
         if (!stale) {
-          setVersion(value)
+          setVersion(pluginHostVersion(value))
         }
       })
       .catch(() => undefined)
