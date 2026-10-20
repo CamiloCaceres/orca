@@ -87,6 +87,34 @@ describe('installed plugin discovery identity', () => {
     expect(plugin && 'error' in plugin ? plugin.error : '').toContain('does not match')
   })
 
+  it('names the version gap when a plugin for a newer Orca uses fields this build lacks', async () => {
+    const pluginsDir = await tempPluginsDir()
+    const hash = 'b'.repeat(64)
+    const versionDir = join(pluginsDir, 'acme.future', hash)
+    await mkdir(versionDir, { recursive: true })
+    await writeFile(join(pluginsDir, 'acme.future', 'current'), hash)
+    await writeFile(
+      join(versionDir, 'orca-plugin.json'),
+      JSON.stringify({
+        manifestVersion: 2,
+        execution: 'data',
+        id: 'future',
+        publisher: 'acme',
+        name: 'Future',
+        version: '1.0.0',
+        engines: { orca: '>=9.0.0' },
+        pluginApi: 1,
+        contributes: { widgets: [{ id: 'clock' }] }
+      })
+    )
+
+    const [plugin] = await discoverPlugins({ pluginsDir, devPluginPaths: [], hostVersion: '1.4.0' })
+
+    expect(plugin && 'error' in plugin ? plugin.error : '').toBe(
+      'requires Orca >=9.0.0 (this is 1.4.0)'
+    )
+  })
+
   it('keeps a removable qualified identity when the current pointer is missing', async () => {
     const pluginsDir = await tempPluginsDir()
     const installedKey = 'orca-samples.broken'

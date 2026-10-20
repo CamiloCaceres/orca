@@ -211,6 +211,32 @@ describe('PluginMarketplaceInstaller', () => {
     )
   })
 
+  it('lists a release for a newer Orca but refuses it before downloading', async () => {
+    git.release = {
+      version: '1.0.0',
+      commit: git.commit,
+      contentHash: 'c'.repeat(64),
+      execution: 'instructional',
+      minimumOrca: '9.0.0',
+      types: ['instructions']
+    }
+    const { marketplace, installer, sourceId } = await setup()
+    await expect(marketplace.findPlugin(sourceId, 'community.notes')).resolves.toBeTruthy()
+
+    await expect(installer.preview(sourceId, 'community.notes')).rejects.toThrow(
+      'requires Orca >=9.0.0 (this is 1.4.0)'
+    )
+    await expect(
+      installer.install({
+        marketplaceSourceId: sourceId,
+        marketplaceCommit: 'f'.repeat(40),
+        pluginKey: 'community.notes',
+        resolvedCommit: git.commit
+      })
+    ).resolves.toEqual({ ok: false, error: 'requires Orca >=9.0.0 (this is 1.4.0)' })
+    expect(git.checkout).not.toHaveBeenCalled()
+  })
+
   it('rejects a source whose manifest identity differs from its listing', async () => {
     const { installer, sourceId } = await setup()
     git.publisher = 'attacker'

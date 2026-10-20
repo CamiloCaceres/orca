@@ -2,6 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import type { PluginManifest } from '../../shared/plugins/plugin-manifest'
+import { pluginCatalogReleaseCompatibilityError } from '../../shared/plugins/plugin-manifest-compatibility'
 import { getUserPluginsDir } from './plugin-discovery'
 import { checkoutPluginGitSource } from './plugin-git-repository'
 import {
@@ -61,6 +62,10 @@ export class PluginMarketplaceInstaller {
     pluginKey: string
   ): Promise<PluginMarketplaceInstallPreview> {
     const listing = await this.requireListing(marketplaceSourceId, pluginKey)
+    const incompatible = this.releaseCompatibilityError(listing)
+    if (incompatible) {
+      throw new Error(incompatible)
+    }
     const stagingDirectory = await mkdtemp(join(tmpdir(), 'orca-plugin-marketplace-preview-'))
     try {
       const resolvedCommit = await checkoutPluginGitSource({
@@ -105,6 +110,10 @@ export class PluginMarketplaceInstaller {
       listing.blockedByKillList?.reason ?? this.blockedPluginReason(preview.pluginKey)
     if (blockedReason) {
       return { ok: false, error: `plugin is blocked by Orca's safety list: ${blockedReason}` }
+    }
+    const incompatible = this.releaseCompatibilityError(listing)
+    if (incompatible) {
+      return { ok: false, error: incompatible }
     }
     if (listing.marketplaceCommit !== preview.marketplaceCommit) {
       return { ok: false, error: 'marketplace changed after preview; review the plugin again' }
@@ -152,6 +161,12 @@ export class PluginMarketplaceInstaller {
       hostVersion: this.hostVersion,
       blockedPluginReason: this.blockedPluginReason
     })
+  }
+
+  private releaseCompatibilityError(listing: PluginMarketplaceListing): string | null {
+    return listing.release
+      ? pluginCatalogReleaseCompatibilityError(listing.release, this.hostVersion)
+      : null
   }
 
   private async requireListing(
