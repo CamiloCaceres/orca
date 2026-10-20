@@ -46,6 +46,7 @@ export const pluginPanelContributionSchema = z
       )
     )
   })
+  .strict()
   .meta({
     id: 'PanelContribution',
     description: 'A sidebar panel. Requires the `sandboxed-ui` execution profile or higher.'

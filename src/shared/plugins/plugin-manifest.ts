@@ -1,9 +1,12 @@
 import { z } from 'zod'
 import { pluginCapabilitySchema } from './plugin-capabilities'
+import { orcaEngineRangeSchema } from './plugin-manifest-engine-range'
 import { pluginContributesShape } from './plugin-contribution-points'
 import { pluginIdSchema, pluginRelativePathSchema } from './plugin-manifest-fields'
 import { pluginManifestDetailFields } from './plugin-detail-fields'
 import { validatePluginManifestContributions } from './plugin-manifest-contribution-validation'
+import { validatePluginEngineFloor } from './plugin-engine-floor'
+import { validatePluginManifestV2Rules } from './plugin-manifest-v2-rules'
 import { formatPluginSchemaIssues } from './plugin-schema-issues'
 import {
   pluginFieldDoc,
@@ -31,15 +34,37 @@ import {
 const SEMVER_RE =
   /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
 
-// Why: v0 supports only the ">=x.y.z" form. A closed grammar keeps the gate
-// predictable; richer ranges can be added without breaking old manifests.
-export const orcaEngineRangeSchema = z
-  .string()
-  .max(64)
-  .regex(/^>=\d+\.\d+\.\d+$/, 'must be a ">=x.y.z" version range')
+export { orcaEngineRangeSchema, satisfiesOrcaEngineRange } from './plugin-manifest-engine-range'
 
 const V1 = PLUGIN_SCHEMA_SINCE_V1
 const NEXT = PLUGIN_MANIFEST_V2_SINCE
+
+const authorShape = {
+  name: z
+    .string()
+    .min(1)
+    .max(256)
+    .meta(pluginFieldDoc('Author or organization name.', V1, ['Acme'])),
+  url: z
+    .string()
+    .max(2048)
+    .optional()
+    .meta(pluginFieldDoc('Author homepage.', V1, ['https://example.com']))
+}
+const authorDoc = pluginFieldDoc('Who maintains the plugin.', V1)
+const enginesShape = {
+  orca: orcaEngineRangeSchema.meta(
+    pluginFieldDoc(
+      `Oldest Orca release this plugin runs on, as \`>=x.y.z\`. Raise it to the newest "Since" of any field you use; a format 2 manifest needs at least \`>=${NEXT}\`, because older Orca cannot read format 2.`,
+      V1,
+      [`>=${NEXT}`]
+    )
+  )
+}
+const enginesDoc = pluginFieldDoc(
+  'Host versions this plugin supports. Older hosts refuse to load it.',
+  V1
+)
 
 // Why one field set: v1 and v2 differ only in the version, `execution` and `$schema`.
 const pluginManifestFields = {
@@ -72,21 +97,7 @@ const pluginManifestFields = {
     .max(4096)
     .optional()
     .meta(pluginFieldDoc('One or two sentences shown in the plugin list.', V1)),
-  author: z
-    .object({
-      name: z
-        .string()
-        .min(1)
-        .max(256)
-        .meta(pluginFieldDoc('Author or organization name.', V1, ['Acme'])),
-      url: z
-        .string()
-        .max(2048)
-        .optional()
-        .meta(pluginFieldDoc('Author homepage.', V1, ['https://example.com']))
-    })
-    .optional()
-    .meta(pluginFieldDoc('Who maintains the plugin.', V1)),
+  author: z.object(authorShape).optional().meta(authorDoc),
   repository: z
     .string()
     .max(2048)
@@ -100,20 +111,7 @@ const pluginManifestFields = {
     .meta(
       pluginPathFieldDoc('Square image shown beside the plugin name.', V1, ['assets/icon.png'])
     ),
-  engines: z
-    .object({
-      orca: orcaEngineRangeSchema.meta(
-        pluginFieldDoc(
-          `Oldest Orca release this plugin runs on, as \`>=x.y.z\`. Raise it to the newest "Since" of any field you use; a format 2 manifest needs at least \`>=${NEXT}\`, because older Orca cannot read format 2.`,
-          V1,
-          [`>=${NEXT}`]
-        )
-      )
-    })
-    .meta(pluginFieldDoc('Host versions this plugin supports. Older hosts refuse to load it.', V1)),
-  pluginApi: z
-    .literal(1)
-    .meta(pluginFieldDoc('Major version of the plugin host API this plugin targets.', V1)),
+  engines: z.object(enginesShape).meta(enginesDoc),
   main: pluginRelativePathSchema
     .optional()
     .meta(
@@ -136,7 +134,13 @@ const pluginManifestFields = {
     .meta(pluginFieldDoc('Host APIs the plugin asks the user to grant. At most 32.', V1))
 }
 
-const pluginManifestV1Object = z.object({ manifestVersion: z.literal(1), ...pluginManifestFields })
+const pluginApiDoc = 'Major version of the plugin host API this plugin targets.'
+
+const pluginManifestV1Object = z.object({
+  manifestVersion: z.literal(1),
+  ...pluginManifestFields,
+  pluginApi: z.literal(1).meta(pluginFieldDoc(pluginApiDoc, V1))
+})
 
 // Why strict: v2 declares its execution profile, so unknown keys must not smuggle in behavior.
 export const pluginManifestV2Object = z
@@ -156,7 +160,20 @@ export const pluginManifestV2Object = z
         ['data']
       )
     ),
-    ...pluginManifestFields
+    ...pluginManifestFields,
+    // Why strict here too: format 2 refuses unknown keys at every level; format 1 never did.
+    author: z.strictObject(authorShape).optional().meta(authorDoc),
+    engines: z.strictObject(enginesShape).meta(enginesDoc),
+    // Why optional: only code calls the host API, so data and instructional plugins leave it out.
+    pluginApi: z
+      .literal(1)
+      .optional()
+      .meta(
+        pluginFieldDoc(
+          `${pluginApiDoc} Optional (defaults to 1), and refused on \`data\` and \`instructional\` plugins, which never call it.`,
+          V1
+        )
+      )
   })
   .strict()
 
@@ -165,6 +182,8 @@ export const pluginManifestSchema = z.discriminatedUnion('manifestVersion', [
   pluginManifestV2Object.superRefine((manifest, ctx) => {
     validatePluginManifestContributions(manifest, ctx)
     validatePluginExecutionProfile(manifest, ctx)
+    validatePluginManifestV2Rules(manifest, ctx)
+    validatePluginEngineFloor(pluginManifestV2Object, manifest, ctx)
   })
 ])
 
@@ -201,27 +220,6 @@ export function parsePluginManifest(raw: unknown): PluginManifestParseResult {
     return { ok: true, manifest: parsed.data }
   }
   return { ok: false, error: formatPluginSchemaIssues(parsed.error.issues, raw) }
-}
-
-/** v0 engines gate: supports the ">=x.y.z" grammar the schema enforces. A prerelease host
- *  (`1.5.0-rc.1`) ranks below its release, as in semver; build metadata (`+…`) is ignored. */
-export function satisfiesOrcaEngineRange(hostVersion: string, range: string): boolean {
-  const minimum = range.slice(2)
-  const parse = (value: string): number[] =>
-    value
-      .split(/[-+]/)[0]!
-      .split('.')
-      .map((part) => Number.parseInt(part, 10) || 0)
-  const host = parse(hostVersion)
-  const min = parse(minimum)
-  for (let i = 0; i < 3; i++) {
-    const a = host[i] ?? 0
-    const b = min[i] ?? 0
-    if (a !== b) {
-      return a > b
-    }
-  }
-  return !/^[^+]*-/.test(hostVersion)
 }
 
 export { isPluginPanelTabKey, isQualifiedPluginKey, pluginPanelTabKey } from './plugin-tab-key'

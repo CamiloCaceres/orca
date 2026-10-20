@@ -105,7 +105,7 @@ export const pluginContributesShape = {
   agents: contributionList(
     pluginAgentProfileContributionSchema,
     PLUGIN_AGENT_PROFILE_LIMIT,
-    'Coding agent profiles.',
+    'Reserved for coding-agent definitions; must be empty in manifest format 2 until their format is defined.',
     V1
   ),
   themes: contributionList(

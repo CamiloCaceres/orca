@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PLUGIN_MANIFEST_V2_SINCE } from './plugin-schema-field-docs'
 import {
   pluginCatalogReleaseError,
   pluginCatalogReleaseSchema,
@@ -17,8 +18,7 @@ function manifest(overrides: Record<string, unknown> = {}): PluginManifest {
     publisher: 'samples',
     name: 'Demo',
     version: '1.2.0',
-    engines: { orca: '>=1.4.0' },
-    pluginApi: 1,
+    engines: { orca: `>=${PLUGIN_MANIFEST_V2_SINCE}` },
     contributes: { languagePacks: [{ locale: 'pt-BR', path: 'pt.json' }] },
     ...overrides
   })
@@ -34,7 +34,7 @@ function release(overrides: Partial<PluginCatalogRelease> = {}): PluginCatalogRe
     commit: COMMIT,
     contentHash: HASH,
     execution: 'data',
-    minimumOrca: '1.4.0',
+    minimumOrca: PLUGIN_MANIFEST_V2_SINCE,
     types: ['interface-language'],
     ...overrides
   })
@@ -57,8 +57,7 @@ function manifestInput(): Record<string, unknown> {
     publisher: 'samples',
     name: 'Demo',
     version: '1.2.0',
-    engines: { orca: '>=1.4.0' },
-    pluginApi: 1
+    engines: { orca: `>=${PLUGIN_MANIFEST_V2_SINCE}` }
   }
 }
 
@@ -140,7 +139,12 @@ describe('catalog releases', () => {
   })
 
   it('requires a v2 manifest', () => {
-    const v1 = parsePluginManifest({ ...manifestInput(), manifestVersion: 1, execution: undefined })
+    const v1 = parsePluginManifest({
+      ...manifestInput(),
+      manifestVersion: 1,
+      pluginApi: 1,
+      execution: undefined
+    })
     if (!v1.ok) {
       throw new Error(v1.error)
     }

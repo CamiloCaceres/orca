@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PLUGIN_MANIFEST_V2_SINCE } from './plugin-schema-field-docs'
 import {
   PLUGIN_COMMAND_LIMIT,
   PLUGIN_ID_MAX_LENGTH,
@@ -62,7 +63,14 @@ describe('pluginManifestSchema boundaries', () => {
   it('accepts a $schema URL in v2 manifests only as an ignored hint', () => {
     const $schema = 'https://example.com/orca-plugin.schema.json'
     const v2 = parsePluginManifest(
-      manifest({ manifestVersion: 2, execution: 'data', contributes: {}, $schema })
+      manifest({
+        manifestVersion: 2,
+        execution: 'data',
+        contributes: {},
+        pluginApi: undefined,
+        engines: { orca: `>=${PLUGIN_MANIFEST_V2_SINCE}` },
+        $schema
+      })
     )
     expect(v2).toMatchObject({ ok: true, manifest: { $schema } })
     expect(parsePluginManifest(manifest({ $schema }))).toMatchObject({ ok: true })

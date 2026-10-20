@@ -2,6 +2,7 @@ import type {
   PluginMarketplaceEntry,
   PluginMarketplaceGitSource
 } from '../../shared/plugins/plugin-marketplace'
+import { selectPluginCatalogRelease } from '../../shared/plugins/plugin-catalog'
 import type { PluginCatalogRelease } from '../../shared/plugins/plugin-catalog-release'
 
 export type PluginMarketplaceSourceState = {
@@ -31,8 +32,11 @@ export type PluginMarketplaceListing = {
   official: boolean
   bundled: boolean
   blockedByKillList?: { reason: string; advisoryUrl?: string }
-  /** Exact release the catalog vouches for; absent for v1 catalogs. */
+  /** The release offered to this host: the newest it can install, else the one needing the least
+   *  newer Orca. Absent for v1 catalogs. */
   release?: PluginCatalogRelease
+  /** Every release the catalog lists for this plugin, newest first. */
+  releases?: PluginCatalogRelease[]
 } & PluginCatalogListingDetails
 
 /** Display fields a release carries, flattened so list rows need not know release records. */
@@ -54,6 +58,17 @@ const DETAIL_KEYS = [
   'updatedAt',
   'changelog'
 ] as const satisfies readonly (keyof PluginCatalogListingDetails & keyof PluginCatalogRelease)[]
+
+/** The release to offer this host; without a host version, the newest. */
+export function offeredCatalogRelease(
+  releases: readonly PluginCatalogRelease[] | undefined,
+  hostVersion: string | null
+): PluginCatalogRelease | undefined {
+  if (!releases) {
+    return undefined
+  }
+  return hostVersion ? selectPluginCatalogRelease(releases, hostVersion) : releases[0]
+}
 
 export function pluginCatalogListingDetails(
   release: PluginCatalogRelease | undefined

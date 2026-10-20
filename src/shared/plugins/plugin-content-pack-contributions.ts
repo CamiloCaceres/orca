@@ -108,7 +108,11 @@ export const pluginAgentProfileContributionSchema = z
     )
   })
   .strict()
-  .meta({ id: 'AgentProfileContribution', description: 'A coding agent profile.' })
+  .meta({
+    id: 'AgentProfileContribution',
+    description:
+      'Reserved for coding-agent definitions. Manifest format 2 refuses a non-empty `agents` list until their format is defined.'
+  })
 
 /** App, terminal and icon themes share one shape: a labelled JSON artifact. */
 export const pluginThemeContributionSchema = z

@@ -1,4 +1,6 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { PLUGIN_SCHEMA_NEWEST_SINCE } from '../../shared/plugins/plugin-host-version'
+import { PLUGIN_MANIFEST_V2_SINCE } from '../../shared/plugins/plugin-schema-field-docs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
@@ -24,8 +26,7 @@ async function userDataWithInstalledPlugin(): Promise<string> {
       publisher: 'acme',
       name: 'Notes',
       version: '1.0.0',
-      engines: { orca: '>=1.0.0' },
-      pluginApi: 1,
+      engines: { orca: `>=${PLUGIN_MANIFEST_V2_SINCE}` },
       license: 'MIT'
     })
   )
@@ -39,7 +40,7 @@ function serviceOff(userDataPath: string) {
     options: {
       isPluginSystemEnabled: () => false,
       userDataPath,
-      hostVersion: '1.4.0',
+      hostVersion: PLUGIN_SCHEMA_NEWEST_SINCE,
       getDevPluginPaths: () => [],
       getPluginConsents: () => ({}),
       getDisabledPlugins: () => []

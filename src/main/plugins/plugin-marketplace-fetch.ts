@@ -1,11 +1,14 @@
 import { tmpdir } from 'node:os'
 import {
   PLUGIN_MARKETPLACE_FILENAME,
-  PLUGIN_MARKETPLACE_V2_FILENAME,
   pluginMarketplaceSchema,
-  pluginMarketplaceV2Schema,
   type PluginMarketplace
 } from '../../shared/plugins/plugin-marketplace'
+import {
+  PLUGIN_CATALOG_FILENAME,
+  pluginCatalogSchema,
+  pluginCatalogVersionError
+} from '../../shared/plugins/plugin-catalog'
 import { formatPluginSchemaIssues } from '../../shared/plugins/plugin-schema-issues'
 import { gitExecFileAsyncBuffer } from '../git/runner'
 import { readPluginGitCommit } from './plugin-git-repository'
@@ -39,22 +42,14 @@ export async function fetchPluginMarketplace(
 }
 
 /** Reads only the catalog index blobs, so the rest of the repository is never written out.
- *  Prefers the release-pinned v2 catalog; repositories that only publish v1 still load. */
+ *  Prefers orca-catalog.json; repositories that only publish the frozen v1 file still load. */
 async function readMarketplaceAtCommit(
   repository: string,
   commit: string
 ): Promise<PluginMarketplace> {
   const options = { cwd: repository, timeout: MARKETPLACE_GIT_TIMEOUT_MS }
   const listing = await gitExecFileAsyncBuffer(
-    [
-      'ls-tree',
-      '-l',
-      '-z',
-      commit,
-      '--',
-      PLUGIN_MARKETPLACE_V2_FILENAME,
-      PLUGIN_MARKETPLACE_FILENAME
-    ],
+    ['ls-tree', '-l', '-z', commit, '--', PLUGIN_CATALOG_FILENAME, PLUGIN_MARKETPLACE_FILENAME],
     { ...options, maxBuffer: 64 * 1024 }
   )
   const blobs = new Map<string, { object: string; size: number }>()
@@ -64,8 +59,8 @@ async function readMarketplaceAtCommit(
       blobs.set(match[3]!, { object: match[1]!, size: Number(match[2]) })
     }
   }
-  const filename = blobs.has(PLUGIN_MARKETPLACE_V2_FILENAME)
-    ? PLUGIN_MARKETPLACE_V2_FILENAME
+  const filename = blobs.has(PLUGIN_CATALOG_FILENAME)
+    ? PLUGIN_CATALOG_FILENAME
     : PLUGIN_MARKETPLACE_FILENAME
   const blob = blobs.get(filename)
   if (!blob) {
@@ -90,10 +85,19 @@ export function parsePluginMarketplaceIndex(filename: string, bytes: Buffer): Pl
       `invalid ${filename}: ${error instanceof Error ? error.message : String(error)}`
     )
   }
-  const parsed =
-    filename === PLUGIN_MARKETPLACE_V2_FILENAME
-      ? pluginMarketplaceV2Schema.safeParse(raw)
-      : pluginMarketplaceSchema.safeParse(raw)
+  if (filename === PLUGIN_CATALOG_FILENAME) {
+    const tooNew = pluginCatalogVersionError(raw)
+    if (tooNew) {
+      throw new Error(`${filename} ${tooNew}`)
+    }
+    const parsed = pluginCatalogSchema.safeParse(raw)
+    if (!parsed.success) {
+      throw new Error(`invalid ${filename}: ${formatPluginSchemaIssues(parsed.error.issues, raw)}`)
+    }
+    const { name, owner, plugins } = parsed.data
+    return { name, owner, plugins }
+  }
+  const parsed = pluginMarketplaceSchema.safeParse(raw)
   if (!parsed.success) {
     throw new Error(`invalid ${filename}: ${formatPluginSchemaIssues(parsed.error.issues, raw)}`)
   }

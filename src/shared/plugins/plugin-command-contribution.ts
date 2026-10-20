@@ -1,5 +1,9 @@
 import { z } from 'zod'
-import { PLUGIN_COMMAND_ALIAS_ACTION_IDS } from './plugin-command-actions'
+import {
+  PLUGIN_COMMAND_ACTION_SINCE,
+  PLUGIN_COMMAND_ALIAS_ACTION_IDS
+} from './plugin-command-actions'
+import { PLUGIN_ENUM_SINCE_KEY } from './plugin-engine-floor-keys'
 import { pluginCommandIdSchema } from './plugin-manifest-fields'
 import { pluginFieldDoc, PLUGIN_SCHEMA_SINCE_V1 } from './plugin-schema-field-docs'
 
@@ -40,9 +44,11 @@ export const pluginCommandContributionSchema = z
         ['view.tasks']
       ),
       // Why: the runtime refinement accepts exactly this set, so editors can complete it.
-      enum: [...PLUGIN_COMMAND_ALIAS_ACTION_IDS]
+      enum: [...PLUGIN_COMMAND_ALIAS_ACTION_IDS],
+      [PLUGIN_ENUM_SINCE_KEY]: PLUGIN_COMMAND_ACTION_SINCE
     })
   })
+  .strict()
   .meta({
     id: 'CommandContribution',
     description:

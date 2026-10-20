@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { PLUGIN_MANIFEST_V2_SINCE } from './plugin-schema-field-docs'
 import { parsePluginManifest } from './plugin-manifest'
 import { formatPluginSchemaPath, pluginSchemaIssueLines } from './plugin-schema-issues'
 
@@ -10,8 +11,7 @@ function v2Manifest(overrides: Record<string, unknown> = {}): Record<string, unk
     publisher: 'acme',
     name: 'Demo',
     version: '1.0.0',
-    engines: { orca: '>=1.4.223' },
-    pluginApi: 1,
+    engines: { orca: `>=${PLUGIN_MANIFEST_V2_SINCE}` },
     ...overrides
   }
 }

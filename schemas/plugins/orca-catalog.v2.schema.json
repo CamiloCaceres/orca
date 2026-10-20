@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-marketplace.v2.schema.json",
+  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-catalog.v2.schema.json",
   "title": "Orca plugin catalog",
-  "description": "The orca-marketplace.v2.json file that lists installable plugin releases.",
+  "description": "The orca-catalog.json file that lists installable plugins and their releases.",
   "type": "object",
   "properties": {
     "$schema": {
@@ -10,6 +10,12 @@
       "x-orca-since": "1.4.233",
       "type": "string",
       "maxLength": 2048
+    },
+    "catalogVersion": {
+      "type": "number",
+      "const": 2,
+      "description": "Catalog format. Raised only for a change older Orca cannot ignore; a newer Orca reads this one.",
+      "x-orca-since": "1.4.233"
     },
     "name": {
       "type": "string",
@@ -38,11 +44,12 @@
       "items": {
         "$ref": "#/$defs/CatalogEntry"
       },
-      "description": "Listed plugins, at most 2048. Each `id` may appear once, or the whole catalog is refused. An entry this Orca cannot parse is skipped, not fatal.",
+      "description": "Listed plugins, at most 2048. Each `id` should appear once; Orca keeps the first. An entry this Orca cannot read is skipped, never fatal.",
       "x-orca-since": "1.4.233"
     }
   },
   "required": [
+    "catalogVersion",
     "name",
     "owner",
     "plugins"
@@ -64,21 +71,15 @@
           "$ref": "#/$defs/CatalogGitSource"
         },
         "description": {
-          "description": "Listing text shown in the marketplace.",
+          "description": "Listing text shown in the catalog.",
           "x-orca-since": "1.4.233",
           "type": "string",
           "minLength": 1,
           "maxLength": 4096
         },
         "categories": {
-          "default": [],
-          "description": "Lowercase slugs used to filter the marketplace, each listed once.",
+          "description": "Lowercase slugs used to filter the catalog, each listed once. At most 16; extras are ignored.",
           "x-orca-since": "1.4.233",
-          "examples": [
-            [
-              "themes"
-            ]
-          ],
           "uniqueItems": true,
           "maxItems": 16,
           "type": "array",
@@ -89,14 +90,21 @@
             "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$"
           }
         },
-        "release": {
-          "$ref": "#/$defs/CatalogRelease"
+        "releases": {
+          "description": "Installable releases, newest first. Orca installs the first one whose `minimumOrca` it meets, so keep older releases listed when you raise `engines.orca`. At most 32.",
+          "x-orca-since": "1.4.233",
+          "minItems": 1,
+          "maxItems": 32,
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/CatalogRelease"
+          }
         }
       },
       "required": [
         "id",
         "source",
-        "release"
+        "releases"
       ],
       "description": "One installable plugin."
     },
@@ -123,7 +131,7 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 4096,
-          "description": "Branch or tag the author publishes from. A `release` pins the exact commit.",
+          "description": "Branch or tag the author publishes from. Each release pins an exact commit.",
           "x-orca-since": "1.4.233",
           "examples": [
             "main"

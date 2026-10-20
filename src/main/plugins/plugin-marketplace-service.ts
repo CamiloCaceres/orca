@@ -23,6 +23,7 @@ import type { PluginKillListEntry } from '../../shared/plugins/plugin-kill-list'
 import { validateMarketplaceProvenance } from './plugin-marketplace-provenance'
 import { pluginMarketplaceErrorMessage } from './plugin-marketplace-error-message'
 import {
+  offeredCatalogRelease,
   pluginCatalogListingDetails,
   type PluginMarketplaceListing,
   type PluginMarketplaceSourceState
@@ -40,6 +41,7 @@ export class PluginMarketplaceService {
   private readonly store: PluginMarketplaceStore
   private readonly fetcher: MarketplaceFetcher
   private readonly getKillListEntry: (pluginKey: string) => PluginKillListEntry | null
+  private readonly hostVersion: string | null
   private readonly refreshChains = new Map<string, Promise<PluginMarketplaceSourceState>>()
   private readonly sourceErrors = new Map<string, string>()
   private officialSeedPromise: Promise<PluginMarketplaceSourceState> | null = null
@@ -50,7 +52,10 @@ export class PluginMarketplaceService {
     fetcher?: MarketplaceFetcher
     store?: PluginMarketplaceStore
     getKillListEntry?: (pluginKey: string) => PluginKillListEntry | null
+    /** Picks which of an entry's releases to offer; without it the newest is offered. */
+    hostVersion?: string
   }) {
+    this.hostVersion = options.hostVersion ?? null
     this.store = options.store ?? new PluginMarketplaceStore(options.pluginsDataDir)
     this.fetcher = options.fetcher ?? fetchPluginMarketplace
     this.getKillListEntry = options.getKillListEntry ?? (() => null)
@@ -270,6 +275,7 @@ export class PluginMarketplaceService {
     snapshot: PluginMarketplaceCachedSnapshot,
     entry: PluginMarketplaceEntry
   ): PluginMarketplaceListing {
+    const release = offeredCatalogRelease(entry.releases, this.hostVersion)
     const official =
       isOfficialMarketplaceGitSource(source.source.url) &&
       snapshot.marketplace.owner.toLowerCase() === OFFICIAL_MARKETPLACE_OWNER &&
@@ -287,8 +293,8 @@ export class PluginMarketplaceService {
       categories: entry.categories,
       official,
       bundled: false,
-      ...(entry.release ? { release: entry.release } : {}),
-      ...pluginCatalogListingDetails(entry.release),
+      ...(release ? { release, releases: entry.releases } : {}),
+      ...pluginCatalogListingDetails(release),
       ...(blocked
         ? {
             blockedByKillList: {

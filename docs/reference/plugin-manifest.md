@@ -28,7 +28,6 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `icon` | string | no | 1.4.160 | Square image shown beside the plugin name. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"assets/icon.png"` |
 | `engines` | object | yes | 1.4.160 | Host versions this plugin supports. Older hosts refuse to load it. |
 | `engines.orca` | string | yes | 1.4.160 | Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it to the newest "Since" of any field you use; a format 2 manifest needs at least `>=1.4.233`, because older Orca cannot read format 2. Example: `">=1.4.233"` |
-| `pluginApi` | `1` | yes | 1.4.160 | Major version of the plugin host API this plugin targets. |
 | `main` | string | no | 1.4.160 | Node entry run in an out-of-process plugin worker. Requires the `trusted-worker` execution profile, and is required by it, by `contributes.events` and by any command without an `action`. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"dist/main.mjs"` |
 | `contributes` | object | no | 1.4.160 | What the plugin adds to Orca. Every point defaults to empty. |
 | `contributes.panels` | [PanelContribution](#panelcontribution)[] | no | 1.4.160 | Sidebar panels. At most 64. |
@@ -37,12 +36,13 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `contributes.languagePacks` | [LanguagePackContribution](#languagepackcontribution)[] | no | 1.4.160 | Interface translations. At most 16. |
 | `contributes.keybindings` | [KeybindingContribution](#keybindingcontribution)[] | no | 1.4.160 | Keyboard shortcuts for contributed commands. At most 256. |
 | `contributes.vmRecipes` | [VmRecipeContribution](#vmrecipecontribution)[] | no | 1.4.160 | Virtual machine environment recipes. At most 64. |
-| `contributes.agents` | [AgentProfileContribution](#agentprofilecontribution)[] | no | 1.4.160 | Coding agent profiles. At most 64. |
+| `contributes.agents` | [AgentProfileContribution](#agentprofilecontribution)[] | no | 1.4.160 | Reserved for coding-agent definitions; must be empty in manifest format 2 until their format is defined. At most 64. |
 | `contributes.themes` | [ThemeContribution](#themecontribution)[] | no | 1.4.233 | App color themes. At most 64. |
 | `contributes.terminalThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.233 | Terminal ANSI palettes. At most 64. |
 | `contributes.iconThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.233 | File icon themes. At most 32. |
 | `contributes.syntaxes` | [SyntaxContribution](#syntaxcontribution)[] | no | 1.4.233 | Syntax highlighting for editor languages. At most 16. |
 | `capabilities` | [Capability](#capability)[] | no | 1.4.160 | Host APIs the plugin asks the user to grant. At most 32. |
+| `pluginApi` | `1` | no | 1.4.160 | Major version of the plugin host API this plugin targets. Optional (defaults to 1), and refused on `data` and `instructional` plugins, which never call it. |
 
 ## PanelContribution
 
@@ -103,7 +103,7 @@ A virtual machine environment recipe.
 
 ## AgentProfileContribution
 
-A coding agent profile.
+Reserved for coding-agent definitions. Manifest format 2 refuses a non-empty `agents` list until their format is defined.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
@@ -140,6 +140,15 @@ A host API the plugin may call once the user consents.
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
 | `kind` | `"workspace:read"` \| `"terminal:send"` \| `"notifications:show"` \| `"storage"` \| `"secrets"` \| `"events:subscribe"` \| `"settings:own"` | yes | 1.4.160 | Capability granted on user consent. |
+
+## Versions and compatibility
+
+- **What runs is strict.** Orca refuses a manifest with any key it does not know, at every level, so an older Orca never silently ignores something a plugin relies on.
+- **`engines.orca` is the only version gate.** It must be at least the newest `Since` of every field and every value (capability, event, built-in action) the manifest uses. Orca checks this when it validates, lists or installs a plugin, so an older Orca can always say "requires Orca >=X (this is Y)" instead of listing unknown fields.
+- **`pluginApi` is optional.** It names the major version of the host API, which only grows within major 1. Only `sandboxed-ui` and `trusted-worker` plugins call that API, so `data` and `instructional` plugins must leave it out.
+- **New fields, contribution points and values are additive.** They arrive with a `Since` version; nothing else changes. `manifestVersion` rises only if an existing field changes meaning.
+- **Deprecation.** A field to be removed is marked deprecated here and keeps working for at least one release; it is removed only together with a higher `engines.orca` requirement, and its name is never reused.
+- `contributes.agents` is reserved for coding-agent definitions and must stay empty until their format is defined.
 
 ## Legacy format 1
 

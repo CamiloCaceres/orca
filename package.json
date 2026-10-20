@@ -63,6 +63,7 @@
     "smoke:serve-terminal": "node config/scripts/runtime-serve-terminal-smoke.mjs",
     "check:feature-wall-assets": "node config/scripts/check-feature-wall-assets.mjs",
     "generate:plugin-schemas": "node config/scripts/generate-plugin-schemas.mjs",
+    "validate:plugin": "node config/scripts/validate-plugin-files.mjs",
     "generate:rpc-params-catalog": "node config/scripts/generate-rpc-params-catalog.mjs",
     "verify:rpc-params-catalog": "node config/scripts/generate-rpc-params-catalog.mjs --check",
     "generate:acp-protocol": "node config/scripts/acp/generate-protocol.mjs",

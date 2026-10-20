@@ -103,7 +103,8 @@
       },
       "required": [
         "name"
-      ]
+      ],
+      "additionalProperties": false
     },
     "repository": {
       "description": "Source repository URL.",
@@ -163,13 +164,8 @@
       "required": [
         "orca"
       ],
+      "additionalProperties": false,
       "description": "Host versions this plugin supports. Older hosts refuse to load it.",
-      "x-orca-since": "1.4.160"
-    },
-    "pluginApi": {
-      "type": "number",
-      "const": 1,
-      "description": "Major version of the plugin host API this plugin targets.",
       "x-orca-since": "1.4.160"
     },
     "main": {
@@ -250,7 +246,7 @@
         },
         "agents": {
           "default": [],
-          "description": "Coding agent profiles. At most 64.",
+          "description": "Reserved for coding-agent definitions; must be empty in manifest format 2 until their format is defined. At most 64.",
           "x-orca-since": "1.4.160",
           "maxItems": 64,
           "type": "array",
@@ -310,6 +306,12 @@
       "items": {
         "$ref": "#/$defs/Capability"
       }
+    },
+    "pluginApi": {
+      "description": "Major version of the plugin host API this plugin targets. Optional (defaults to 1), and refused on `data` and `instructional` plugins, which never call it.",
+      "x-orca-since": "1.4.160",
+      "type": "number",
+      "const": 1
     }
   },
   "required": [
@@ -319,8 +321,7 @@
     "publisher",
     "name",
     "version",
-    "engines",
-    "pluginApi"
+    "engines"
   ],
   "additionalProperties": false,
   "$defs": {
@@ -374,6 +375,7 @@
         "title",
         "entry"
       ],
+      "additionalProperties": false,
       "description": "A sidebar panel. Requires the `sandboxed-ui` execution profile or higher."
     },
     "CommandContribution": {
@@ -432,6 +434,23 @@
             "sidebar.checks.toggle",
             "sidebar.ports.toggle"
           ],
+          "x-orca-enum-since": {
+            "worktree.history.back": "1.4.160",
+            "worktree.history.forward": "1.4.160",
+            "sidebar.left.toggle": "1.4.160",
+            "sidebar.sleepingWorkspaces.toggle": "1.4.160",
+            "floatingWorkspace.maximize": "1.4.160",
+            "tab.rename": "1.4.160",
+            "workspace.rename": "1.4.160",
+            "workspace.openBoard": "1.4.160",
+            "view.tasks": "1.4.160",
+            "sidebar.right.toggle": "1.4.160",
+            "sidebar.explorer.toggle": "1.4.160",
+            "sidebar.search.toggle": "1.4.160",
+            "sidebar.sourceControl.toggle": "1.4.160",
+            "sidebar.checks.toggle": "1.4.160",
+            "sidebar.ports.toggle": "1.4.160"
+          },
           "type": "string",
           "minLength": 1,
           "maxLength": 256,
@@ -442,6 +461,7 @@
         "id",
         "title"
       ],
+      "additionalProperties": false,
       "description": "A command palette entry. Requires the `instructional` execution profile or higher."
     },
     "EventContribution": {
@@ -455,12 +475,18 @@
             "agent.status.changed"
           ],
           "description": "Event delivered to the plugin worker.",
-          "x-orca-since": "1.4.160"
+          "x-orca-since": "1.4.160",
+          "x-orca-enum-since": {
+            "worktree.created": "1.4.160",
+            "worktree.removed": "1.4.160",
+            "agent.status.changed": "1.4.160"
+          }
         }
       },
       "required": [
         "on"
       ],
+      "additionalProperties": false,
       "description": "An event subscription. Requires `main`, the `trusted-worker` execution profile and the `events:subscribe` capability."
     },
     "LanguagePackContribution": {
@@ -577,7 +603,7 @@
         "path"
       ],
       "additionalProperties": false,
-      "description": "A coding agent profile."
+      "description": "Reserved for coding-agent definitions. Manifest format 2 refuses a non-empty `agents` list until their format is defined."
     },
     "ThemeContribution": {
       "type": "object",
@@ -736,7 +762,16 @@
             "settings:own"
           ],
           "description": "Capability granted on user consent.",
-          "x-orca-since": "1.4.160"
+          "x-orca-since": "1.4.160",
+          "x-orca-enum-since": {
+            "workspace:read": "1.4.160",
+            "terminal:send": "1.4.160",
+            "notifications:show": "1.4.160",
+            "storage": "1.4.160",
+            "secrets": "1.4.160",
+            "events:subscribe": "1.4.160",
+            "settings:own": "1.4.160"
+          }
         }
       },
       "required": [

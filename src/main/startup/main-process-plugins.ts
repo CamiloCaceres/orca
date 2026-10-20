@@ -1,3 +1,4 @@
+import { pluginHostVersion } from '../../shared/plugins/plugin-host-version'
 import { app, BrowserWindow } from 'electron'
 import { performance } from 'node:perf_hooks'
 import { PluginService } from '../plugins/plugin-service'
@@ -38,7 +39,8 @@ export async function initializeMainProcessPlugins(runtime: OrcaRuntimeService):
   await state.pluginKillListService.initialize()
   state.pluginMarketplaceService = new PluginMarketplaceService({
     pluginsDataDir: getPluginsDataDir(app.getPath('userData')),
-    getKillListEntry: (pluginKey) => state.pluginKillListService?.find(pluginKey) ?? null
+    getKillListEntry: (pluginKey) => state.pluginKillListService?.find(pluginKey) ?? null,
+    hostVersion: pluginHostVersion(app.getVersion())
   })
   const requestOfficialMarketplaceSeed = (): void => {
     if (store.getSettings().pluginSystemEnabled !== true) {
@@ -53,12 +55,12 @@ export async function initializeMainProcessPlugins(runtime: OrcaRuntimeService):
   state.pluginMarketplaceInstaller = new PluginMarketplaceInstaller({
     marketplace: state.pluginMarketplaceService,
     userDataPath: app.getPath('userData'),
-    hostVersion: app.getVersion(),
+    hostVersion: pluginHostVersion(app.getVersion()),
     blockedPluginReason: (pluginKey) => state.pluginKillListService?.reason(pluginKey) ?? null
   })
   state.pluginService = new PluginService({
     userDataPath: app.getPath('userData'),
-    hostVersion: app.getVersion(),
+    hostVersion: pluginHostVersion(app.getVersion()),
     // Feature flag: with the setting off, discovery returns nothing and no
     // plugin code path runs at all.
     isPluginSystemEnabled: () => state.store?.getSettings().pluginSystemEnabled === true,
@@ -76,7 +78,7 @@ export async function initializeMainProcessPlugins(runtime: OrcaRuntimeService):
       appPath: app.getAppPath()
     }),
     userDataPath: app.getPath('userData'),
-    hostVersion: app.getVersion(),
+    hostVersion: pluginHostVersion(app.getVersion()),
     isEnabled: () => state.store?.getSettings().pluginSystemEnabled === true,
     blockedPluginReason: (pluginKey) => state.pluginKillListService?.reason(pluginKey) ?? null,
     refreshPlugins: () => state.pluginService?.refresh() ?? Promise.resolve()

@@ -14,7 +14,7 @@ import {
   type PluginJsonSchema
 } from './plugin-json-schema'
 import { parsePluginManifest, pluginManifestV2Object } from './plugin-manifest'
-import { pluginMarketplaceV2DocumentSchema, pluginMarketplaceV2Schema } from './plugin-marketplace'
+import { pluginCatalogDocumentSchema, pluginCatalogSchema } from './plugin-catalog'
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..', '..')
 
@@ -118,7 +118,7 @@ describe('published plugin schemas', () => {
 
   it.each([
     ['manifest', pluginManifestV2Object],
-    ['catalog', pluginMarketplaceV2DocumentSchema]
+    ['catalog', pluginCatalogDocumentSchema]
   ])('accepts every documented %s example at runtime too', (_name, root) => {
     const fields = zodFields(root)
     expect(fields.length).toBeGreaterThan(10)
@@ -165,6 +165,6 @@ describe('published plugin schemas', () => {
       ])
     }
     expect(validate(catalog), JSON.stringify(validate.errors)).toBe(true)
-    expect(pluginMarketplaceV2Schema.parse(catalog).plugins).toHaveLength(1)
+    expect(pluginCatalogSchema.parse(catalog).plugins).toHaveLength(1)
   })
 })

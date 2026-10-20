@@ -6,6 +6,7 @@ export function compilePluginJsonSchema(schema: PluginJsonSchema) {
   // Why no format plugin: every format the schemas use also carries a `pattern`.
   const ajv = new Ajv2020({ allErrors: true, validateFormats: false })
   ajv.addKeyword('x-orca-since')
+  ajv.addKeyword('x-orca-enum-since')
   return { ajv, validate: ajv.compile(schema) }
 }
 
@@ -30,7 +31,6 @@ export function v2ManifestFixture(
     name: 'Demo',
     version: '1.0.0',
     engines: { orca: `>=${PLUGIN_MANIFEST_V2_SINCE}` },
-    pluginApi: 1,
     ...overrides
   }
 }
@@ -43,23 +43,26 @@ export function catalogEntryFixture(
     id: 'acme.gleam-syntax',
     source: { kind: 'git', url: 'https://github.com/acme/gleam.git', ref: 'main' },
     categories: ['syntax'],
-    release: {
-      version: '1.0.0',
-      commit: 'a'.repeat(40),
-      contentHash: 'b'.repeat(64),
-      execution: 'data',
-      minimumOrca: PLUGIN_MANIFEST_V2_SINCE,
-      types: ['syntax'],
-      ...release
-    },
+    releases: [
+      {
+        version: '1.0.0',
+        commit: 'a'.repeat(40),
+        contentHash: 'b'.repeat(64),
+        execution: 'data',
+        minimumOrca: PLUGIN_MANIFEST_V2_SINCE,
+        types: ['syntax'],
+        ...release
+      }
+    ],
     ...overrides
   }
 }
 
 export function catalogFixture(plugins: unknown[]): {
+  catalogVersion: number
   name: string
   owner: string
   plugins: unknown[]
 } {
-  return { name: 'Acme Plugins', owner: 'acme', plugins }
+  return { catalogVersion: 2, name: 'Acme Plugins', owner: 'acme', plugins }
 }
