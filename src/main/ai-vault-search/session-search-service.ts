@@ -71,6 +71,9 @@ export function createSessionSearchService({
                   ? null
                   : {
                       snippet: evidence.snippet,
+                      ...(evidence.originalExcerpt
+                        ? { originalExcerpt: evidence.originalExcerpt }
+                        : {}),
                       role: evidence.role,
                       timestamp: evidence.timestamp
                     },

@@ -39,6 +39,7 @@ import { sessionRowFilter } from './session-search-row-filter'
 import { ensureSessionSearchQuerySchema } from './session-search-query-schema'
 import { EMPTY_SNIPPET, sessionSearchSnippet } from './session-search-snippet'
 import { sessionSourcePresence } from './session-search-source-presence'
+import { sessionSearchOriginalExcerpt } from './session-search-original-excerpt'
 
 /**
  * Sessions retrieved before ranking cuts the page.
@@ -126,7 +127,7 @@ export class SessionSearchEngine {
 
     const limit = resolveSessionSearchLimit(request.limit)
     const page = ranked.slice(offset, offset + limit)
-    const hits = this.hits(page, scope, retrieved)
+    const hits = this.hits(page, scope, retrieved, split.text)
     const actualGeneration = readIndexGeneration(this.db)
     if (actualGeneration !== generation) {
       throw new SessionSearchCursorError('stale-generation', actualGeneration, generation)
@@ -194,26 +195,38 @@ export class SessionSearchEngine {
   private hits(
     page: readonly RankedSession[],
     scope: SessionSearchScope,
-    retrieved: Retrieved | null
+    retrieved: Retrieved | null,
+    query: string
   ): SessionSearchHit[] {
     const presence = sessionSourcePresence(
       this.db,
       page.map((entry) => entry.session.id)
     )
-    return page.map((entry) => this.hit(entry, scope, retrieved, presence))
+    return page.map((entry) => this.hit(entry, scope, retrieved, presence, query))
   }
 
   private hit(
     entry: RankedSession,
     scope: SessionSearchScope,
     retrieved: Retrieved | null,
-    presence: ReadonlyMap<number, SessionSearchSourcePresence>
+    presence: ReadonlyMap<number, SessionSearchSourcePresence>,
+    query: string
   ): SessionSearchHit {
     const { session, message } = entry
     const snippet =
       message && retrieved
         ? sessionSearchSnippet(this.db, scope, message.rowid, retrieved.plan, retrieved.route)
         : EMPTY_SNIPPET
+    const originalExcerpt =
+      message && retrieved
+        ? sessionSearchOriginalExcerpt(
+            this.db,
+            scope,
+            message.rowid,
+            query,
+            this.options.retentionCutoffMs ?? null
+          )
+        : undefined
     return {
       ...sessionFields(session),
       score: entry.score,
@@ -224,6 +237,7 @@ export class SessionSearchEngine {
             role: message.role as TranscriptMessageRole,
             timestamp: message.ts,
             snippet: snippet.text,
+            ...(originalExcerpt ? { originalExcerpt } : {}),
             ...(snippet.truncated ? { snippetTruncated: true } : {})
           }
         : null

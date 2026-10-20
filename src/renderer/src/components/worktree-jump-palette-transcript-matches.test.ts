@@ -4,7 +4,10 @@ import { searchHit } from '../../../shared/ai-vault-search-test-fixture'
 import { makePaneKey } from '../../../shared/stable-pane-id'
 import type { OriginalPaneState } from './right-sidebar/ai-vault-original-pane'
 import { parseAiVaultSnippetMarks } from './right-sidebar/ai-vault-search-snippet-marks'
-import { resolvePaletteTranscriptMatches } from './worktree-jump-palette-transcript-matches'
+import {
+  fitPaletteTranscriptMatches,
+  resolvePaletteTranscriptMatches
+} from './worktree-jump-palette-transcript-matches'
 import { LEAF_ID, makeAgentEntry, makeTerminalTab } from './worktree-jump-palette-test-fixtures'
 
 function hit(sessionId: string, snippet: string | null): AiVaultSearchHit {
@@ -57,20 +60,37 @@ describe('resolvePaletteTranscriptMatches', () => {
     expect(matches).toEqual([
       {
         worktreeId: 'wt-b',
+        ordinal: 0,
+        complete: false,
+        windows: [],
         terminalTabId: 'term-b',
         snippet: { text: 'fix the flaky test', ranges: [{ start: 8, end: 13 }] }
       },
-      { worktreeId: 'wt-a', terminalTabId: 'term-a', snippet: null }
+      {
+        worktreeId: 'wt-a',
+        terminalTabId: 'term-a',
+        snippet: null,
+        ordinal: 2,
+        complete: false,
+        windows: []
+      }
     ])
   })
 
-  it('keeps one match per tab, the best-ranked hit', () => {
+  it('folds sessions only after display fit, preferring proof and then the original ordinal', () => {
     const state = paneStateFor([{ tabId: 'term-a', worktreeId: 'wt-a', sessionId: 's-a' }])
     const matches = resolvePaletteTranscriptMatches(
       [hit('s-a', '[[first]]'), hit('s-a', '[[second]]')],
       state
     )
-    expect(matches.map((match) => match.snippet?.text)).toEqual(['first'])
+    expect(matches.map((match) => match.snippet?.text)).toEqual(['first', 'second'])
+    expect(
+      fitPaletteTranscriptMatches(matches, new Map()).map((match) => match.snippet?.text)
+    ).toEqual(['first'])
+    const proof = { text: 'verified', ranges: [{ start: 0, end: 8 }] }
+    expect(fitPaletteTranscriptMatches(matches, new Map([[1, proof]]))).toMatchObject([
+      { ordinal: 1, complete: true, snippet: proof }
+    ])
   })
 
   it('returns nothing when there are no hits', () => {

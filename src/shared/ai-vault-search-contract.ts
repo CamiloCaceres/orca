@@ -45,6 +45,19 @@ export const AiVaultSearchSourceSchema = z.object({
 })
 export const AiVaultSearchEvidenceSchema = z.object({
   snippet: z.string(),
+  originalExcerpt: z
+    .object({
+      text: z
+        .string()
+        .max(1024)
+        .refine(
+          (text) =>
+            Array.from(text).length <= 512 &&
+            !Array.from(text).some((point) => point.length === 1 && /[\uD800-\uDFFF]/u.test(point))
+        )
+    })
+    .optional()
+    .catch(undefined),
   role: z.enum(['user', 'assistant', 'tool', 'system', 'unknown']),
   timestamp: z.string().nullable()
 })

@@ -1,6 +1,6 @@
 # Cmd J transcript search ranking
 
-Status: Proposed. Implementation is not part of this document.
+Status: Implemented for review units 1–4. See [validation and release budgets](#implementation-validation). Host retrieval recall remains a separate change.
 
 ## Decision
 
@@ -97,7 +97,11 @@ Choose windows with pure bounded logic, then verify them in one bounded out-of-f
 
 Unknown width, unloaded typography, or non-fitting proof receives no promotion until valid fit exists. Explicit width/typography changes invalidate once and recompute; badges and membership do not change width. Never certify a full source excerpt and hide proof behind CSS truncation.
 
+Font-load signals invalidate cached fits even when the CSS font declaration is unchanged. Each completed measurement batch replaces the receiver's fit snapshot.
+
 Reserve one excerpt line plus spacing from the first render of a nonempty transcript-enabled generation, before deferred work/debounce, only for destinations eligible for local enrichment. Use existing host/live/sleeping/runtime rules and keep eligibility stable for surviving destinations within the generation; arriving destinations use the same predicate. Remote/ineligible rows pay no reservation cost. Empty/error responses retain eligible reservations. Text updates never change row height or wrap.
+
+The merge owns one geometry decision per host-aware destination, including ineligible decisions, across title/transcript match transitions. A surviving row without reserved excerpt space cannot gain a line or promote from hidden proof.
 
 After interaction, keep outer palette geometry, viewport, scrollbar, and heading/hint/control footprints stable during enrichment. Insert nothing above protected occurrences. Query changes, genuine removals, explicit resize/typography changes, and explicit See more expansion are layout exceptions.
 
@@ -153,7 +157,7 @@ Normalize/classify once per query/display generation, measure bounded windows in
 
 ### Required before enabling promotion
 
-No measured improvement is claimed yet. Use a small fixed corpus of realistic queries and judged useful destinations, comparing current and proposed behavior with the same page limit and debounce. Include exact navigation, distinctive phrases, broad words, identifiers, typos, long messages, closed history, and early navigation. Distinguish host recall omissions from renderer gains.
+A fixed-corpus evaluation and local release-budget evidence are recorded in [validation](#implementation-validation). Keep a small fixed corpus of realistic queries and judged useful destinations, comparing current and proposed behavior with the same page limit and debounce. Include exact navigation, distinctive phrases, broad words, identifiers, typos, long messages, closed history, and early navigation. Distinguish host recall omissions from renderer gains.
 
 - **Correctness and interaction:** pass the [acceptance tests](#acceptance-tests), with zero literal false promotions in the corpus and regression fixtures. Verify target geometry and activation through early keyboard, hover, and scroll interaction.
 - **Usefulness and density:** record first-screen useful-result rate, useful-arrival coverage after early interaction, and the number of visible rows lost to excerpt reservations. Judge usefulness independently of literal compliance: an incidental common-word mention can satisfy the classifier and still be a poor result.
@@ -231,3 +235,71 @@ For implementation, run focused suites with `ORCA_BACKGROUND_LAUNCH=1`, appropri
 **Freeze IDs/scroll or measure after ranking.** Geometry still moves pointer targets, and mounted-only checks miss capped candidates. Reserve eligible row space and measure shared-width windows before ranking.
 
 **Raise the page limit or keep paging.** Extra history cannot undo route/folding suppression. Apply eligibility before those host decisions in the separate PR.
+
+## Implementation validation
+
+Reference: 2026-10-19, macOS arm64, hidden Electron renderers, default Geist typography, 900px palette and 600px list. This is a fixed synthetic evaluation, not a production study. Host recall remains the separate change described in the design.
+
+### Release budgets
+
+Promotion requires literal original-source proof and a measured highlighted window. Missing provenance, unknown typography/width, and failed fit checks retain ordinary or unpromoted index results.
+
+| Check                                        | Budget                                                                                         | Reference result                                     |
+| -------------------------------------------- | ---------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| Literal false promotions                     | Zero across the corpus and boundary regressions                                                | Zero                                                 |
+| Useful destination on the first screen       | No exact-navigation loss; at least three additional successful queries in the nine-case corpus | 2/9 → 6/9; exact title stays first                   |
+| Useful late arrivals after early interaction | All 20 arrivals enter the unseen suffix with the original 50-row capacity                      | 20/20 for keyboard, hover, and scroll                |
+| Excerpt reservation density                  | At most four visible rows lost at the reference viewport                                       | 11 → 9, two lost                                     |
+| Host median, 100 long-message hits           | At most twice the baseline median plus 2ms                                                     | 9.54ms → 15.17ms                                     |
+| Extra indexed reads                          | At most one bounded row read per returned hit                                                  | 100 reads; 723,700 source code points in the fixture |
+| Returned original content                    | At most 100 × 512 Unicode code points                                                          | 51,200 code points                                   |
+| Fit reads                                    | At most 100 × 8 windows, in one out-of-flow batch                                              | 100 unique reads after caching                       |
+| Fit-read CPU                                 | At most 16ms on the reference machine                                                          | 0.10ms                                               |
+| Renderer arrival work                        | At most 100ms on the reference machine                                                         | 85.31ms isolated                                     |
+
+The renderer work measurement uses CDP thread task counters through the DOM commit. It includes application work during that interval and excludes accessibility assertions. The ordinary-input interval in the same 200-tab fixture recorded 6,812ms of renderer task time; it includes input and application activity and is not a general matcher-latency baseline. No renderer speedup is claimed. Isolated arrival runs recorded 85.31ms and 97.63ms; the full eight-case run recorded 107.25ms. The isolated gate passes, but the full-suite overrun shows limited margin and should be rechecked when changing classification or measurement.
+
+Timing assertions run with `ORCA_CMD_J_EVALUATION=1` on an otherwise idle reference machine. Ordinary test runs enforce deterministic work, density, proof, and interaction bounds without imposing machine-specific latency thresholds on other platforms.
+
+### Judged corpus
+
+Usefulness labels are separate from literal completeness. For example, the first broad-word hit is an incidental build-log mention: it can prove the word without being the useful conversation. Each query has the same bounded candidate population before and after; weak-name cases include fourteen ordinary distractors. All newly visible useful destinations rank first or second, so the gain does not depend on a partially visible final row.
+
+| Query shape                                         | Useful rank before | Useful rank after |
+| --------------------------------------------------- | -----------------: | ----------------: |
+| Exact title navigation                              |                  1 |                 1 |
+| Distinctive `token refresh race` terms              |                 15 |                 1 |
+| Broad `refresh`, with an incidental earlier hit     |                 16 |                 2 |
+| Original `tokenRefresh` identifier                  |                 15 |                 1 |
+| Typo retrieval with repaired-only source text       |                 15 |                15 |
+| Compact proof inside a long message                 |                 15 |                 1 |
+| Quoted phrase competing with identifier-shadow text |                  2 |                 1 |
+| Useful text touching an uncertain chunk edge        |                 15 |                15 |
+| Useful session omitted by host retrieval            |            Missing |           Missing |
+
+The final three misses distinguish renderer policy from retrieval recall: repaired-only text and uncertain edges cannot promote; an omitted host candidate cannot be recovered by renderer ranking.
+
+### Compatibility and ordinary ordering
+
+The optional `originalExcerpt` field is validated and projected by the existing service and transport paths. Legacy snippets remain unchanged. Invalid optional evidence is discarded without dropping its result. Older hosts cannot certify promotion. Local evidence cannot attach to a runtime-owned workspace or an explicitly remote tab, including when a runtime is focused.
+
+The Cmd+J adapter owns both entity sorts. The generic comparator retains its implementation. Ordinary before/after fixtures record the intended reversal: protected fallback exact evidence moves ahead of structured weak or fuzzy evidence. Comparisons inside each ordinary band retain semantic, activity, position, and identity ordering. Section leadership retains its stronger ordinary distinctions and workspace/settings destination safeguard.
+
+### Validation coverage
+
+The final focused run passed 649 tests across 56 suites. All eight hidden Electron cases, host and renderer typechecks, the changed-code quality gate, and `git diff --check` passed. The isolated host and renderer budget gates also passed.
+
+The unit suites cover extraction lifetime, retention, generation rejection, public and transport compatibility, NFC/UTF-16 ranges, clipped combining marks and identifiers, original-query caps and stop words, quotes and punctuation, repeated anchors, fit-before-tab deduplication, separate ordinary/transcript signals, comparator laws, section leadership, observed-prefix reconciliation, continuation headings, unique overflow, removal, and programmatic callbacks.
+
+Hidden Electron tests record row rectangles, viewport height, scroll position, and a parked pointer's hit target before late arrivals. They assert the same targets and selected value afterwards, then verify Enter activates the selected tab. Separate cases verify initial default selection, shared excerpt widths, narrow-to-wide resize, the 100-candidate bound, and website navigation in both themes. All launched windows remain hidden.
+
+Run the isolated budgets after the regular focused suites:
+
+```bash
+ORCA_BACKGROUND_LAUNCH=1 ORCA_CMD_J_EVALUATION=1 pnpm test src/main/ai-vault-search/session-search-original-excerpt-performance.test.ts --silent=false --reporter=verbose
+ORCA_BACKGROUND_LAUNCH=1 ORCA_CMD_J_EVALUATION=1 SKIP_BUILD=1 pnpm run test:e2e tests/e2e/worktree-jump-palette-transcript-ranking.spec.ts --workers=1 --grep budgets
+```
+
+`SKIP_BUILD=1` requires a current `electron-vite build --mode e2e`. With an active dev watcher, use `--outDir <app>/out` and set `ORCA_E2E_BUILD_DIR=<app>/out`. That isolated app needs its own copy of `package.json`, plus `resources`, `node_modules`, and `out/cli` (the reference bundle linked those to the worktree). The harness checks the package and entry before launching Electron. The repository's background-only Playwright harness was used because the referenced Electron skill was unavailable. Screenshot evidence is retained locally under `.tmp/cmd-j-transcript-search/`.
+
+The implementation preserves the accepted conservative misses, local-only scope, 120ms debounce, 100-hit bound, consent, cancellation, and existing activation authority. Wider recall, remote expansion, production p50/p95 studies, and richer message-boundary provenance remain follow-ups.

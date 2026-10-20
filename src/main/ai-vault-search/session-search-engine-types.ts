@@ -89,6 +89,8 @@ export type SessionSearchEvidence = {
   timestamp: string | null
   /** FTS5 snippet with the matched terms wrapped in `[[` `]]`. */
   snippet: string
+  /** One contiguous, unmarked slice of an original indexed message column. */
+  originalExcerpt?: { text: string }
   /** The snippet hit the engine's per-hit ceiling and was cut. */
   snippetTruncated?: boolean
 }

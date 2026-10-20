@@ -11,22 +11,16 @@ import {
   searchWorkspaceTabs,
   type SearchableWorkspaceTab
 } from '@/lib/workspace-tab-palette-search'
-import { comparePaletteRankedItems } from '@/lib/cmd-j-section-leadership'
-import { getPaletteWorktreeIdentity } from '@/lib/palette-repo-resolution'
 import type {
   BrowserPaletteItem,
   SimulatorPaletteItem,
-  WorkspaceTabPaletteItem,
-  WorktreePaletteItem
+  WorkspaceTabPaletteItem
 } from './worktree-jump-palette-model'
 import type { WorktreeJumpPaletteFilter } from './use-worktree-jump-palette-filter'
 import type { WorktreeJumpPaletteLocalState } from './use-worktree-jump-palette-local-state'
 import type { WorktreeJumpPaletteStoreState } from './use-worktree-jump-palette-store-state'
 import type { WorktreeJumpPaletteWorktrees } from './use-worktree-jump-palette-worktrees'
-import {
-  encodePaletteIdentity,
-  type PaletteSearchContext
-} from '@/lib/palette-match/palette-ranking'
+import type { PaletteSearchContext } from '@/lib/palette-match/palette-ranking'
 import { useWorkspaceTabTranscriptMerge } from './use-worktree-jump-palette-transcript-tab-merge'
 import type { WorktreeJumpPaletteTranscriptMatches } from './use-worktree-jump-palette-transcript-matches'
 import {
@@ -34,6 +28,7 @@ import {
   buildSimulatorPaletteItems,
   buildWorkspaceTabPaletteItems
 } from './worktree-jump-palette-open-tab-items'
+import { buildWorktreePaletteItems } from './worktree-jump-palette-worktree-items'
 
 const EMPTY_BROWSER_PAGE_ENTRIES: SearchableBrowserPage[] = []
 const EMPTY_SIMULATOR_TAB_ENTRIES: SearchableSimulatorTab[] = []
@@ -43,7 +38,10 @@ type WorktreeJumpPaletteOpenTabsInput = WorktreeJumpPaletteStoreState &
   WorktreeJumpPaletteWorktrees &
   Pick<WorktreeJumpPaletteFilter, 'repoMap' | 'repoByHostIdentity' | 'filterModel'> &
   Pick<WorktreeJumpPaletteLocalState, 'deferredQuery'> &
-  WorktreeJumpPaletteTranscriptMatches & {
+  Pick<
+    WorktreeJumpPaletteTranscriptMatches,
+    'transcriptMatches' | 'transcriptEligibleTabs' | 'transcriptGenerationKey'
+  > & {
     paletteSearchContext: PaletteSearchContext
   }
 
@@ -55,6 +53,8 @@ export function useWorktreeJumpPaletteOpenTabs({
   repoByHostIdentity,
   filterModel,
   transcriptMatches,
+  transcriptEligibleTabs,
+  transcriptGenerationKey,
   worktreeOrder,
   browserTabsByWorktree,
   browserPagesByWorkspace,
@@ -226,43 +226,10 @@ export function useWorktreeJumpPaletteOpenTabs({
       }),
     [workspaceTabEntries, deferredQuery, paletteSearchContext]
   )
-  const worktreeItems = useMemo<WorktreePaletteItem[]>(() => {
-    const items = worktreeMatches
-      .map((match) => {
-        const worktree = resolveWorktree(match.worktreeId, match.worktreeHostId)
-        return worktree
-          ? {
-              id: encodePaletteIdentity(['worktree', getPaletteWorktreeIdentity(worktree)]),
-              type: 'worktree' as const,
-              match,
-              worktree
-            }
-          : null
-      })
-      .filter((item): item is WorktreePaletteItem => item !== null)
-    if (!hasQuery) {
-      return items
-    }
-    const orderByIdentity = new Map(
-      items.map((item, index) => [getPaletteWorktreeIdentity(item.worktree), index])
-    )
-    return items.sort((left, right) =>
-      comparePaletteRankedItems(
-        {
-          rank: left.match.rank,
-          order: orderByIdentity.get(getPaletteWorktreeIdentity(left.worktree)) ?? 0,
-          identity: left.id,
-          activity: left.match.activity
-        },
-        {
-          rank: right.match.rank,
-          order: orderByIdentity.get(getPaletteWorktreeIdentity(right.worktree)) ?? 0,
-          identity: right.id,
-          activity: right.match.activity
-        }
-      )
-    )
-  }, [hasQuery, resolveWorktree, worktreeMatches])
+  const worktreeItems = useMemo(
+    () => buildWorktreePaletteItems({ hasQuery, resolveWorktree, worktreeMatches }),
+    [hasQuery, resolveWorktree, worktreeMatches]
+  )
   const browserItems = useMemo<BrowserPaletteItem[]>(
     () => buildBrowserPaletteItems(browserMatches),
     [browserMatches]
@@ -278,6 +245,8 @@ export function useWorktreeJumpPaletteOpenTabs({
   const { workspaceTabItems, openTabItems } = useWorkspaceTabTranscriptMerge({
     filterModel,
     transcriptMatches,
+    transcriptEligibleTabs,
+    transcriptGenerationKey,
     titleWorkspaceTabItems,
     workspaceTabEntries,
     browserItems,

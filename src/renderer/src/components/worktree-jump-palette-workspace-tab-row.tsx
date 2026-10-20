@@ -9,7 +9,6 @@ import { translate } from '@/i18n/i18n'
 import type { WorkspaceTabPaletteItem } from './worktree-jump-palette-model'
 import type { WorktreeJumpPaletteController } from './use-worktree-jump-palette-controller'
 import {
-  HighlightedText,
   PaletteHostBadgeChip,
   PaletteLocationChip,
   PaletteOpenTabPrimaryLine,
@@ -19,6 +18,7 @@ import { formatPaletteSessionAge } from '@/components/cmd-j/palette-session-age'
 import { resolvePaletteRepoForWorktree } from '@/lib/palette-repo-resolution'
 import { isEditorTabContentType } from '@/store/slices/editor/tabs/editor-tab-content-type'
 import { getRepoExecutionHostId } from '../../../shared/execution-host'
+import { PaletteTranscriptExcerpt } from './cmd-j/palette-transcript-measurement'
 
 export function WorktreeJumpPaletteWorkspaceTabRow({
   entry,
@@ -98,17 +98,6 @@ export function WorktreeJumpPaletteWorkspaceTabRow({
                 </>
               }
             />
-            {entry.transcriptSnippet ? (
-              <div
-                data-slot="palette-open-tab-transcript-snippet"
-                className="mt-0.5 truncate text-[12px] text-muted-foreground"
-              >
-                <HighlightedText
-                  text={entry.transcriptSnippet.text}
-                  matchRanges={entry.transcriptSnippet.ranges}
-                />
-              </div>
-            ) : null}
             {result.typeAliasMatches.length ? (
               <span className="sr-only">
                 {result.typeAliasMatches.map((match) => match.text).join(', ')}
@@ -130,6 +119,9 @@ export function WorktreeJumpPaletteWorkspaceTabRow({
             />
           </div>
         </div>
+        {entry.transcriptReserved || entry.transcriptSnippet ? (
+          <PaletteTranscriptExcerpt snippet={entry.transcriptSnippet ?? null} />
+        ) : null}
       </div>
     </CommandItem>
   )

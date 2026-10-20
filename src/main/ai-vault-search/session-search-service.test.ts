@@ -44,6 +44,7 @@ describe('real index to public service adapter', () => {
       throw new Error('Expected results')
     }
     expect(first.debug?.plannerReport.scope).toBe('all')
+    expect(first.hits[0].evidence?.originalExcerpt).toEqual({ text: 'needle' })
     expect(first).not.toHaveProperty('route')
     expect(first).not.toHaveProperty('tier')
     expect(first.page.hasMore).toBe(true)

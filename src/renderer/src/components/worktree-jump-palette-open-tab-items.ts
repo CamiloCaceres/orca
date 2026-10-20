@@ -1,4 +1,4 @@
-import { comparePaletteRankedItems } from '@/lib/cmd-j-section-leadership'
+import { compareCmdJTranscriptRankedItems } from '@/lib/cmd-j-transcript-ranking'
 import type { BrowserPaletteSearchResult } from '@/lib/browser-palette-search'
 import type { SimulatorPaletteSearchResult } from '@/lib/simulator-palette-search'
 import type { WorkspaceTabPaletteSearchResult } from '@/lib/workspace-tab-palette-search'
@@ -48,25 +48,28 @@ export function buildOpenTabPaletteItems({
   browserItems: readonly BrowserPaletteItem[]
   simulatorItems: readonly SimulatorPaletteItem[]
   workspaceTabItems: readonly WorkspaceTabPaletteItem[]
-  /** Already in the index's relevance order, and arrive late, so they trail every title match. */
+  /** Original response ordinals remain attached through classification and deduplication. */
   transcriptOnlyItems?: readonly WorkspaceTabPaletteItem[]
 }): OpenTabPaletteItem[] {
-  const titleMatches = [...browserItems, ...simulatorItems, ...workspaceTabItems].sort(
+  return [...browserItems, ...simulatorItems, ...workspaceTabItems, ...transcriptOnlyItems].sort(
     (left, right) =>
-      comparePaletteRankedItems(
+      compareCmdJTranscriptRankedItems(
         {
           rank: left.result.rank,
+          qualityClass: left.result.qualityClass,
+          transcript: left.type === 'workspace-tab' ? left.transcript : undefined,
           order: left.result.score,
           identity: left.id,
           activity: left.result.activity
         },
         {
           rank: right.result.rank,
+          qualityClass: right.result.qualityClass,
+          transcript: right.type === 'workspace-tab' ? right.transcript : undefined,
           order: right.result.score,
           identity: right.id,
           activity: right.result.activity
         }
       )
   )
-  return transcriptOnlyItems.length ? [...titleMatches, ...transcriptOnlyItems] : titleMatches
 }

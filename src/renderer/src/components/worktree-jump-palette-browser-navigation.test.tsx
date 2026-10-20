@@ -57,6 +57,7 @@ function listInput(query: string, overrides: Partial<ListInput> = {}): ListInput
     recentTabShortcutIndexById: new Map(),
     digitShortcutModifiers: [],
     paletteSections: {
+      availableItems: [navigationItem(query)],
       hasExactEntityDestination: false,
       visibleWorktreeItems: [],
       worktreeOverflowCount: 0,

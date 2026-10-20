@@ -39,7 +39,12 @@ export type SimulatorPaletteItem = {
   result: SimulatorPaletteSearchResult
 }
 
-export type PaletteTranscriptSnippet = { text: string; ranges: readonly MatchRange[] }
+export type PaletteTranscriptSnippet = {
+  text: string
+  ranges: readonly MatchRange[]
+  leadingEllipsis?: boolean
+  trailingEllipsis?: boolean
+}
 
 export type WorkspaceTabPaletteItem = {
   id: string
@@ -47,6 +52,8 @@ export type WorkspaceTabPaletteItem = {
   result: WorkspaceTabPaletteSearchResult
   /** Evidence from the session index when this chat's transcript matched the query. */
   transcriptSnippet?: PaletteTranscriptSnippet
+  transcript?: { complete: boolean; ordinal: number }
+  transcriptReserved?: boolean
 }
 
 export type SettingsPaletteItem = {

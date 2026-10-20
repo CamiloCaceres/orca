@@ -18,6 +18,7 @@ import { useWorkspaceEmojiShortcodeInput } from '@/components/workspace-emoji/us
 import { usePaletteSearchEvaluationContext } from '@/hooks/use-palette-search-evaluation-context'
 import type { WorktreePaletteRequestGuard } from '@/lib/worktree-palette-create-action'
 import { useMemo } from 'react'
+import { useWorktreeJumpPaletteObservedPrefix } from './use-worktree-jump-palette-observed-prefix'
 
 export function useWorktreeJumpPaletteController({
   visible,
@@ -76,6 +77,14 @@ export function useWorktreeJumpPaletteController({
     ...storeState,
     ...localState
   })
+  const observedPrefix = useWorktreeJumpPaletteObservedPrefix({
+    generationKey: JSON.stringify([
+      transcriptMatches.transcriptGenerationKey,
+      transcriptMatches.transcriptDisplayKey
+    ]),
+    listRef: localState.listRef,
+    active: storeState.visible && localState.query.trim().length > 0
+  })
   const openTabs = useWorktreeJumpPaletteOpenTabs({
     ...storeState,
     ...localState,
@@ -105,6 +114,7 @@ export function useWorktreeJumpPaletteController({
     ...projectTargets
   })
   const sections = useWorktreeJumpPaletteSections({
+    ...observedPrefix,
     ...localState,
     ...filter,
     ...worktrees,
@@ -115,6 +125,7 @@ export function useWorktreeJumpPaletteController({
     ...taskUrl
   })
   const listEntries = useWorktreeJumpPaletteListEntries({
+    ...observedPrefix,
     ...localState,
     ...worktrees,
     ...openTabs,
@@ -123,6 +134,7 @@ export function useWorktreeJumpPaletteController({
     ...taskUrl
   })
   const selectionLifecycle = useWorktreeJumpPaletteSelectionLifecycle({
+    ...observedPrefix,
     ...storeState,
     ...localState,
     ...filter,
@@ -161,6 +173,8 @@ export function useWorktreeJumpPaletteController({
   })
 
   return {
+    ...observedPrefix,
+    ...transcriptMatches,
     ...storeState,
     ...localState,
     ...taskUrl,

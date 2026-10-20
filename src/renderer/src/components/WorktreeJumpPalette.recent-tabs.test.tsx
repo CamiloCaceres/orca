@@ -82,11 +82,21 @@ vi.mock('@/components/ui/command', async () => {
     }: {
       children: React.ReactNode
       open?: boolean
-      commandProps?: { value?: string; onValueChange?: (next: string) => void }
+      commandProps?: {
+        value?: string
+        onValueChange?: (next: string) => void
+        onKeyDownCapture?: React.KeyboardEventHandler<HTMLDivElement>
+        onKeyDown?: React.KeyboardEventHandler<HTMLDivElement>
+      }
     }) => {
       setCommandSelection = commandProps?.onValueChange ?? null
       return open ? (
-        <div data-command-dialog="true" data-command-value={commandProps?.value ?? ''}>
+        <div
+          data-command-dialog="true"
+          data-command-value={commandProps?.value ?? ''}
+          onKeyDownCapture={commandProps?.onKeyDownCapture}
+          onKeyDown={commandProps?.onKeyDown}
+        >
           {children}
         </div>
       ) : null
@@ -94,10 +104,12 @@ vi.mock('@/components/ui/command', async () => {
     CommandInput: ({
       value,
       onValueChange,
+      onKeyDown,
       placeholder
     }: {
       value?: string
       onValueChange?: (next: string) => void
+      onKeyDown?: React.KeyboardEventHandler<HTMLInputElement>
       placeholder?: string
     }) => {
       setCommandQuery = onValueChange ?? null
@@ -107,6 +119,7 @@ vi.mock('@/components/ui/command', async () => {
           placeholder={placeholder}
           value={value}
           onChange={(event) => onValueChange?.(event.currentTarget.value)}
+          onKeyDown={onKeyDown}
         />
       )
     },
@@ -195,6 +208,13 @@ function getCommandValue(): string {
   return (
     testContainer.querySelector<HTMLElement>('[data-command-dialog]')?.dataset.commandValue ?? ''
   )
+}
+
+function navigateCommandTo(value: string): void {
+  testContainer
+    .querySelector('[data-command-input]')
+    ?.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowDown', bubbles: true }))
+  setCommandSelection?.(value)
 }
 
 function getTabRowIds(): string[] {
@@ -422,7 +442,7 @@ describe('WorktreeJumpPalette recent chats & terminals', () => {
     expect(rows.length).toBeGreaterThan(1)
 
     await act(async () => {
-      setCommandSelection?.(rows[1])
+      navigateCommandTo(rows[1])
     })
     await flushEffects()
 
@@ -556,7 +576,7 @@ describe('WorktreeJumpPalette recent chats & terminals', () => {
     // Why the second row: only a selection that differs from the auto-picked head proves the user moved it.
     const movedTo = worktreeIds[1]
     await act(async () => {
-      setCommandSelection?.(movedTo)
+      navigateCommandTo(movedTo)
     })
     await flushEffects()
 
@@ -598,7 +618,7 @@ describe('WorktreeJumpPalette recent chats & terminals', () => {
       id.startsWith(encodePaletteIdentity(['workspace-tab']))
     )[1]
     await act(async () => {
-      setCommandSelection?.(movedTo)
+      navigateCommandTo(movedTo)
     })
     await flushEffects()
     await act(async () => {
