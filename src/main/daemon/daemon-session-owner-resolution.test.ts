@@ -330,28 +330,20 @@ describe('DaemonSessionOwnerResolver', () => {
     expect(routes.has('session')).toBe(false)
   })
 
-  it('does not let a bare-id route choose between listed incarnations', () => {
-    const first = provider(async () => [])
-    const second = provider(async () => [])
+  it('does not let a bare-id route choose between listed incarnations', async () => {
+    const first = provider(async () => [
+      { id: 'session', incarnationId: 'first', cwd: '/first', title: 'first' }
+    ])
+    const second = provider(async () => [
+      { id: 'session', incarnationId: 'second', cwd: '/second', title: 'second' }
+    ])
     const routes = new Map<string, IPtyProvider>()
     const resolver = new DaemonSessionOwnerResolver([first, second], routes)
     resolver.recordRoute('session', first)
 
-    expect(() =>
-      resolver.reconcileListedProcesses(
-        [
-          {
-            provider: first,
-            processes: [{ id: 'session', incarnationId: 'first', cwd: '/first', title: 'first' }]
-          },
-          {
-            provider: second,
-            processes: [{ id: 'session', incarnationId: 'second', cwd: '/second', title: 'second' }]
-          }
-        ],
-        resolver.inventoryEpoch
-      )
-    ).toThrow(TerminalSessionOwnerUnverifiedError)
+    await expect(resolver.listProcesses()).rejects.toBeInstanceOf(
+      TerminalSessionOwnerUnverifiedError
+    )
     expect(routes.has('session')).toBe(false)
   })
 

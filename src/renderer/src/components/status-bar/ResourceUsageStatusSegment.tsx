@@ -125,13 +125,13 @@ export function ResourceUsageStatusSegment({
         })}
         <Tabs value={controller.selectedTab} onValueChange={controller.setSelectedTab}>
           <div className="px-3 pt-1 pb-1">
-            <TabsList variant="line">
+            <TabsList variant="line" size="sm">
               <TabsTrigger value="resources">
-                <Activity aria-hidden="true" />
+                <Activity aria-hidden="true" className="size-3" />
                 {translate('resourceManager.resources', 'Resources')}
               </TabsTrigger>
               <TabsTrigger value="ptys">
-                <Terminal aria-hidden="true" />
+                <Terminal aria-hidden="true" className="size-3" />
                 {translate('resourceManager.ptys', 'PTYs')}
                 {controller.localPtyInventory.observedAt !== null && (
                   <Badge variant="secondary">

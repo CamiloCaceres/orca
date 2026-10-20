@@ -80,7 +80,10 @@ describe('Resource Manager inventory admission', () => {
     list.mockResolvedValue([])
     const { result, rerender } = setup(true)
     await flush()
-    expect(list).toHaveBeenCalledWith({ connectionId: null }, { resourceManagerView: true })
+    expect(list).toHaveBeenCalledWith(
+      { connectionId: null, includeUnrouted: true },
+      { resourceManagerView: true }
+    )
     expect(result.current.observedAt).not.toBeNull()
     rerender({ active: false, ready: true })
     rerender({ active: true, ready: true })
@@ -235,6 +238,106 @@ describe('Resource Manager inventory admission', () => {
     expect(result.current.sessionInventory.count).toBe(1)
     act(() => result.current.removeSession('one', 'A'))
     expect(result.current.sessionInventory.count).toBe(1)
+  })
+
+  it('retains both daemon generations and removes only the exited incarnation', async () => {
+    list.mockResolvedValue([row('one', 'A'), row('one', 'B'), row('unrelated')])
+    const { result } = setup(true)
+    await flush()
+    expect(result.current.sessionsError).toBe(false)
+    expect(result.current.sessionInventory.count).toBe(3)
+    act(() => exit({ id: 'one', incarnationId: 'A', hostId: 'local' }))
+    expect(result.current.sessionInventory.sessions).toEqual([row('one', 'B'), row('unrelated')])
+    act(() => result.current.removeSession('one', 'A'))
+    expect(result.current.sessionInventory.count).toBe(2)
+  })
+
+  it('retains legacy sources and refreshes an exit that cannot identify its source', async () => {
+    const first = {
+      id: 'legacy',
+      title: 'first',
+      cwd: '/first',
+      agentOwnership: 'unknown' as const,
+      inventorySourceId: 'first',
+      rootProcessId: 101
+    }
+    const second = { ...first, inventorySourceId: 'second', rootProcessId: 202 }
+    list.mockResolvedValue([first, second])
+    const { result } = setup(true)
+    await flush()
+    expect(result.current.sessionInventory.count).toBe(2)
+    list.mockResolvedValue([second])
+    act(() => exit({ id: 'legacy', hostId: 'local' }))
+    expect(result.current.sessionInventory.count).toBe(2)
+    await flush(100)
+    expect(result.current.sessionInventory.sessions).toEqual([second])
+  })
+
+  it('matches incarnation lifecycle events to diagnostic source identities', async () => {
+    const first = { ...row('one', 'A'), inventorySourceId: 'first' }
+    const second = { ...row('one', 'B'), inventorySourceId: 'second' }
+    list.mockResolvedValue([first, second])
+    const { result } = setup(true)
+    await flush()
+    act(() => spawn({ id: 'one', incarnationId: 'A', hostId: 'local' }))
+    await flush(100)
+    expect(list).toHaveBeenCalledOnce()
+    act(() => exit({ id: 'one', incarnationId: 'A', hostId: 'local' }))
+    expect(result.current.sessionInventory.sessions).toEqual([second])
+    act(() => result.current.removeSession('one', 'B'))
+    expect(result.current.sessionInventory.count).toBe(0)
+  })
+
+  it('retains ambiguous same-incarnation sources until an authoritative refresh', async () => {
+    const first = { ...row('one'), inventorySourceId: 'first' }
+    const second = { ...row('one'), inventorySourceId: 'second' }
+    list.mockResolvedValue([first, second])
+    const { result } = setup(true)
+    await flush()
+    act(() => exit({ id: 'one', incarnationId: 'A', hostId: 'local' }))
+    expect(result.current.sessionInventory.count).toBe(2)
+    await flush(100)
+    expect(result.current.sessionInventory.count).toBe(2)
+  })
+
+  it('does not suppress ambiguous diagnostic sources when exit precedes the first listing', async () => {
+    const first = { ...row('one'), inventorySourceId: 'first' }
+    const second = { ...row('one'), inventorySourceId: 'second' }
+    const slow = deferred()
+    list.mockReturnValueOnce(slow.promise).mockResolvedValue([second])
+    const { result } = setup(true)
+    await flush()
+    act(() => exit({ id: 'one', incarnationId: 'A', hostId: 'local' }))
+    await act(async () => {
+      slow.resolve([first, second])
+      await slow.promise
+    })
+    expect(result.current.sessionInventory.count).toBe(2)
+    await flush(100)
+    expect(result.current.sessionInventory.sessions).toEqual([second])
+  })
+
+  it('refreshes an unidentified legacy exit that arrives during the first listing', async () => {
+    const first: PtyListedSession = {
+      id: 'one',
+      cwd: '/first',
+      title: 'shell',
+      agentOwnership: 'unknown',
+      inventorySourceId: 'first'
+    }
+    const second = { ...first, inventorySourceId: 'second' }
+    const slow = deferred()
+    list.mockReturnValueOnce(slow.promise).mockResolvedValue([second])
+    const { result } = setup(true)
+    await flush()
+    act(() => exit({ id: 'one', hostId: 'local' }))
+    await act(async () => {
+      slow.resolve([first, second])
+      await slow.promise
+    })
+    expect(result.current.sessionInventory.count).toBe(2)
+    await flush(100)
+    expect(result.current.sessionInventory.sessions).toEqual([second])
   })
 
   it.each([{ code: -1 }, { code: 0, ptySourceDisowned: true as const }])(

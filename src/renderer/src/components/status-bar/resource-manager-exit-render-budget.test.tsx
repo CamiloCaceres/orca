@@ -198,7 +198,10 @@ it('preserves actual badge DOM/controller outputs and no extra reads while avoid
   await act(async () => {
     await vi.advanceTimersByTimeAsync(100)
   })
-  expect(list).toHaveBeenLastCalledWith({ connectionId: null }, { resourceManagerView: true })
+  expect(list).toHaveBeenLastCalledWith(
+    { connectionId: null, includeUnrouted: true },
+    { resourceManagerView: true }
+  )
   const readsBeforeHide = list.mock.calls.length
   const metricsBeforeHide = memoryReads.mock.calls.length
   act(() => nativeVisibility(false))

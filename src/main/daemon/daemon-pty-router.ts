@@ -6,7 +6,6 @@ import { DaemonPtyAdapterSubscriptionFanout } from './daemon-pty-adapter-subscri
 import type {
   IPtyProvider,
   PtyBackgroundStreamEvent,
-  PtyProcessInfo,
   PtyProviderBufferSnapshot,
   PtySpawnOptions,
   PtySpawnResult
@@ -250,30 +249,10 @@ export class DaemonPtyRouter implements IPtyProvider {
     await this.current.revive(state)
   }
 
-  async listProcesses(opts?: { deadlineMs?: number }): Promise<PtyProcessInfo[]> {
-    let inventoryEpoch = this.ownerResolver.inventoryEpoch
-    // Why: worktree removal fails closed on this list. A legacy daemon whose socket is gone and
-    // whose process has exited is an empty inventory; anything else still throws.
-    const results = await Promise.all(
-      this.allAdapters().map(async (adapter) => {
-        try {
-          const processes = await adapter.listProcesses(opts)
-          this.legacyExitProof.record(this.legacy)
-          return { provider: adapter, processes }
-        } catch (error) {
-          const verdict = this.retireExitedLegacy(adapter, error)
-          if (verdict === 'not-exited') {
-            throw error
-          }
-          if (verdict === 'retired') {
-            this.ownerResolver.dropProvider(adapter)
-            inventoryEpoch++
-          }
-          return { provider: adapter, processes: [] }
-        }
-      })
-    )
-    return this.ownerResolver.reconcileListedProcesses(results, inventoryEpoch)
+  async listProcesses(opts?: Parameters<IPtyProvider['listProcesses']>[0]) {
+    const processes = await this.ownerResolver.listProcesses(opts)
+    this.legacyExitProof.record(this.legacy)
+    return processes
   }
 
   private retireExitedLegacy(adapter: DaemonPtyAdapter, error: unknown): ExitedLegacyVerdict {

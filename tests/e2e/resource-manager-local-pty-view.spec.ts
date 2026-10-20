@@ -119,9 +119,11 @@ for (const theme of ['dark', 'light'] as const) {
     const listMs = performance.now() - listStarted
     const before = await electronApp.evaluate(() => Reflect.get(globalThis, '__ptyViewCounts'))
     const panel = orcaPage.getByRole('tabpanel', { name: /^PTYs/ })
-    const search = panel.getByRole('searchbox', { name: 'Search terminals' })
-    await search.fill('FOLDER-999')
-    await expect(panel.getByText('Showing 1 of 1000', { exact: true })).toBeVisible()
+    await expect(panel.getByRole('searchbox')).toHaveCount(0)
+    const body = orcaPage.locator('[data-resource-pty-body]')
+    await body.evaluate((element) => {
+      element.scrollTop = element.scrollHeight
+    })
     const details = panel.getByRole('button', { name: 'Details for Terminal 999', exact: true })
     await details.focus()
     await orcaPage.keyboard.press('Enter')
@@ -138,11 +140,10 @@ for (const theme of ['dark', 'light'] as const) {
       path: testInfo.outputPath(`local-pty-details-${theme}.png`),
       animations: 'disabled'
     })
-    await search.fill('LOCAL-PTY-0000')
-    await expect(panel.getByText('Showing 1 of 1000', { exact: true })).toBeVisible()
+    await body.evaluate((element) => {
+      element.scrollTop = 0
+    })
     await expect(panel.getByRole('button', { name: 'End Terminal 0', exact: true })).toBeVisible()
-    await search.fill('Terminal 999')
-    await expect(panel.getByText('Showing 1 of 1000', { exact: true })).toBeVisible()
     await panel.getByRole('combobox', { name: 'Tab filter' }).click()
     await orcaPage.getByRole('option', { name: 'Has tab', exact: true }).click()
     await expect(panel.getByText('Showing 0 of 1000', { exact: true })).toBeVisible()
@@ -160,7 +161,6 @@ for (const theme of ['dark', 'light'] as const) {
       await expect(terminal).toBeFocused()
       await expect(terminal).toBeInViewport()
     }
-    const body = orcaPage.locator('[data-resource-pty-body]')
     await body.evaluate((element) => {
       element.scrollTop = element.scrollHeight
     })

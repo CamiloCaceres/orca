@@ -110,6 +110,13 @@ describe('DaemonPtyRouter inventory identity', () => {
       await expect(router.listProcesses()).rejects.toBeInstanceOf(
         TerminalSessionOwnerUnverifiedError
       )
+      await expect(router.listProcesses({ includeUnrouted: true })).resolves.toEqual([
+        expect.objectContaining({ id: 'ambiguous', cwd: '/current' }),
+        expect.objectContaining({ id: 'ambiguous', cwd: '/legacy' })
+      ])
+      await expect(router.listProcesses()).rejects.toBeInstanceOf(
+        TerminalSessionOwnerUnverifiedError
+      )
       expect(router.supportsFencedTermination('ambiguous')).toBe(false)
       expect(router.providesAgentSessionOwnerListings('ambiguous')).toBe(false)
       await expect(
@@ -120,4 +127,95 @@ describe('DaemonPtyRouter inventory identity', () => {
       expect(legacy.spawn).not.toHaveBeenCalled()
     }
   )
+
+  it.each(['listing-first', 'attach-first'] as const)(
+    'shares a healthy inventory with an exact reattach (%s)',
+    async (order) => {
+      const current = createAdapter('current', [], undefined, PROTOCOL_VERSION)
+      const legacy = createAdapter('legacy', [], undefined, PROTOCOL_VERSION)
+      vi.mocked(current.listProcesses).mockResolvedValue([
+        { id: 'session', incarnationId: 'A', cwd: '/', title: 'shell' }
+      ])
+      vi.mocked(current.spawn).mockResolvedValue({
+        id: 'session',
+        incarnationId: 'A',
+        isReattach: true
+      })
+      const router = new DaemonPtyRouter({ current, legacy: [legacy] })
+      const listing = () => router.listProcesses({ includeUnrouted: true })
+      const attach = () =>
+        router.spawn({
+          sessionId: 'session',
+          expectedIncarnationId: 'A',
+          expectedIncarnationIsAuthoritative: true,
+          attachOnly: true,
+          cols: 80,
+          rows: 24
+        })
+      const results = await Promise.allSettled(
+        order === 'listing-first' ? [listing(), attach()] : [attach(), listing()]
+      )
+      expect(results.map((result) => result.status)).toEqual(['fulfilled', 'fulfilled'])
+      expect(current.listProcesses).toHaveBeenCalledOnce()
+      expect(legacy.listProcesses).toHaveBeenCalledOnce()
+    }
+  )
+
+  it('shares concurrent routed and diagnostic reads without weakening duplicate authority', async () => {
+    const current = createAdapter('current', [], undefined, PROTOCOL_VERSION)
+    const legacy = createAdapter('legacy', [], undefined, PROTOCOL_VERSION)
+    vi.mocked(legacy.listProcesses).mockResolvedValue([
+      { id: 'same', incarnationId: 'B', cwd: '/legacy', title: 'shell' }
+    ])
+    const router = new DaemonPtyRouter({ current, legacy: [legacy] })
+    await router.discoverLegacySessions()
+    vi.mocked(current.listProcesses).mockResolvedValue([
+      { id: 'same', incarnationId: 'A', cwd: '/current', title: 'shell' }
+    ])
+    const [routed, diagnostic] = await Promise.all([
+      router.listProcesses(),
+      router.listProcesses({ includeUnrouted: true })
+    ])
+    expect(routed).toEqual([expect.objectContaining({ incarnationId: 'B' })])
+    expect(diagnostic).toEqual([
+      expect.objectContaining({ incarnationId: 'A', routed: false }),
+      expect.objectContaining({ incarnationId: 'B', routed: true })
+    ])
+    await router.shutdown(routed[0]!.id, { immediate: true })
+    expect(current.shutdown).not.toHaveBeenCalled()
+    expect(legacy.shutdown).toHaveBeenCalledWith('same', { immediate: true })
+  })
+
+  it('assigns stable distinct sources when legacy daemons omit incarnations', async () => {
+    const current = createAdapter('current', ['same'])
+    const legacy = createAdapter('legacy', ['same'])
+    const router = new DaemonPtyRouter({ current, legacy: [legacy] })
+    const sessions = await router.listProcesses({ includeUnrouted: true })
+    expect(sessions).toHaveLength(2)
+    expect(new Set(sessions.map((session) => session.inventorySourceId)).size).toBe(2)
+    expect(
+      sessions.every((session) => session.inventorySourceId && session.routed === undefined)
+    ).toBe(true)
+    expect(await router.listProcesses({ includeUnrouted: true })).toEqual(sessions)
+  })
+
+  it('bounds a joining caller without cancelling the shared inventory', async () => {
+    vi.useFakeTimers()
+    try {
+      const current = createAdapter('current')
+      const inventory = Promise.withResolvers<PtyProcessInfo[]>()
+      vi.mocked(current.listProcesses).mockReturnValue(inventory.promise)
+      const router = new DaemonPtyRouter({ current, legacy: [] })
+      const ordinary = router.listProcesses()
+      const short = router.listProcesses({ deadlineMs: Date.now() + 10 })
+      const refused = expect(short).rejects.toBeInstanceOf(TerminalSessionOwnerUnverifiedError)
+      await vi.advanceTimersByTimeAsync(10)
+      await refused
+      inventory.resolve([{ id: 'live', cwd: '/', title: 'shell' }])
+      await expect(ordinary).resolves.toEqual([{ id: 'live', cwd: '/', title: 'shell' }])
+      expect(current.listProcesses).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

@@ -1,12 +1,12 @@
 import type { DaemonSessionInventory } from './resource-session-inventory'
-import type { PtyListedSession, PtySessionLifecycle } from '../../../../shared/pty-listed-session'
+import {
+  ptySessionIdentity,
+  type PtyListedSession,
+  type PtySessionLifecycle
+} from '../../../../shared/pty-listed-session'
 import { isResourceViewInactive } from '../../../../shared/resource-view-admission'
 import { isProvenProcessExit } from '../../../../shared/terminal-exit-cause'
 import { EMPTY_DAEMON_SESSION_INVENTORY, inventoryFromSessions } from './resource-session-inventory'
-
-export function resourceSessionIdentity(session: { id: string; incarnationId?: string }): string {
-  return JSON.stringify([session.id, session.incarnationId ?? null])
-}
 
 const COOLDOWN_MS = 100
 
@@ -25,6 +25,7 @@ export class ResourceSessionInventoryCache {
   }
   private listeners = new Set<() => void>()
   private known = new Map<string, PtyListedSession>()
+  private identitiesByIncarnation = new Map<string, Set<string>>()
   // Suppression belongs only to the current listing, never to later authoritative results.
   private tombstones = new Set<string>()
   private epoch = 0
@@ -117,13 +118,33 @@ export class ResourceSessionInventoryCache {
           return
         }
         const deduped = new Map<string, PtyListedSession>()
+        const identitiesByIncarnation = new Map<string, Set<string>>()
         for (const session of sessions) {
-          if (this.tombstones.has(resourceSessionIdentity(session))) {
+          const identity = ptySessionIdentity(session)
+          const incarnation = ptySessionIdentity({
+            id: session.id,
+            incarnationId: session.incarnationId
+          })
+          deduped.set(identity, session)
+          const identities = identitiesByIncarnation.get(incarnation) ?? new Set<string>()
+          identities.add(identity)
+          identitiesByIncarnation.set(incarnation, identities)
+        }
+        for (const [incarnation, identities] of identitiesByIncarnation) {
+          if (!this.tombstones.has(incarnation)) {
             continue
           }
-          deduped.set(session.id, session)
+          if (identities.size > 1) {
+            this.pendingRefresh = true
+            continue
+          }
+          for (const identity of identities) {
+            deduped.delete(identity)
+          }
+          identitiesByIncarnation.delete(incarnation)
         }
         this.known = deduped
+        this.identitiesByIncarnation = identitiesByIncarnation
         this.publish({
           sessionInventory: inventoryFromSessions([...deduped.values()]),
           sessionsError: false,
@@ -155,8 +176,7 @@ export class ResourceSessionInventoryCache {
     if (this.localOnly && event.hostId !== 'local') {
       return
     }
-    const known = this.known.get(event.id)
-    if (!known || known.incarnationId !== event.incarnationId) {
+    if (!event.incarnationId || !this.identitiesByIncarnation.has(ptySessionIdentity(event))) {
       this.invalidate()
     }
   }
@@ -168,21 +188,38 @@ export class ResourceSessionInventoryCache {
     if (event.ptySourceDisowned || !isProvenProcessExit(event.code)) {
       return
     }
+    const identities = this.identitiesByIncarnation.get(ptySessionIdentity(event))
+    if (
+      !event.incarnationId &&
+      (this.localOnly ||
+        (identities &&
+          [...identities].some(
+            (identity) => this.known.get(identity)?.inventorySourceId !== undefined
+          )))
+    ) {
+      // A legacy exit cannot identify which daemon's same-id process exited.
+      this.invalidate()
+      return
+    }
     this.remove(event.id, event.incarnationId)
   }
 
   private removeIdentity(id: string, incarnationId?: string): boolean {
-    const known = this.known.get(id)
-    if (!incarnationId && known?.incarnationId) {
+    const incarnation = ptySessionIdentity({ id, incarnationId })
+    const identities = this.identitiesByIncarnation.get(incarnation)
+    if (identities && identities.size > 1) {
+      this.invalidate()
       return false
     }
     if (this.inFlight) {
-      this.tombstones.add(resourceSessionIdentity({ id, incarnationId }))
+      this.tombstones.add(incarnation)
     }
-    if (known?.incarnationId !== incarnationId) {
+    const identity = identities?.values().next().value
+    this.identitiesByIncarnation.delete(incarnation)
+    if (identity === undefined) {
       return false
     }
-    return this.known.delete(id)
+    return this.known.delete(identity)
   }
 
   remove(id: string, incarnationId?: string): void {

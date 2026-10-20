@@ -2,13 +2,31 @@ import type { IPtyProvider, PtyProcessInfo } from '../providers/pty-provider-con
 import type { DaemonSessionOwnerResolution } from './daemon-session-owner-resolution'
 import { TerminalSessionOwnerUnverifiedError } from './daemon-errors'
 import { chooseSessionOwner, type OwnerCandidate } from './daemon-session-owner-choice'
+import { randomUUID } from 'node:crypto'
 
-export type ProviderInventory<T> = { provider: T; processes: PtyProcessInfo[] | null }
+export type ProviderInventory<T> = {
+  provider: T
+  processes: PtyProcessInfo[] | null
+  failure?: { error: unknown }
+}
 
 export type OwnerInventory<T extends IPtyProvider> = {
   candidatesBySessionId: Map<string, OwnerCandidate<T>[]>
   complete: boolean
   epoch: number
+  failure?: { error: unknown }
+}
+
+const inventorySourceIds = new WeakMap<IPtyProvider, string>()
+
+function inventorySourceId(provider: IPtyProvider): string {
+  const existing = inventorySourceIds.get(provider)
+  if (existing) {
+    return existing
+  }
+  const id = randomUUID()
+  inventorySourceIds.set(provider, id)
+  return id
 }
 
 export function indexDaemonOwnerInventory<T extends IPtyProvider>(
@@ -32,7 +50,12 @@ export function indexDaemonOwnerInventory<T extends IPtyProvider>(
       candidatesBySessionId.set(process.id, candidates)
     }
   }
-  const inventory = { candidatesBySessionId, complete, epoch }
+  const inventory = {
+    candidatesBySessionId,
+    complete,
+    epoch,
+    failure: entries.find((entry) => entry.failure)?.failure
+  }
   if (complete && epoch === currentEpoch) {
     for (const [sessionId, candidates] of candidatesBySessionId) {
       let owner = selectInventoryOwner(candidates, complete)
@@ -130,7 +153,8 @@ export function resolveDaemonInventoryTerminationOwner<T extends IPtyProvider>(
 export function selectListedDaemonProcesses<T extends IPtyProvider>(
   inventory: OwnerInventory<T>,
   routes: ReadonlyMap<string, IPtyProvider>,
-  incarnations: ReadonlyMap<string, string | undefined>
+  incarnations: ReadonlyMap<string, string | undefined>,
+  includeUnrouted = false
 ): PtyProcessInfo[] {
   if (!inventory.complete) {
     throw new TerminalSessionOwnerUnverifiedError('incomplete inventory')
@@ -143,6 +167,16 @@ export function selectListedDaemonProcesses<T extends IPtyProvider>(
       (candidate) =>
         candidate.provider === routed && candidate.process.incarnationId === incarnationId
     )
+    if (includeUnrouted) {
+      processes.push(
+        ...candidates.map((candidate) => ({
+          ...candidate.process,
+          inventorySourceId: inventorySourceId(candidate.provider),
+          ...(owner ? { routed: candidate === owner } : {})
+        }))
+      )
+      continue
+    }
     // Omitting an ambiguous id is false exit proof; either candidate could misstate route authority.
     if (!owner) {
       throw new TerminalSessionOwnerUnverifiedError(sessionId)

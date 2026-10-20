@@ -54,6 +54,34 @@ describe('degraded daemon inventory ownership', () => {
     expect(legacy.write).not.toHaveBeenCalled()
   })
 
+  it('shares routed, diagnostic and exact reattach observations in degraded mode', async () => {
+    const { current, legacy, fallback, provider } = setup()
+    vi.mocked(current.listProcesses).mockResolvedValue([process('current')])
+    vi.mocked(current.spawn).mockResolvedValue({
+      id: 'session',
+      incarnationId: 'current',
+      isReattach: true
+    })
+    const [routed, diagnostic, attached] = await Promise.all([
+      provider.listProcesses(),
+      provider.listProcesses({ includeUnrouted: true }),
+      provider.spawn({
+        sessionId: 'session',
+        expectedIncarnationId: 'current',
+        expectedIncarnationIsAuthoritative: true,
+        attachOnly: true,
+        cols: 80,
+        rows: 24
+      })
+    ])
+    expect(routed).toEqual([process('current')])
+    expect(diagnostic).toEqual([expect.objectContaining({ ...process('current'), routed: true })])
+    expect(attached.incarnationId).toBe('current')
+    for (const source of [current, legacy, fallback]) {
+      expect(source.listProcesses).toHaveBeenCalledOnce()
+    }
+  })
+
   it.each(['different', 'identical'])(
     'refuses ambiguous inventory and capabilities without adopting the first cached owner (%s)',
     async (incarnations) => {
@@ -65,6 +93,13 @@ describe('degraded daemon inventory ownership', () => {
       vi.mocked(current.hasPty).mockReturnValue(true)
       vi.mocked(legacy.hasPty).mockReturnValue(true)
 
+      await expect(provider.listProcesses()).rejects.toBeInstanceOf(
+        TerminalSessionOwnerUnverifiedError
+      )
+      await expect(provider.listProcesses({ includeUnrouted: true })).resolves.toEqual([
+        expect.objectContaining(process('current')),
+        expect.objectContaining(process(incarnations === 'identical' ? 'current' : 'legacy'))
+      ])
       await expect(provider.listProcesses()).rejects.toBeInstanceOf(
         TerminalSessionOwnerUnverifiedError
       )

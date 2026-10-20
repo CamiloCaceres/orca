@@ -52,6 +52,22 @@ describe('PtyProcessListAdmission', () => {
     ).toThrow('invalid_pty_process_list')
   })
 
+  it('admits diagnostic provenance and rejects malformed routing evidence', () => {
+    const session = {
+      id: 'pty',
+      cwd: '/',
+      title: 'shell',
+      inventorySourceId: 'source',
+      routed: false
+    }
+    expect(new PtyProcessListAdmission().admit(session)).toEqual(session)
+    Reflect.set(session, 'routed', 'yes')
+    expect(() => new PtyProcessListAdmission().admit(session)).toThrow('invalid_pty_process_list')
+    Reflect.set(session, 'routed', false)
+    Reflect.set(session, 'inventorySourceId', 1)
+    expect(() => new PtyProcessListAdmission().admit(session)).toThrow('invalid_pty_process_list')
+  })
+
   it('keeps the host verdict that a PTY is exiting', () => {
     const admission = new PtyProcessListAdmission()
 

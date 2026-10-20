@@ -12,7 +12,9 @@ import type {
   PtySpawnOptions,
   PtySpawnResult
 } from '../providers/pty-provider-contract'
-import { SessionNotFoundError, TerminalSessionOwnerUnverifiedError } from './daemon-errors'
+import { TerminalSessionOwnerUnverifiedError } from './daemon-errors'
+import { spawnDaemonAttachOnly } from './daemon-session-owner-attach'
+import { awaitDaemonWorkWithinCallerDeadline } from './daemon-request-deadline'
 
 export type DaemonSessionOwnerResolution<T extends IPtyProvider> =
   | { kind: 'owner'; provider: T }
@@ -22,12 +24,6 @@ export type DaemonSessionOwnerResolution<T extends IPtyProvider> =
 const OWNER_RESOLUTION_TIMEOUT_MS = 2_000
 const OWNER_INVENTORY_CACHE_MS = 1_000
 const FAILED_PROVIDER_COOLDOWN_MS = 1_000
-
-function assertClientConnected(signal: PtySpawnOptions['signal']): void {
-  if (signal?.aborted) {
-    throw new Error('client_disconnected')
-  }
-}
 
 export class DaemonSessionOwnerResolver<T extends IPtyProvider> {
   private inventoryInFlight: Promise<OwnerInventory<T>> | null = null
@@ -44,12 +40,6 @@ export class DaemonSessionOwnerResolver<T extends IPtyProvider> {
     private readonly isProviderProvenGone?: (provider: T, error: unknown) => boolean
   ) {
     this.providers = [...providers]
-  }
-
-  /** Removes a provider that can no longer be contacted, including from later inventories. */
-  dropProvider(provider: T): void {
-    this.forgetProvider(provider)
-    this.invalidateProvider(provider)
   }
 
   // Why no epoch bump on its own: a proven-gone provider lists nothing, so in-flight inventories stay valid.
@@ -83,65 +73,7 @@ export class DaemonSessionOwnerResolver<T extends IPtyProvider> {
   }
 
   async spawnAttachOnly(opts: PtySpawnOptions & { sessionId: string }): Promise<PtySpawnResult> {
-    assertClientConnected(opts.signal)
-    const routed = this.providers.find((provider) => provider === this.routes.get(opts.sessionId))
-    const direct = routed ?? (this.providers.length === 1 ? this.providers[0] : undefined)
-    const routedIncarnation = this.routeIncarnations.get(opts.sessionId)
-    const routeNeedsAuthoritativeResolution =
-      direct &&
-      routed &&
-      opts.expectedIncarnationIsAuthoritative === true &&
-      routedIncarnation !== opts.expectedIncarnationId
-    if (direct && !routeNeedsAuthoritativeResolution) {
-      try {
-        const result = await direct.spawn(opts)
-        if (
-          !result.exitedBeforeSpawnReply &&
-          result.id === opts.sessionId &&
-          result.isReattach === true
-        ) {
-          this.recordRoute(result.id, direct, result.incarnationId)
-        }
-        return result
-      } catch (error) {
-        if (!(error instanceof SessionNotFoundError) || this.providers.length === 1) {
-          throw error
-        }
-        if (routed && this.routes.get(opts.sessionId) === routed) {
-          this.forgetRoute(opts.sessionId, routed)
-        }
-      }
-    }
-
-    assertClientConnected(opts.signal)
-    const resolution = await this.resolve(
-      opts.sessionId,
-      opts.expectedIncarnationId,
-      opts.expectedIncarnationIsAuthoritative
-    )
-    assertClientConnected(opts.signal)
-    if (resolution.kind === 'unknown') {
-      throw new TerminalSessionOwnerUnverifiedError(opts.sessionId)
-    }
-    if (resolution.kind === 'absent') {
-      throw new SessionNotFoundError(opts.sessionId)
-    }
-    try {
-      const result = await resolution.provider.spawn(opts)
-      if (
-        !result.exitedBeforeSpawnReply &&
-        result.id === opts.sessionId &&
-        result.isReattach === true
-      ) {
-        this.recordRoute(result.id, resolution.provider, result.incarnationId)
-      }
-      return result
-    } catch (error) {
-      if (error instanceof SessionNotFoundError && this.providers.length > 1) {
-        throw new TerminalSessionOwnerUnverifiedError(opts.sessionId)
-      }
-      throw error
-    }
+    return spawnDaemonAttachOnly(opts, this.providers, this.routes, this.routeIncarnations, this)
   }
 
   async probe(sessionId: string): Promise<boolean | null> {
@@ -217,25 +149,49 @@ export class DaemonSessionOwnerResolver<T extends IPtyProvider> {
   }
 
   async discoverRoutes(): Promise<void> {
-    await this.inventory()
+    // Explicit discovery supersedes pending observations; ordinary readers share them.
+    this.invalidateInventory()
+    await this.inventory(false)
     this.failedProviderCooldowns.clear()
     this.cachedInventory = null
   }
 
-  get inventoryEpoch(): number {
-    return this.epoch
-  }
-
-  reconcileListedProcesses(entries: ProviderInventory<T>[], epoch: number): PtyProcessInfo[] {
-    if (epoch !== this.epoch) {
+  async listProcesses(
+    opts?: Parameters<IPtyProvider['listProcesses']>[0]
+  ): Promise<PtyProcessInfo[]> {
+    const pending = this.inventory(false, opts, true)
+    if (
+      opts?.deadlineMs !== undefined &&
+      !(await awaitDaemonWorkWithinCallerDeadline(
+        pending.then(() => {}),
+        opts.deadlineMs
+      ))
+    ) {
+      throw new TerminalSessionOwnerUnverifiedError('inventory deadline')
+    }
+    const inventory = await pending
+    if (inventory.epoch !== this.epoch) {
       throw new TerminalSessionOwnerUnverifiedError('stale inventory')
     }
-    this.inventoryInFlight = null
-    const inventory = this.indexInventory(entries, epoch)
-    return selectListedDaemonProcesses(inventory, this.routes, this.routeIncarnations)
+    if (inventory.failure) {
+      throw inventory.failure.error
+    }
+    return selectListedDaemonProcesses(
+      inventory,
+      this.routes,
+      this.routeIncarnations,
+      opts?.includeUnrouted
+    )
   }
 
   recordRoute(sessionId: string, provider: T, incarnationId?: string): void {
+    if (
+      incarnationId &&
+      this.routes.get(sessionId) === provider &&
+      this.routeIncarnations.get(sessionId) === incarnationId
+    ) {
+      return
+    }
     this.invalidateInventory()
     this.setRoute(sessionId, provider, incarnationId)
   }
@@ -264,7 +220,11 @@ export class DaemonSessionOwnerResolver<T extends IPtyProvider> {
     this.cachedInventory = null
   }
 
-  private inventory(allowCached = true): Promise<OwnerInventory<T>> {
+  private inventory(
+    allowCached = true,
+    opts?: Parameters<IPtyProvider['listProcesses']>[0],
+    retryFailedProviders = false
+  ): Promise<OwnerInventory<T>> {
     if (this.inventoryInFlight) {
       return this.inventoryInFlight
     }
@@ -276,11 +236,18 @@ export class DaemonSessionOwnerResolver<T extends IPtyProvider> {
       return Promise.resolve(this.cachedInventory.value)
     }
     this.cachedInventory = null
-    const deadlineMs = Date.now() + OWNER_RESOLUTION_TIMEOUT_MS
+    // A restore can join diagnostics, so every shared acquisition keeps the restore budget.
+    const deadlineMs = Math.min(
+      opts?.deadlineMs ?? Infinity,
+      Date.now() + OWNER_RESOLUTION_TIMEOUT_MS
+    )
     const epoch = this.epoch
     const inventory = Promise.all(
       this.providers.map(async (provider): Promise<ProviderInventory<T>> => {
-        if ((this.failedProviderCooldowns.get(provider) ?? 0) > Date.now()) {
+        if (
+          !retryFailedProviders &&
+          (this.failedProviderCooldowns.get(provider) ?? 0) > Date.now()
+        ) {
           return { provider, processes: null }
         }
         this.failedProviderCooldowns.delete(provider)
@@ -295,7 +262,7 @@ export class DaemonSessionOwnerResolver<T extends IPtyProvider> {
           if (epoch === this.epoch) {
             this.failedProviderCooldowns.set(provider, Date.now() + FAILED_PROVIDER_COOLDOWN_MS)
           }
-          return { provider, processes: null }
+          return { provider, processes: null, failure: { error } }
         }
       })
     )
@@ -310,12 +277,6 @@ export class DaemonSessionOwnerResolver<T extends IPtyProvider> {
   }
 
   private indexInventory(entries: ProviderInventory<T>[], epoch: number): OwnerInventory<T> {
-    if (epoch === this.epoch) {
-      // Why: later route knowledge supersedes every inventory that started before it.
-      this.epoch += 1
-      this.cachedInventory = null
-      epoch = this.epoch
-    }
     return indexDaemonOwnerInventory(
       entries,
       epoch,

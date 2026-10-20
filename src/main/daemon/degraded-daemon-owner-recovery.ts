@@ -12,7 +12,7 @@ export class DegradedDaemonOwnerRecovery {
   private readonly livenessResolver: DaemonSessionOwnerResolver<DaemonPtyAdapter>
 
   constructor(
-    private readonly providers: readonly IPtyProvider[],
+    providers: readonly IPtyProvider[],
     private readonly daemonAdapters: readonly DaemonPtyAdapter[],
     routes: Map<string, IPtyProvider>,
     private readonly spawnFresh: (opts: PtySpawnOptions) => Promise<PtySpawnResult>
@@ -35,15 +35,10 @@ export class DegradedDaemonOwnerRecovery {
 
   discoverRoutes = async (): Promise<void> => await this.attachResolver.discoverRoutes()
 
-  async listProcesses(opts?: { deadlineMs?: number }): Promise<PtyProcessInfo[]> {
-    const epoch = this.attachResolver.inventoryEpoch
-    const entries = await Promise.all(
-      this.providers.map(async (provider) => ({
-        provider,
-        processes: await provider.listProcesses(opts)
-      }))
-    )
-    return this.attachResolver.reconcileListedProcesses(entries, epoch)
+  async listProcesses(
+    opts?: Parameters<IPtyProvider['listProcesses']>[0]
+  ): Promise<PtyProcessInfo[]> {
+    return this.attachResolver.listProcesses(opts)
   }
 
   async reconcileOnStartup(validWorktreeIds: Set<string>): Promise<{

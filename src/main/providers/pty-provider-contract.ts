@@ -258,6 +258,8 @@ export type IPtyProvider = {
   listProcesses(opts?: {
     deadlineMs?: number
     includeForegroundProcessEvidence?: boolean
+    /** Diagnostic display only: include generations whose routing owner is unverifiable. */
+    includeUnrouted?: boolean
   }): Promise<PtyProcessInfo[]>
   getDefaultShell(): Promise<string>
   getProfiles(): Promise<{ name: string; path: string }[]>

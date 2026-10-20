@@ -1,4 +1,4 @@
-import type { PtyListedSession } from '../../../../shared/pty-listed-session'
+import { ptySessionIdentity, type PtyListedSession } from '../../../../shared/pty-listed-session'
 import type { Worktree } from '../../../../shared/worktree/types'
 import type { Repo } from '../../../../shared/repo-types'
 import type { ProjectGroup } from '../../../../shared/project-group-types'
@@ -16,7 +16,6 @@ import {
   deriveWorktreeNameFromWorktreeId,
   resolveDaemonSessionLabel
 } from './resource-session-labels'
-import { resourceSessionIdentity } from './resource-session-inventory-cache'
 
 export type ResourcePtyRow = {
   session: PtyListedSession
@@ -117,9 +116,17 @@ export function buildResourcePtyRows(args: {
       }
     }
   }
-  const sessions = new Map(args.sessions.map((session) => [session.id, session]))
+  const sessions = new Map(args.sessions.map((session) => [ptySessionIdentity(session), session]))
+  const countsById = new Map<string, number>()
+  for (const session of sessions.values()) {
+    countsById.set(session.id, (countsById.get(session.id) ?? 0) + 1)
+  }
   return [...sessions.values()].map((session): ResourcePtyRow => {
-    const tabId = bindings.ptyIdToTabId.get(session.id) ?? null
+    const routeUnknown = session.routed === undefined && (countsById.get(session.id) ?? 0) > 1
+    const tabId =
+      session.routed === false || routeUnknown
+        ? null
+        : (bindings.ptyIdToTabId.get(session.id) ?? null)
     const workspaceId =
       (tabId && bindings.tabIdToWorktreeId.get(tabId)) || session.worktreeId || null
     const workspace = workspaceId ? worktrees.get(workspaceId) : undefined
@@ -142,7 +149,7 @@ export function buildResourcePtyRows(args: {
         : resolveDaemonSessionLabel(session, workspaceId, tabId, args, bindings)
     return {
       session,
-      identity: resourceSessionIdentity(session),
+      identity: ptySessionIdentity(session),
       label,
       sortName: tab?.customTitle?.trim() || tab?.defaultTitle?.trim() || session.id,
       workspace: workspaceName,
@@ -150,8 +157,13 @@ export function buildResourcePtyRows(args: {
       projectId: project ? (workspace?.repoId ?? '') : '',
       project: project ?? null,
       tabId,
-      paneKey: paneKeys.get(session.id) ?? null,
-      binding: !args.bindings.workspaceSessionReady ? 'pending' : tabId ? 'bound' : 'unbound'
+      paneKey: tabId ? (paneKeys.get(session.id) ?? null) : null,
+      binding:
+        !args.bindings.workspaceSessionReady || routeUnknown
+          ? 'pending'
+          : tabId
+            ? 'bound'
+            : 'unbound'
     }
   })
 }

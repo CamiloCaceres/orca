@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -33,7 +32,6 @@ export function ResourcePtyPanel({
   runtimePaneTitlesByTabId
 }: Props) {
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null)
-  const [query, setQuery] = useState('')
   const [bindingFilter, setBindingFilter] = useState('all')
   const { sessions } = inventory.sessionInventory
   const rows = useMemo(
@@ -50,17 +48,10 @@ export function ResourcePtyPanel({
         : [],
     [active, sessions, bindings, worktrees, repos, projectGroups, runtimePaneTitlesByTabId]
   )
-  const filteredRows = useMemo(() => {
-    const search = query.trim().toLocaleLowerCase()
-    return rows.filter(
-      (row) =>
-        (bindingFilter === 'all' || row.binding === bindingFilter) &&
-        (!search ||
-          [row.label, row.session.title, row.workspace, row.session.cwd, row.session.id].some(
-            (value) => value?.toLocaleLowerCase().includes(search)
-          ))
-    )
-  }, [rows, query, bindingFilter])
+  const filteredRows = useMemo(
+    () => rows.filter((row) => bindingFilter === 'all' || row.binding === bindingFilter),
+    [rows, bindingFilter]
+  )
   const groups = useMemo(() => groupResourcePtyRows(filteredRows), [filteredRows])
   const unbound = rows.filter((row) => row.binding === 'unbound').length
   return (
@@ -95,16 +86,6 @@ export function ResourcePtyPanel({
           </div>
         )}
         <div className="flex items-center gap-2">
-          <Input
-            type="search"
-            aria-label={translate('resourceManager.pty.search', 'Search terminals')}
-            placeholder={translate('resourceManager.pty.searchPlaceholder', 'Search terminals…')}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value)
-              scrollElement?.scrollTo({ top: 0 })
-            }}
-          />
           <Select
             value={bindingFilter}
             onValueChange={(value) => {
@@ -171,7 +152,6 @@ export function ResourcePtyPanel({
               variant="link"
               size="xs"
               onClick={() => {
-                setQuery('')
                 setBindingFilter('all')
               }}
             >

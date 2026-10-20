@@ -8,9 +8,12 @@ export function useResourceSessionInventory(ready: boolean, active = false, loca
     () =>
       new ResourceSessionInventoryCache(
         () =>
-          window.api.pty.listSessions(localOnly ? { connectionId: null } : undefined, {
-            resourceManagerView: true
-          }),
+          window.api.pty.listSessions(
+            localOnly ? { connectionId: null, includeUnrouted: true } : undefined,
+            {
+              resourceManagerView: true
+            }
+          ),
         localOnly
       )
   )

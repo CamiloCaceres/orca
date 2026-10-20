@@ -34,6 +34,15 @@ const base = () => ({
 })
 
 describe('local PTY view model', () => {
+  it('keeps distinct process generations with the same terminal id as separate rows', () => {
+    const rows = buildResourcePtyRows({
+      ...base(),
+      sessions: [session('same', { incarnationId: 'A' }), session('same', { incarnationId: 'B' })]
+    })
+    expect(rows).toHaveLength(2)
+    expect(new Set(rows.map((row) => row.identity)).size).toBe(2)
+  })
+
   it('counts a session once across multiple bound panes and navigates to the matching leaf', () => {
     const inputs = base()
     const otherLeaf = '22222222-2222-4222-8222-222222222222'
@@ -72,6 +81,55 @@ describe('local PTY view model', () => {
       paneKey: makePaneKey('tab', leaf),
       workspace: 'Notes'
     })
+  })
+
+  it('binds only the established route when daemon generations reuse a terminal id', () => {
+    const inputs = base()
+    const rows = buildResourcePtyRows({
+      ...inputs,
+      sessions: [
+        session('pty-tab', { incarnationId: 'A', inventorySourceId: 'first', routed: false }),
+        session('pty-tab', { incarnationId: 'B', inventorySourceId: 'second', routed: true })
+      ]
+    })
+    expect(rows[0]).toMatchObject({
+      binding: 'unbound',
+      tabId: null,
+      paneKey: null,
+      workspace: null
+    })
+    expect(rows[1]).toMatchObject({ binding: 'bound', tabId: 'tab', workspace: 'Notes' })
+  })
+
+  it('keeps duplicate bindings uncertain when a publisher cannot identify the route', () => {
+    const rows = buildResourcePtyRows({
+      ...base(),
+      sessions: [
+        session('pty-tab', { incarnationId: 'A' }),
+        session('pty-tab', { incarnationId: 'B' })
+      ]
+    })
+    expect(rows.every((row) => row.binding === 'pending' && row.tabId === null)).toBe(true)
+  })
+
+  it('keeps legacy processes from distinct daemons as separate rows without incarnation metadata', () => {
+    const rows = buildResourcePtyRows({
+      ...base(),
+      sessions: [
+        session('same', {
+          incarnationId: undefined,
+          inventorySourceId: 'first',
+          rootProcessId: 101
+        }),
+        session('same', {
+          incarnationId: undefined,
+          inventorySourceId: 'second',
+          rootProcessId: 202
+        })
+      ]
+    })
+    expect(rows).toHaveLength(2)
+    expect(new Set(rows.map((row) => row.identity)).size).toBe(2)
   })
 
   it('uses inactive saved tab bindings and keeps restore-pending distinct from unbound', () => {
