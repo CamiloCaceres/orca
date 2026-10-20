@@ -9,6 +9,10 @@ import type {
 import { translate } from '@/i18n/i18n'
 import { PluginCatalogEmptyState } from '../plugin-catalog/PluginCatalogEmptyState'
 import {
+  matchesPluginSearch,
+  pluginListEntryFromListing
+} from '../plugin-catalog/plugin-list-entries'
+import {
   PluginCatalogLayout,
   type PluginCatalogFilter
 } from '../plugin-catalog/PluginCatalogLayout'
@@ -101,21 +105,13 @@ export function PluginMarketplaceBrowser({
     () => new Map(installedPlugins.map((plugin) => [plugin.pluginKey, plugin])),
     [installedPlugins]
   )
-  const visibleListings = useMemo(() => {
-    const query = search.trim().toLocaleLowerCase()
-    if (!query) {
-      return listings
-    }
-    return listings.filter((listing) =>
-      [
-        listing.pluginKey,
-        listing.description ?? '',
-        listing.marketplaceName,
-        listing.marketplaceOwner,
-        ...listing.categories
-      ].some((value) => value.toLocaleLowerCase().includes(query))
-    )
-  }, [listings, search])
+  const visibleListings = useMemo(
+    () =>
+      listings.filter((listing) =>
+        matchesPluginSearch(pluginListEntryFromListing(listing), search)
+      ),
+    [listings, search]
+  )
 
   const refresh = async (): Promise<void> => {
     setRefreshBusy(true)
