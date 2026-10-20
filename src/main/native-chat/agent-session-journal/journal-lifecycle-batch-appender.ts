@@ -156,7 +156,7 @@ export class JournalLifecycleBatchAppender {
           return !previouslyPlanned &&
             existing &&
             isDeepStrictEqual(existing.body, only.body) &&
-            (!Object.hasOwn(only, 'echoOf') || current.itemEchoes.has(resolved)) &&
+            (!Object.hasOwn(only, 'echoOf') || current.itemEchoes.has(itemId)) &&
             (only.linkage === undefined ||
               isDeepStrictEqual(
                 agentJournalLinkageFields(existing),
