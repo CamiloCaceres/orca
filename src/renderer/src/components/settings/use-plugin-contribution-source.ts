@@ -50,8 +50,10 @@ export function useInstalledPluginContributionSource(
   }, [plugin, appThemes, terminalThemes, iconThemes, syntaxes, languagePacks, failures])
 }
 
-/** An installed plugin's declared manifest, read when its page opens; null until read or if unreadable. */
-export function useInstalledPluginManifest(pluginKey: string | null): PluginManifest | null {
+/** An installed plugin's declared manifest, read when its page opens; undefined until read, null if unreadable. */
+export function useInstalledPluginManifest(
+  pluginKey: string | null
+): PluginManifest | null | undefined {
   const [loaded, setLoaded] = useState<{
     pluginKey: string
     manifest: PluginManifest | null
@@ -68,12 +70,17 @@ export function useInstalledPluginManifest(pluginKey: string | null): PluginMani
           setLoaded({ pluginKey, manifest })
         }
       })
-      .catch((cause: unknown) => console.warn('[plugins] installed manifest read failed:', cause))
+      .catch((cause: unknown) => {
+        console.warn('[plugins] installed manifest read failed:', cause)
+        if (!stale) {
+          setLoaded({ pluginKey, manifest: null })
+        }
+      })
     return () => {
       stale = true
     }
   }, [pluginKey])
-  return loaded && loaded.pluginKey === pluginKey ? loaded.manifest : null
+  return loaded && loaded.pluginKey === pluginKey ? loaded.manifest : undefined
 }
 
 function hasLiveContent(source: PluginContributionSource): boolean {

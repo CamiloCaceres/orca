@@ -1,5 +1,6 @@
 import { AlertTriangle, Loader2, RotateCw, ShieldCheck } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
+import type { PluginExecutionProfile } from '../../../../shared/plugins/plugin-execution-profile'
 import { Button } from '../ui/button'
 import { pluginCapabilityDescription } from './plugin-capability-presentation'
 import type { PluginLogsState } from './use-plugin-logs'
@@ -60,26 +61,55 @@ export function DetailRow({
   )
 }
 
+/** What its execution profile lets it do when it carries no capability rows; null = no extra row. */
+function executionProfileRow(execution: PluginExecutionProfile): React.JSX.Element | null {
+  if (execution === 'trusted-worker') {
+    return (
+      <DetailRow
+        icon={<AlertTriangle />}
+        title={translate(
+          'auto.components.settings.PluginConsentDialog.warning',
+          'Its worker runs as a normal process with full access to your files, network, and other processes.'
+        )}
+      />
+    )
+  }
+  if (execution === 'instructional') {
+    return (
+      <DetailRow
+        icon={<AlertTriangle />}
+        title={translate(
+          'auto.components.settings.PluginConsentDialog.instructionalWarning',
+          'Its commands and instructions can take actions when you or an agent use them.'
+        )}
+      />
+    )
+  }
+  return null
+}
+
 /** What the plugin can reach, in the consent dialog's words. */
 export function PluginAccessSection({
   capabilities,
-  runsCode,
+  execution,
   loading,
   failed = false,
   onRetry
 }: {
   capabilities: readonly { kind: string; description: string }[] | null
-  runsCode: boolean
+  /** The verified execution profile; null while unknown, never guessed from contributions. */
+  execution: PluginExecutionProfile | null
   loading: boolean
   /** The manifest couldn't be read, so nothing is known about its access. */
   failed?: boolean
   onRetry?: () => void
 }): React.JSX.Element {
+  const profileRow = execution ? executionProfileRow(execution) : null
   return (
     <DetailSection
       title={translate('auto.components.settings.PluginDetailSections.access', 'Can access')}
     >
-      {failed ? (
+      {failed || (!loading && capabilities !== null && execution === null) ? (
         // Why: an unreadable plugin must never read as one that needs no access.
         <DetailRow
           icon={<AlertTriangle />}
@@ -93,7 +123,7 @@ export function PluginAccessSection({
           )}
           detailTone="warning"
           trailing={
-            onRetry ? (
+            failed && onRetry ? (
               <Button variant="ghost" size="xs" onClick={onRetry}>
                 <RotateCw />
                 {translate('auto.components.settings.PluginDetailSections.retry', 'Retry')}
@@ -101,7 +131,7 @@ export function PluginAccessSection({
             ) : null
           }
         />
-      ) : loading || capabilities === null ? (
+      ) : loading || capabilities === null || execution === null ? (
         <DetailRow
           icon={<Loader2 className="animate-spin" />}
           title={translate(
@@ -109,14 +139,17 @@ export function PluginAccessSection({
             'Reading the plugin…'
           )}
         />
-      ) : capabilities.length > 0 ? (
-        capabilities.map((capability) => (
-          <DetailRow
-            key={capability.kind}
-            icon={<AlertTriangle />}
-            title={pluginCapabilityDescription(capability.kind, capability.description)}
-          />
-        ))
+      ) : capabilities.length > 0 || profileRow ? (
+        <>
+          {profileRow}
+          {capabilities.map((capability) => (
+            <DetailRow
+              key={capability.kind}
+              icon={<AlertTriangle />}
+              title={pluginCapabilityDescription(capability.kind, capability.description)}
+            />
+          ))}
+        </>
       ) : (
         <DetailRow
           icon={<ShieldCheck />}
@@ -125,7 +158,7 @@ export function PluginAccessSection({
             'Nothing outside its own files'
           )}
           detail={
-            runsCode
+            execution === 'sandboxed-ui'
               ? translate(
                   'auto.components.settings.PluginDetailSections.noAccessCode',
                   'Its code runs in a sandbox with no extra access.'

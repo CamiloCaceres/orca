@@ -90,6 +90,7 @@ const installed: PluginHostListEntry = {
   panels: [],
   commands: [],
   hasWorker: false,
+  execution: 'data',
   restarts: 0,
   source: { kind: 'local-path', reference: '/tmp/gleam', resolvedCommit: null, contentHash: 'h' }
 }
@@ -199,6 +200,46 @@ describe('PluginDetailPage', () => {
     const container = await render(pluginListEntryFromInstalled(installed), vi.fn())
     expect(container.textContent).toContain('Gleam')
     expect(container.textContent).toContain('Highlighting stopped: this grammar failed.')
+  })
+
+  it('never calls a commands plugin content only, before or after its manifest is read', async () => {
+    const commandsListing: PluginMarketplaceHostListing = {
+      ...listing,
+      pluginKey: 'stablyai.shortcuts',
+      release: { ...listing.release!, execution: 'instructional', types: ['instructions'] }
+    }
+    let resolvePreview: (result: PluginPagePreview) => void = () => {}
+    const container = await render(
+      pluginListEntryFromListing(commandsListing),
+      () => new Promise((resolve) => (resolvePreview = resolve))
+    )
+    expect(container.textContent).not.toContain('Content only')
+    // Why no capabilities: the old page read "no worker" as "no code that runs".
+    await act(async () =>
+      resolvePreview({
+        ok: true,
+        preview: {
+          ...preview,
+          pluginKey: 'stablyai.shortcuts',
+          manifest: { ...preview.manifest, capabilities: [] }
+        }
+      })
+    )
+    expect(container.textContent).not.toContain('Content only')
+    expect(container.textContent).toContain(
+      'Its commands and instructions can take actions when you or an agent use them.'
+    )
+  })
+
+  it('warns that an installed worker plugin has full access even without capabilities', async () => {
+    const container = await render(
+      pluginListEntryFromInstalled({ ...installed, hasWorker: true, execution: 'trusted-worker' }),
+      vi.fn()
+    )
+    expect(container.textContent).not.toContain('sandbox')
+    expect(container.textContent).toContain(
+      'Its worker runs as a normal process with full access to your files, network, and other processes.'
+    )
   })
 
   it('names what a plugin under review adds from its installed manifest', async () => {

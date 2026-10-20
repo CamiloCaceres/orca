@@ -13,6 +13,8 @@ import { installedPluginControls, type InstalledRowHandlers } from './PluginMana
 import { PluginChips } from '../plugin-catalog/PluginChips'
 import type { PluginPagePreview } from './use-plugin-catalog'
 import type { PluginLogsState } from './use-plugin-logs'
+import { pluginPageExecutionProfile } from './plugin-access-profile'
+import { useInstalledPluginManifest } from './use-plugin-contribution-source'
 
 type PluginDetailPageProps = {
   entry: PluginListEntry
@@ -117,6 +119,16 @@ export function PluginDetailPage({
     }
   }, [plugin, listing, fetchPreview, previewAttempt])
 
+  // Why the manifest read: hosts that predate the list's `execution` field still get a verified profile.
+  const installedManifest = useInstalledPluginManifest(
+    plugin && plugin.execution === undefined ? plugin.pluginKey : null
+  )
+  const execution = pluginPageExecutionProfile({
+    installed: plugin,
+    installedManifest,
+    listing,
+    previewManifest: preview?.manifest ?? null
+  })
   const controls = plugin
     ? installedPluginControls(plugin, entry, {
         busy,
@@ -278,8 +290,11 @@ export function PluginDetailPage({
               })) ??
               null
             }
-            runsCode={plugin?.hasWorker ?? entry.types.includes('worker')}
-            loading={previewLoading}
+            execution={execution}
+            loading={
+              previewLoading ||
+              (plugin !== null && execution === null && installedManifest === undefined)
+            }
             failed={!plugin && previewFailed}
             onRetry={() => setPreviewAttempt((attempt) => attempt + 1)}
           />
