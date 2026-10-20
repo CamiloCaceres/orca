@@ -234,7 +234,7 @@ describe('Codex chat catch-up', () => {
       ],
       ['turn/completed', { turn: { id: 'turn-3', status: 'completed' } }]
     ] as const) {
-      native.handle({ type: 'notification', threadId: THREAD, method, params })
+      native.handle({ type: 'notification', sessionId: SESSION, threadId: THREAD, method, params })
     }
     await c.deferred.drained()
     native.dispose()
@@ -578,8 +578,7 @@ describe('Codex chat catch-up', () => {
       callerKey,
       operationId,
       fingerprint: 'rewind',
-      now: 500_000,
-      sessionId: SESSION
+      now: 500_000
     })
     await store.transitionHandoff(SESSION, (record) => ({
       ...record,
@@ -633,7 +632,7 @@ describe('Codex chat catch-up', () => {
       ownerFence: 1,
       body: {
         kind: 'message' as const,
-        role: 'user',
+        role: 'user' as const,
         blocks: [{ type: 'text' as const, text: 'legacy' }]
       }
     }
@@ -662,7 +661,7 @@ describe('Codex chat catch-up', () => {
       await c.journal.appendItem(
         { provider: 'codex', threadId: THREAD, turnId: 'native', ordinal: 0 },
         { kind: 'message', role: 'assistant', blocks: [{ type: 'text', text: 'ordinary reply' }] },
-        { fence: 1 }
+        { fence: 1, turnScope: { kind: 'thread' } }
       )
       await c.open([turn(3)])
       expect(c.texts()).toEqual(['user:legacy', 'assistant:ordinary reply'])
