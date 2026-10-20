@@ -1,5 +1,9 @@
 import { z } from 'zod'
 import {
+  PLUGIN_CONTRIBUTION_POINT_POLICY,
+  PLUGIN_CONTRIBUTION_POINTS
+} from './plugin-contribution-points'
+import {
   pluginExecutionAllows,
   pluginExecutionProfileSchema,
   type PluginExecutionProfile
@@ -72,33 +76,17 @@ export const pluginCatalogReleaseSchema = z
 export type PluginCatalogRelease = z.infer<typeof pluginCatalogReleaseSchema>
 
 export function pluginCatalogTypes(manifest: PluginManifest): PluginCatalogType[] {
-  const c = manifest.contributes
-  const types: PluginCatalogType[] = []
-  if (c.languagePacks.length > 0) {
-    types.push('interface-language')
-  }
-  if (c.themes.length > 0) {
-    types.push('app-theme')
-  }
-  if (c.terminalThemes.length > 0) {
-    types.push('terminal-theme')
-  }
-  if (c.iconThemes.length > 0) {
-    types.push('icon-theme')
-  }
-  if (c.syntaxes.length > 0) {
-    types.push('syntax')
-  }
-  if (c.commands.length || c.keybindings.length || c.vmRecipes.length || c.agents.length) {
-    types.push('instructions')
-  }
-  if (c.panels.length > 0) {
-    types.push('panel')
+  const declared = new Set<PluginCatalogType>()
+  for (const point of PLUGIN_CONTRIBUTION_POINTS) {
+    const type = PLUGIN_CONTRIBUTION_POINT_POLICY[point].catalogType
+    if (type && manifest.contributes[point].length > 0) {
+      declared.add(type)
+    }
   }
   if (manifest.main !== undefined) {
-    types.push('worker')
+    declared.add('worker')
   }
-  return types
+  return PLUGIN_CATALOG_TYPES.filter((type) => declared.has(type))
 }
 
 /** Why null-or-message: install and preview surface the first mismatch verbatim. */

@@ -1,26 +1,7 @@
 import { z } from 'zod'
 import { pluginCapabilitySchema } from './plugin-capabilities'
-import {
-  PLUGIN_AGENT_PROFILE_LIMIT,
-  PLUGIN_KEYBINDING_LIMIT,
-  PLUGIN_LANGUAGE_PACK_LIMIT,
-  PLUGIN_ICON_THEME_LIMIT,
-  PLUGIN_SYNTAX_LIMIT,
-  pluginSyntaxContributionSchema,
-  PLUGIN_TERMINAL_THEME_LIMIT,
-  PLUGIN_THEME_LIMIT,
-  PLUGIN_VM_RECIPE_LIMIT,
-  pluginAgentProfileContributionSchema,
-  pluginKeybindingContributionSchema,
-  pluginLanguagePackContributionSchema,
-  pluginThemeContributionSchema,
-  pluginVmRecipeContributionSchema
-} from './plugin-content-pack-contributions'
-import {
-  pluginCommandIdSchema,
-  pluginIdSchema,
-  pluginRelativePathSchema
-} from './plugin-manifest-fields'
+import { pluginContributesShape } from './plugin-contribution-points'
+import { pluginIdSchema, pluginRelativePathSchema } from './plugin-manifest-fields'
 import { validatePluginManifestContributions } from './plugin-manifest-contribution-validation'
 import {
   pluginExecutionProfileSchema,
@@ -41,8 +22,6 @@ import {
 
 const SEMVER_RE =
   /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*)(?:\.(?:0|[1-9]\d*|\d*[A-Za-z-][0-9A-Za-z-]*))*)?(?:\+[0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)?$/
-export const PLUGIN_PANEL_LIMIT = 64
-export const PLUGIN_COMMAND_LIMIT = 256
 
 // Why: v0 supports only the ">=x.y.z" form. A closed grammar keeps the gate
 // predictable; richer ranges can be added without breaking old manifests.
@@ -50,38 +29,6 @@ const orcaEngineRangeSchema = z
   .string()
   .max(64)
   .regex(/^>=\d+\.\d+\.\d+$/, 'must be a ">=x.y.z" version range')
-
-const panelContributionSchema = z.object({
-  id: pluginIdSchema,
-  title: z.string().min(1).max(256),
-  /** Lucide icon name rendered in the right-sidebar activity bar. */
-  icon: z.string().min(1).max(64).optional(),
-  /** HTML entry rendered inside a sandboxed panel frame. */
-  entry: pluginRelativePathSchema
-})
-
-const commandContributionSchema = z.object({
-  id: pluginCommandIdSchema,
-  title: z.string().min(1).max(256),
-  context: z.enum(['global', 'worktree']).optional(),
-  /** Built-in action aliases remain declarative and do not activate a worker. */
-  action: pluginCommandIdSchema.optional()
-})
-
-/** Domain events a plugin can subscribe to in v0. Closed set: server-side
- *  filtering means plugins only ever receive what they subscribed to. */
-export const PLUGIN_EVENT_NAMES = [
-  'worktree.created',
-  'worktree.removed',
-  'agent.status.changed'
-] as const
-export const PLUGIN_EVENT_SUBSCRIPTION_LIMIT = PLUGIN_EVENT_NAMES.length
-
-export type PluginEventName = (typeof PLUGIN_EVENT_NAMES)[number]
-
-const eventContributionSchema = z.object({
-  on: z.enum(PLUGIN_EVENT_NAMES)
-})
 
 const pluginManifestV1Object = z.object({
   manifestVersion: z.literal(1),
@@ -104,31 +51,7 @@ const pluginManifestV1Object = z.object({
   /** Node entry executed inside the out-of-process plugin worker. */
   main: pluginRelativePathSchema.optional(),
   contributes: z
-    .object({
-      panels: z.array(panelContributionSchema).max(PLUGIN_PANEL_LIMIT).default([]),
-      commands: z.array(commandContributionSchema).max(PLUGIN_COMMAND_LIMIT).default([]),
-      events: z.array(eventContributionSchema).max(PLUGIN_EVENT_SUBSCRIPTION_LIMIT).default([]),
-      languagePacks: z
-        .array(pluginLanguagePackContributionSchema)
-        .max(PLUGIN_LANGUAGE_PACK_LIMIT)
-        .default([]),
-      keybindings: z
-        .array(pluginKeybindingContributionSchema)
-        .max(PLUGIN_KEYBINDING_LIMIT)
-        .default([]),
-      vmRecipes: z.array(pluginVmRecipeContributionSchema).max(PLUGIN_VM_RECIPE_LIMIT).default([]),
-      agents: z
-        .array(pluginAgentProfileContributionSchema)
-        .max(PLUGIN_AGENT_PROFILE_LIMIT)
-        .default([]),
-      themes: z.array(pluginThemeContributionSchema).max(PLUGIN_THEME_LIMIT).default([]),
-      terminalThemes: z
-        .array(pluginThemeContributionSchema)
-        .max(PLUGIN_TERMINAL_THEME_LIMIT)
-        .default([]),
-      iconThemes: z.array(pluginThemeContributionSchema).max(PLUGIN_ICON_THEME_LIMIT).default([]),
-      syntaxes: z.array(pluginSyntaxContributionSchema).max(PLUGIN_SYNTAX_LIMIT).default([])
-    })
+    .object(pluginContributesShape)
     .strict()
     // Why prefault: runs `{}` through the schema, so every family's own default applies.
     .prefault({}),
@@ -149,9 +72,14 @@ export const pluginManifestSchema = z.discriminatedUnion('manifestVersion', [
 ])
 
 export type PluginManifest = z.infer<typeof pluginManifestSchema>
-export type PluginPanelContribution = z.infer<typeof panelContributionSchema>
-export type PluginCommandContribution = z.infer<typeof commandContributionSchema>
-export type PluginEventContribution = z.infer<typeof eventContributionSchema>
+export { PLUGIN_PANEL_LIMIT, type PluginPanelContribution } from './plugin-panel-contribution'
+export { PLUGIN_COMMAND_LIMIT, type PluginCommandContribution } from './plugin-command-contribution'
+export {
+  PLUGIN_EVENT_NAMES,
+  PLUGIN_EVENT_SUBSCRIPTION_LIMIT,
+  type PluginEventContribution,
+  type PluginEventName
+} from './plugin-event-contribution'
 
 export {
   isSafePluginId,
