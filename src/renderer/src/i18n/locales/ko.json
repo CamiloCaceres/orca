@@ -13085,7 +13085,8 @@
           "updateAvailable": "업데이트 {{value0}} 사용 가능",
           "updateLabel": "{{value0}}을(를) {{value1}}(으)로 업데이트",
           "update": "{{value0}}(으)로 업데이트",
-          "needsOrca": "Orca {{value0}} 필요"
+          "needsOrca": "Orca {{value0}} 필요",
+          "off": "꺼짐"
         },
         "PluginSettingsOverview": {
           "offTitle": "플러그인이 꺼져 있습니다",

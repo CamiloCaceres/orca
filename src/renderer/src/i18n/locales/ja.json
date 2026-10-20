@@ -13085,7 +13085,8 @@
           "updateAvailable": "アップデート {{value0}} あり",
           "updateLabel": "{{value0}} を {{value1}} にアップデート",
           "update": "{{value0}} にアップデート",
-          "needsOrca": "Orca {{value0}} が必要"
+          "needsOrca": "Orca {{value0}} が必要",
+          "off": "オフ"
         },
         "PluginSettingsOverview": {
           "offTitle": "プラグインはオフです",

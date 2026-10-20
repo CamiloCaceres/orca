@@ -56,6 +56,9 @@ export function statusWordFor(kind: PluginStatusKind): string {
   if (kind === 'enabled') {
     return translate('auto.components.settings.PluginManagerRows.on', 'On')
   }
+  if (kind === 'disabled') {
+    return translate('auto.components.settings.PluginManagerRows.off', 'Off')
+  }
   return pluginStatusLabel(kind)
 }
 

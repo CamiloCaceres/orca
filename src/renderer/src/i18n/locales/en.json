@@ -13371,7 +13371,8 @@
           "updateAvailable": "update {{value0}} available",
           "updateLabel": "Update {{value0}} to {{value1}}",
           "update": "Update {{value0}}",
-          "needsOrca": "Needs Orca {{value0}}"
+          "needsOrca": "Needs Orca {{value0}}",
+          "off": "Off"
         },
         "PluginSettingsOverview": {
           "offTitle": "Plugins are off",

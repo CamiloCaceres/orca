@@ -13085,7 +13085,8 @@
           "updateAvailable": "有可用更新 {{value0}}",
           "updateLabel": "将 {{value0}} 更新到 {{value1}}",
           "update": "更新到 {{value0}}",
-          "needsOrca": "需要 Orca {{value0}}"
+          "needsOrca": "需要 Orca {{value0}}",
+          "off": "已关闭"
         },
         "PluginSettingsOverview": {
           "offTitle": "插件已关闭",

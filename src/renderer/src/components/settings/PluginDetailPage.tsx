@@ -145,6 +145,10 @@ export function PluginDetailPage({
     Boolean(entry.minimumOrca && orcaVersion) &&
     !satisfiesOrcaEngineRange(orcaVersion ?? '', `>=${entry.minimumOrca}`)
   const version = plugin?.version ?? preview?.manifest.version ?? entry.version
+  // Why: a fetched manifest names the plugin exactly; older catalogs only give its key.
+  const name = plugin?.name ?? preview?.manifest.name ?? entry.name
+  // Why: "official" is trust, already shown by the verified mark.
+  const categories = entry.categories.filter((category) => category !== 'official')
   const description = plugin?.description ?? preview?.manifest.description ?? entry.description
   const repository =
     listing?.source.url ?? (plugin?.source?.kind === 'git' ? plugin.source.reference : null)
@@ -236,7 +240,7 @@ export function PluginDetailPage({
               tabIndex={-1}
               className="text-xl font-semibold outline-none"
             >
-              {entry.name}
+              {name}
             </h3>
             {entry.official ? (
               <BadgeCheck
@@ -328,13 +332,13 @@ export function PluginDetailPage({
                 )}
               />
             ) : null}
-            {entry.categories.length > 0 ? (
+            {categories.length > 0 ? (
               <InfoRow
                 label={translate(
                   'auto.components.settings.PluginDetailPage.categories',
                   'Categories'
                 )}
-                value={entry.categories.join(', ')}
+                value={categories.join(', ')}
               />
             ) : null}
             <InfoRow

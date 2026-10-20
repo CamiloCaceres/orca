@@ -13080,7 +13080,8 @@
           "updateAvailable": "actualización {{value0}} disponible",
           "updateLabel": "Actualizar {{value0}} a {{value1}}",
           "update": "Actualizar a {{value0}}",
-          "needsOrca": "Requiere Orca {{value0}}"
+          "needsOrca": "Requiere Orca {{value0}}",
+          "off": "Desactivado"
         },
         "PluginSettingsOverview": {
           "offTitle": "Los plugins están desactivados",
