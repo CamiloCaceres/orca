@@ -81,7 +81,9 @@ describe('buildPluginList consent identity', () => {
     expect((await buildPluginList(serviceWith(plugin), emptyPluginLockfile()))[0]).toMatchObject({
       pluginKey: plugin.pluginKey,
       consentFingerprint: 'sha256-current',
-      status: 'pending'
+      status: 'pending',
+      // Why instructional: a capability makes it more than content, with no worker in sight.
+      execution: 'instructional'
     })
   })
 

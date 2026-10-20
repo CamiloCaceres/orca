@@ -1,3 +1,4 @@
+import type { PluginExecutionProfile } from '../../shared/plugins/plugin-execution-profile'
 import type {
   PluginIconThemeMetadata,
   PluginIconThemeRegistration
@@ -49,6 +50,9 @@ export type PluginHostListEntry = {
   version: string
   publisher: string
   description?: string
+  /** The verified execution profile from the installed manifest; absent for invalid entries and
+   *  on hosts that predate it. Never infer it from the plugin's contents. */
+  execution?: PluginExecutionProfile
   /** SPDX license expression from the manifest. */
   license?: string
   homepage?: string
@@ -108,6 +112,9 @@ export type PluginHostInstallResult =
       contentHash: string
       consentFingerprint: string
       resolvedCommit: string | null
+      /** Set when install was asked to enable a content-only plugin: false means it is on;
+       *  true means it runs or adds instructions, so it waits for review. */
+      needsReview?: boolean
     }
   | { ok: false; error: string }
 
@@ -217,11 +224,13 @@ export type PluginsApi = {
     marketplaceSourceId: string
     pluginKey: string
   }) => Promise<PluginMarketplaceHostInstallPreview>
+  /** With `enableIfData`, main also turns the plugin on when the installed manifest is
+   *  `execution: 'data'`; anything else comes back `needsReview: true`. Older hosts ignore it. */
   installMarketplacePlugin: (
     preview: Pick<
       PluginMarketplaceHostInstallPreview,
       'marketplaceSourceId' | 'marketplaceCommit' | 'pluginKey' | 'resolvedCommit'
-    >
+    > & { enableIfData?: true }
   ) => Promise<PluginHostInstallResult>
   previewMarketplaceUpdate: (args: {
     pluginKey: string

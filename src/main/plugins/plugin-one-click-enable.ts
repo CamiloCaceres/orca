@@ -1,0 +1,26 @@
+import { pluginExecutionProfile } from '../../shared/plugins/plugin-execution-profile'
+import type { ValidDiscoveredPlugin } from './plugin-discovery'
+
+/**
+ * One-click install for content-only plugins. Why main decides: the click counts as consent only
+ * for plugins that cannot run anything, and that must be read from the installed, verified
+ * manifest, never from what the renderer claims. Anything else stays pending for review.
+ */
+export async function enableIfDataPlugin(input: {
+  pluginKey: string
+  /** Fingerprint of the bytes just installed; approval binds to exactly these. */
+  installedFingerprint: string
+  findValidPlugin: (pluginKey: string) => ValidDiscoveredPlugin | null
+  approve: (pluginKey: string, reviewedFingerprint: string) => Promise<void>
+}): Promise<{ needsReview: boolean }> {
+  const plugin = input.findValidPlugin(input.pluginKey)
+  if (
+    !plugin ||
+    plugin.consentFingerprint !== input.installedFingerprint ||
+    pluginExecutionProfile(plugin.manifest) !== 'data'
+  ) {
+    return { needsReview: true }
+  }
+  await input.approve(input.pluginKey, plugin.consentFingerprint)
+  return { needsReview: false }
+}
