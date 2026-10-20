@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/v2/orca-marketplace.schema.json",
+  "$id": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-marketplace.v2.schema.json",
   "title": "Orca plugin catalog",
   "description": "The orca-marketplace.v2.json file that lists installable plugin releases.",
   "type": "object",
@@ -38,7 +38,7 @@
       "items": {
         "$ref": "#/$defs/CatalogEntry"
       },
-      "description": "Listed plugins, at most 2048. An entry this Orca cannot parse is skipped, not fatal.",
+      "description": "Listed plugins, at most 2048. Each `id` may appear once, or the whole catalog is refused. An entry this Orca cannot parse is skipped, not fatal.",
       "x-orca-since": "1.4.232"
     }
   },
@@ -54,7 +54,7 @@
         "id": {
           "type": "string",
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
-          "description": "`<publisher>.<id>`, matching the plugin's manifest.",
+          "description": "`<publisher>.<id>`, matching the plugin's manifest. Each half is at most 64 characters, and the reserved names `constructor` and `prototype` are refused.",
           "x-orca-since": "1.4.232",
           "examples": [
             "acme.gleam-syntax"
@@ -72,13 +72,14 @@
         },
         "categories": {
           "default": [],
-          "description": "Lowercase slugs used to filter the marketplace.",
+          "description": "Lowercase slugs used to filter the marketplace, each listed once.",
           "x-orca-since": "1.4.232",
           "examples": [
             [
               "themes"
             ]
           ],
+          "uniqueItems": true,
           "maxItems": 16,
           "type": "array",
           "items": {
@@ -134,7 +135,6 @@
         "url",
         "ref"
       ],
-      "additionalProperties": false,
       "description": "Where the plugin source lives."
     },
     "CatalogRelease": {
@@ -182,7 +182,7 @@
           "description": "The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it.",
           "x-orca-since": "1.4.232",
           "examples": [
-            "1.4.223"
+            "1.4.232"
           ]
         },
         "types": {
@@ -202,13 +202,14 @@
               "worker"
             ]
           },
-          "description": "Every kind of contribution the release carries, matching its manifest exactly.",
+          "description": "Every kind of contribution the release carries, matching its manifest exactly. `instructions` needs the `instructional` profile or higher, `panel` needs `sandboxed-ui`, and `worker` needs `trusted-worker`.",
           "x-orca-since": "1.4.232",
           "examples": [
             [
               "syntax"
             ]
-          ]
+          ],
+          "uniqueItems": true
         },
         "name": {
           "description": "The manifest's `name`, so Orca can suggest the plugin before downloading it.",
@@ -282,11 +283,11 @@
         "fileTypes": {
           "description": "Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer.",
           "x-orca-since": "1.4.232",
+          "type": "array",
           "items": {
             "type": "string",
             "pattern": "^[a-z0-9][a-z0-9+_-]{0,15}$"
-          },
-          "type": "array"
+          }
         }
       },
       "required": [

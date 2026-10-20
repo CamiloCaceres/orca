@@ -1,8 +1,9 @@
 import { z } from 'zod'
 
 /** A file extension without its dot, as catalogs list it. */
-export const PLUGIN_FILE_TYPE_RE = /^[a-z0-9][a-z0-9+_-]{0,15}$/
-export const pluginFileTypeSchema = z.string().regex(PLUGIN_FILE_TYPE_RE)
+export const pluginFileTypeSchema = z
+  .string()
+  .regex(/^[a-z0-9][a-z0-9+_-]{0,15}$/, 'must be a lowercase extension without the dot')
 
 const MAX_DISMISSED_FILE_TYPES = 256
 

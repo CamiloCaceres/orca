@@ -11,7 +11,7 @@ export const pluginCommandContributionSchema = z
   .object({
     id: pluginCommandIdSchema.meta(
       pluginFieldDoc(
-        'Command id, unique within the plugin. Dotted namespaces are allowed.',
+        "Command id, unique among this plugin's commands. Dotted namespaces are allowed.",
         PLUGIN_SCHEMA_SINCE_V1,
         ['jupyter.restartKernel']
       )

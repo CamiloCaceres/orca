@@ -7,6 +7,7 @@ import { validatePluginManifestContributions } from './plugin-manifest-contribut
 import { formatPluginSchemaIssues } from './plugin-schema-issues'
 import {
   pluginFieldDoc,
+  pluginPathFieldDoc,
   PLUGIN_MANIFEST_V2_SINCE,
   PLUGIN_SCHEMA_SINCE_V1
 } from './plugin-schema-field-docs'
@@ -43,15 +44,19 @@ const NEXT = PLUGIN_MANIFEST_V2_SINCE
 // Why one field set: v1 and v2 differ only in the version, `execution` and `$schema`.
 const pluginManifestFields = {
   id: pluginIdSchema.meta(
-    pluginFieldDoc('Plugin id, kebab-case. The install identity is `<publisher>.<id>`.', V1, [
-      'gleam-syntax'
-    ])
+    pluginFieldDoc(
+      'Plugin id, kebab-case. The install identity is `<publisher>.<id>`. The reserved names `constructor` and `prototype` are refused.',
+      V1,
+      ['gleam-syntax']
+    )
   ),
   // Why both ids: bare-id global uniqueness is unverifiable without a registry.
   publisher: pluginIdSchema.meta(
-    pluginFieldDoc('Publisher slug, kebab-case. Usually your GitHub user or organization.', V1, [
-      'acme'
-    ])
+    pluginFieldDoc(
+      'Publisher slug, kebab-case, usually your GitHub user or organization. The reserved names `constructor` and `prototype` are refused.',
+      V1,
+      ['acme']
+    )
   ),
   name: z
     .string()
@@ -92,14 +97,16 @@ const pluginManifestFields = {
   ...pluginManifestDetailFields,
   icon: pluginRelativePathSchema
     .optional()
-    .meta(pluginFieldDoc('Square image shown beside the plugin name.', V1, ['assets/icon.png'])),
+    .meta(
+      pluginPathFieldDoc('Square image shown beside the plugin name.', V1, ['assets/icon.png'])
+    ),
   engines: z
     .object({
       orca: orcaEngineRangeSchema.meta(
         pluginFieldDoc(
-          'Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it when you use a field newer than the current floor.',
+          `Oldest Orca release this plugin runs on, as \`>=x.y.z\`. Raise it to the newest "Since" of any field you use; a format 2 manifest needs at least \`>=${NEXT}\`, because older Orca cannot read format 2.`,
           V1,
-          ['>=1.4.223']
+          [`>=${NEXT}`]
         )
       )
     })
@@ -110,8 +117,8 @@ const pluginManifestFields = {
   main: pluginRelativePathSchema
     .optional()
     .meta(
-      pluginFieldDoc(
-        'Node entry run in an out-of-process plugin worker. Requires the `trusted-worker` execution profile.',
+      pluginPathFieldDoc(
+        'Node entry run in an out-of-process plugin worker. Requires the `trusted-worker` execution profile, and is required by it, by `contributes.events` and by any command without an `action`.',
         V1,
         ['dist/main.mjs']
       )
@@ -193,11 +200,11 @@ export function parsePluginManifest(raw: unknown): PluginManifestParseResult {
   if (parsed.success) {
     return { ok: true, manifest: parsed.data }
   }
-  return { ok: false, error: formatPluginSchemaIssues(parsed.error.issues) }
+  return { ok: false, error: formatPluginSchemaIssues(parsed.error.issues, raw) }
 }
 
-/** v0 engines gate: supports the ">=x.y.z" grammar the schema enforces.
- *  Prerelease/build suffixes on the host version are ignored for ordering. */
+/** v0 engines gate: supports the ">=x.y.z" grammar the schema enforces. A prerelease host
+ *  (`1.5.0-rc.1`) ranks below its release, as in semver; build metadata (`+…`) is ignored. */
 export function satisfiesOrcaEngineRange(hostVersion: string, range: string): boolean {
   const minimum = range.slice(2)
   const parse = (value: string): number[] =>
@@ -214,7 +221,7 @@ export function satisfiesOrcaEngineRange(hostVersion: string, range: string): bo
       return a > b
     }
   }
-  return true
+  return !/^[^+]*-/.test(hostVersion)
 }
 
 export { isPluginPanelTabKey, isQualifiedPluginKey, pluginPanelTabKey } from './plugin-tab-key'

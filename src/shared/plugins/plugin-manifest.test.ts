@@ -3,7 +3,8 @@ import {
   PLUGIN_COMMAND_LIMIT,
   PLUGIN_ID_MAX_LENGTH,
   parsePluginManifest,
-  pluginManifestSchema
+  pluginManifestSchema,
+  satisfiesOrcaEngineRange
 } from './plugin-manifest'
 
 function manifest(overrides: Record<string, unknown> = {}): Record<string, unknown> {
@@ -106,5 +107,19 @@ describe('pluginManifestSchema boundaries', () => {
         })
       ).ok
     ).toBe(false)
+  })
+})
+
+describe('satisfiesOrcaEngineRange', () => {
+  it.each([
+    ['1.5.0', '>=1.5.0', true],
+    ['1.5.1', '>=1.5.0', true],
+    ['1.4.9', '>=1.5.0', false],
+    ['1.5.0-rc.1', '>=1.5.0', false],
+    ['1.5.1-rc.1', '>=1.5.0', true],
+    ['1.5.0+build.7', '>=1.5.0', true],
+    ['1.5.0+build-7', '>=1.5.0', true]
+  ])('%s against %s is %s', (host, range, expected) => {
+    expect(satisfiesOrcaEngineRange(host, range)).toBe(expected)
   })
 })

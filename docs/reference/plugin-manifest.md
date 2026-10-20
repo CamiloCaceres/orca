@@ -4,7 +4,7 @@
 
 The orca-plugin.json file at the root of an Orca plugin (manifest format 2).
 
-Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/v2/orca-plugin.schema.json"` to `orca-plugin.json` for completion and inline errors in your editor.
+Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-plugin.v2.schema.json"` to `orca-plugin.json` for completion and inline errors in your editor.
 `Since` is the first Orca release that reads the field; raise `engines.orca` when you use a newer one.
 
 ## Fields
@@ -14,35 +14,35 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `$schema` | string | no | 1.4.232 | JSON Schema URL for editor completion. Ignored by Orca. |
 | `manifestVersion` | `2` | yes | 1.4.232 | Manifest format. Use 2 for new plugins. |
 | `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | 1.4.232 | Most authority the plugin needs, least first: `data` (themes, syntaxes, translations), `instructional` (commands, shortcuts, recipes, agents), `sandboxed-ui` (panels), `trusted-worker` (`main` and events). Contributions beyond it fail validation. Example: `"data"` |
-| `id` | string | yes | 1.4.223 | Plugin id, kebab-case. The install identity is `<publisher>.<id>`. Example: `"gleam-syntax"` |
-| `publisher` | string | yes | 1.4.223 | Publisher slug, kebab-case. Usually your GitHub user or organization. Example: `"acme"` |
-| `name` | string | yes | 1.4.223 | Display name. Example: `"Gleam"` |
-| `version` | string | yes | 1.4.223 | Plugin version, semver. Example: `"1.2.0"` |
-| `description` | string | no | 1.4.223 | One or two sentences shown in the plugin list. |
-| `author` | object | no | 1.4.223 | Who maintains the plugin. |
-| `author.name` | string | yes | 1.4.223 | Author or organization name. Example: `"Acme"` |
-| `author.url` | string | no | 1.4.223 | Author homepage. Example: `"https://example.com"` |
-| `repository` | string | no | 1.4.223 | Source repository URL. Example: `"https://github.com/acme/orca-gleam-syntax"` |
+| `id` | string | yes | 1.4.160 | Plugin id, kebab-case. The install identity is `<publisher>.<id>`. The reserved names `constructor` and `prototype` are refused. Example: `"gleam-syntax"` |
+| `publisher` | string | yes | 1.4.160 | Publisher slug, kebab-case, usually your GitHub user or organization. The reserved names `constructor` and `prototype` are refused. Example: `"acme"` |
+| `name` | string | yes | 1.4.160 | Display name. Example: `"Gleam"` |
+| `version` | string | yes | 1.4.160 | Plugin version, semver. Example: `"1.2.0"` |
+| `description` | string | no | 1.4.160 | One or two sentences shown in the plugin list. |
+| `author` | object | no | 1.4.160 | Who maintains the plugin. |
+| `author.name` | string | yes | 1.4.160 | Author or organization name. Example: `"Acme"` |
+| `author.url` | string | no | 1.4.160 | Author homepage. Example: `"https://example.com"` |
+| `repository` | string | no | 1.4.160 | Source repository URL. Example: `"https://github.com/acme/orca-gleam-syntax"` |
 | `license` | string | no | 1.4.232 | SPDX license expression. Example: `"MIT"` |
 | `homepage` | string | no | 1.4.232 | Project homepage, https only. Example: `"https://example.com/gleam"` |
-| `icon` | string | no | 1.4.223 | Square image shown beside the plugin name. Example: `"assets/icon.png"` |
-| `engines` | object | yes | 1.4.223 | Host versions this plugin supports. Older hosts refuse to load it. |
-| `engines.orca` | string | yes | 1.4.223 | Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it when you use a field newer than the current floor. Example: `">=1.4.223"` |
-| `pluginApi` | `1` | yes | 1.4.223 | Major version of the plugin host API this plugin targets. |
-| `main` | string | no | 1.4.223 | Node entry run in an out-of-process plugin worker. Requires the `trusted-worker` execution profile. Example: `"dist/main.mjs"` |
-| `contributes` | object | no | 1.4.223 | What the plugin adds to Orca. Every point defaults to empty. |
-| `contributes.panels` | [PanelContribution](#panelcontribution)[] | no | 1.4.223 | Sidebar panels. At most 64. |
-| `contributes.commands` | [CommandContribution](#commandcontribution)[] | no | 1.4.223 | Command palette entries. At most 256. |
-| `contributes.events` | [EventContribution](#eventcontribution)[] | no | 1.4.223 | Events delivered to the plugin worker. At most 3. |
-| `contributes.languagePacks` | [LanguagePackContribution](#languagepackcontribution)[] | no | 1.4.223 | Interface translations. At most 16. |
-| `contributes.keybindings` | [KeybindingContribution](#keybindingcontribution)[] | no | 1.4.223 | Keyboard shortcuts for contributed commands. At most 256. |
-| `contributes.vmRecipes` | [VmRecipeContribution](#vmrecipecontribution)[] | no | 1.4.223 | Virtual machine environment recipes. At most 64. |
-| `contributes.agents` | [AgentProfileContribution](#agentprofilecontribution)[] | no | 1.4.223 | Coding agent profiles. At most 64. |
+| `icon` | string | no | 1.4.160 | Square image shown beside the plugin name. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"assets/icon.png"` |
+| `engines` | object | yes | 1.4.160 | Host versions this plugin supports. Older hosts refuse to load it. |
+| `engines.orca` | string | yes | 1.4.160 | Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it to the newest "Since" of any field you use; a format 2 manifest needs at least `>=1.4.232`, because older Orca cannot read format 2. Example: `">=1.4.232"` |
+| `pluginApi` | `1` | yes | 1.4.160 | Major version of the plugin host API this plugin targets. |
+| `main` | string | no | 1.4.160 | Node entry run in an out-of-process plugin worker. Requires the `trusted-worker` execution profile, and is required by it, by `contributes.events` and by any command without an `action`. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"dist/main.mjs"` |
+| `contributes` | object | no | 1.4.160 | What the plugin adds to Orca. Every point defaults to empty. |
+| `contributes.panels` | [PanelContribution](#panelcontribution)[] | no | 1.4.160 | Sidebar panels. At most 64. |
+| `contributes.commands` | [CommandContribution](#commandcontribution)[] | no | 1.4.160 | Command palette entries. At most 256. |
+| `contributes.events` | [EventContribution](#eventcontribution)[] | no | 1.4.160 | Events delivered to the plugin worker. At most 3. |
+| `contributes.languagePacks` | [LanguagePackContribution](#languagepackcontribution)[] | no | 1.4.160 | Interface translations. At most 16. |
+| `contributes.keybindings` | [KeybindingContribution](#keybindingcontribution)[] | no | 1.4.160 | Keyboard shortcuts for contributed commands. At most 256. |
+| `contributes.vmRecipes` | [VmRecipeContribution](#vmrecipecontribution)[] | no | 1.4.160 | Virtual machine environment recipes. At most 64. |
+| `contributes.agents` | [AgentProfileContribution](#agentprofilecontribution)[] | no | 1.4.160 | Coding agent profiles. At most 64. |
 | `contributes.themes` | [ThemeContribution](#themecontribution)[] | no | 1.4.232 | App color themes. At most 64. |
 | `contributes.terminalThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.232 | Terminal ANSI palettes. At most 64. |
 | `contributes.iconThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.232 | File icon themes. At most 32. |
 | `contributes.syntaxes` | [SyntaxContribution](#syntaxcontribution)[] | no | 1.4.232 | Syntax highlighting for editor languages. At most 16. |
-| `capabilities` | [Capability](#capability)[] | no | 1.4.223 | Host APIs the plugin asks the user to grant. At most 32. |
+| `capabilities` | [Capability](#capability)[] | no | 1.4.160 | Host APIs the plugin asks the user to grant. At most 32. |
 
 ## PanelContribution
 
@@ -50,10 +50,10 @@ A sidebar panel. Requires the `sandboxed-ui` execution profile or higher.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | 1.4.223 | Panel id, unique within the plugin. Example: `"dashboard"` |
-| `title` | string | yes | 1.4.223 | Title shown on the panel tab and its tooltip. Example: `"Dashboard"` |
-| `icon` | string | no | 1.4.223 | Lucide icon name shown in the right-sidebar activity bar. Example: `"layout-dashboard"` |
-| `entry` | string | yes | 1.4.223 | HTML file, relative to the plugin root, rendered inside a sandboxed panel frame. Example: `"dist/panel.html"` |
+| `id` | string | yes | 1.4.160 | Panel id, unique among this plugin's panels. The reserved names `constructor` and `prototype` are refused. Example: `"dashboard"` |
+| `title` | string | yes | 1.4.160 | Title shown on the panel tab and its tooltip. Example: `"Dashboard"` |
+| `icon` | string | no | 1.4.160 | Lucide icon name shown in the right-sidebar activity bar. Example: `"layout-dashboard"` |
+| `entry` | string | yes | 1.4.160 | HTML file, relative to the plugin root, rendered inside a sandboxed panel frame. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"dist/panel.html"` |
 
 ## CommandContribution
 
@@ -61,10 +61,10 @@ A command palette entry. Requires the `instructional` execution profile or highe
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | 1.4.223 | Command id, unique within the plugin. Dotted namespaces are allowed. Example: `"jupyter.restartKernel"` |
-| `title` | string | yes | 1.4.223 | Title shown in the command palette. Example: `"Restart kernel"` |
-| `context` | `"global"` \| `"worktree"` | no | 1.4.223 | `worktree` hides the command when no worktree is active. Defaults to `global`. |
-| `action` | `"worktree.history.back"` \| `"worktree.history.forward"` \| `"sidebar.left.toggle"` \| `"sidebar.sleepingWorkspaces.toggle"` \| `"floatingWorkspace.maximize"` \| `"tab.rename"` \| `"workspace.rename"` \| `"workspace.openBoard"` \| `"view.tasks"` \| `"sidebar.right.toggle"` \| `"sidebar.explorer.toggle"` \| `"sidebar.search.toggle"` \| `"sidebar.sourceControl.toggle"` \| `"sidebar.checks.toggle"` \| `"sidebar.ports.toggle"` | no | 1.4.223 | Built-in Orca action this command runs. A command with an action is declarative and never starts the plugin worker; one without needs `main`. Example: `"view.tasks"` |
+| `id` | string | yes | 1.4.160 | Command id, unique among this plugin's commands. Dotted namespaces are allowed. Example: `"jupyter.restartKernel"` |
+| `title` | string | yes | 1.4.160 | Title shown in the command palette. Example: `"Restart kernel"` |
+| `context` | `"global"` \| `"worktree"` | no | 1.4.160 | `worktree` hides the command when no worktree is active. Defaults to `global`. |
+| `action` | `"worktree.history.back"` \| `"worktree.history.forward"` \| `"sidebar.left.toggle"` \| `"sidebar.sleepingWorkspaces.toggle"` \| `"floatingWorkspace.maximize"` \| `"tab.rename"` \| `"workspace.rename"` \| `"workspace.openBoard"` \| `"view.tasks"` \| `"sidebar.right.toggle"` \| `"sidebar.explorer.toggle"` \| `"sidebar.search.toggle"` \| `"sidebar.sourceControl.toggle"` \| `"sidebar.checks.toggle"` \| `"sidebar.ports.toggle"` | no | 1.4.160 | Built-in Orca action this command runs. A command with an action is declarative and never starts the plugin worker; one without needs `main`. Example: `"view.tasks"` |
 
 ## EventContribution
 
@@ -72,7 +72,7 @@ An event subscription. Requires `main`, the `trusted-worker` execution profile a
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `on` | `"worktree.created"` \| `"worktree.removed"` \| `"agent.status.changed"` | yes | 1.4.223 | Event delivered to the plugin worker. |
+| `on` | `"worktree.created"` \| `"worktree.removed"` \| `"agent.status.changed"` | yes | 1.4.160 | Event delivered to the plugin worker. |
 
 ## LanguagePackContribution
 
@@ -80,8 +80,8 @@ An interface translation.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `locale` | string | yes | 1.4.223 | BCP 47 locale the pack translates Orca into. Example: `"pt-BR"` |
-| `path` | string | yes | 1.4.223 | JSON file of translated interface strings. Example: `"locales/pt-BR.json"` |
+| `locale` | string | yes | 1.4.160 | BCP 47 locale the pack translates Orca into. Each locale appears once, ignoring case. Example: `"pt-BR"` |
+| `path` | string | yes | 1.4.160 | JSON file of translated interface strings. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"locales/pt-BR.json"` |
 
 ## KeybindingContribution
 
@@ -89,9 +89,9 @@ A keyboard shortcut for a command.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `command` | string | yes | 1.4.223 | Id of a command this plugin contributes in `contributes.commands`. Example: `"jupyter.restartKernel"` |
-| `key` | string | yes | 1.4.223 | Key chord. `Mod` is Cmd on macOS and Ctrl elsewhere. Example: `"Mod+Shift+K"` |
-| `when` | `"global"` \| `"worktree"` | no | 1.4.223 | Where the shortcut is active; must match its command's `context`. |
+| `command` | string | yes | 1.4.160 | Id of a command this plugin contributes in `contributes.commands`. Example: `"jupyter.restartKernel"` |
+| `key` | string | yes | 1.4.160 | Key chord Orca recognizes, such as `Mod+Shift+K`. `Mod` is Cmd on macOS and Ctrl elsewhere. Each chord may be bound once on every platform. Example: `"Mod+Shift+K"` |
+| `when` | `"global"` \| `"worktree"` | no | 1.4.160 | Where the shortcut is active; must match its command's `context`. |
 
 ## VmRecipeContribution
 
@@ -99,7 +99,7 @@ A virtual machine environment recipe.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `path` | string | yes | 1.4.223 | JSON environment recipe file. Example: `"recipes/ubuntu.json"` |
+| `path` | string | yes | 1.4.160 | JSON environment recipe file, listed once. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"recipes/ubuntu.json"` |
 
 ## AgentProfileContribution
 
@@ -107,7 +107,7 @@ A coding agent profile.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `path` | string | yes | 1.4.223 | JSON agent profile file. Example: `"agents/reviewer.json"` |
+| `path` | string | yes | 1.4.160 | JSON agent profile file, listed once. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"agents/reviewer.json"` |
 
 ## ThemeContribution
 
@@ -115,9 +115,9 @@ A labelled theme file.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | 1.4.232 | Theme id, unique within its family in this plugin. Example: `"dusk"` |
+| `id` | string | yes | 1.4.232 | Theme id, unique within its family in this plugin. The reserved names `constructor` and `prototype` are refused. Example: `"dusk"` |
 | `label` | string | yes | 1.4.232 | Name shown in the theme picker. Example: `"Dusk"` |
-| `path` | string | yes | 1.4.232 | JSON theme file, at most 16 KiB. Example: `"themes/dusk.json"` |
+| `path` | string | yes | 1.4.232 | JSON theme file, at most 16 KiB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"themes/dusk.json"` |
 
 ## SyntaxContribution
 
@@ -125,13 +125,13 @@ Syntax highlighting for one language.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | 1.4.232 | Language id, unique within the plugin. Example: `"gleam"` |
+| `id` | string | yes | 1.4.232 | Language id, unique among this plugin's syntaxes. The reserved names `constructor` and `prototype` are refused. Example: `"gleam"` |
 | `label` | string | yes | 1.4.232 | Language name shown in the editor. Example: `"Gleam"` |
-| `scopeName` | string | yes | 1.4.232 | The grammar's root TextMate scope. Example: `"source.gleam"` |
-| `path` | string | yes | 1.4.232 | TextMate grammar JSON file. Example: `"syntaxes/gleam.tmLanguage.json"` |
-| `configuration` | string | no | 1.4.232 | Language configuration JSON file: comments, brackets and auto-closing pairs. Example: `"syntaxes/language-configuration.json"` |
+| `scopeName` | string | yes | 1.4.232 | The grammar's root TextMate scope, unique among this plugin's syntaxes. Example: `"source.gleam"` |
+| `path` | string | yes | 1.4.232 | TextMate grammar JSON file. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"syntaxes/gleam.tmLanguage.json"` |
+| `configuration` | string | no | 1.4.232 | Language configuration JSON file: comments, brackets and auto-closing pairs. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"syntaxes/language-configuration.json"` |
 | `extensions` | string[] | no | 1.4.232 | File extensions this language opens, with the dot. Example: `[".gleam"]` |
-| `filenames` | string[] | no | 1.4.232 | Exact file names this language opens. Example: `["gleam.toml"]` |
+| `filenames` | string[] | no | 1.4.232 | Exact file names this language opens. Names must be portable: no path separators, `.`, `..` or characters Windows forbids. Example: `["gleam.toml"]` |
 
 ## Capability
 
@@ -139,11 +139,11 @@ A host API the plugin may call once the user consents.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `kind` | `"workspace:read"` \| `"terminal:send"` \| `"notifications:show"` \| `"storage"` \| `"secrets"` \| `"events:subscribe"` \| `"settings:own"` | yes | 1.4.223 | Capability granted on user consent. |
+| `kind` | `"workspace:read"` \| `"terminal:send"` \| `"notifications:show"` \| `"storage"` \| `"secrets"` \| `"events:subscribe"` \| `"settings:own"` | yes | 1.4.160 | Capability granted on user consent. |
 
 ## Legacy format 1
 
-Orca still loads `"manifestVersion": 1` manifests (read since 1.4.223), but new plugins should use format 2. Format 1 differs in three ways:
+Orca still loads `"manifestVersion": 1` manifests (read since 1.4.160), but new plugins should use format 2. Format 1 differs in three ways:
 
 - It has no `execution` field. Orca derives the least profile that can run what the manifest declares.
 - Unknown top-level keys are ignored instead of rejected.

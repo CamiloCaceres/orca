@@ -95,7 +95,7 @@ export function parsePluginMarketplaceIndex(filename: string, bytes: Buffer): Pl
       ? pluginMarketplaceV2Schema.safeParse(raw)
       : pluginMarketplaceSchema.safeParse(raw)
   if (!parsed.success) {
-    throw new Error(`invalid ${filename}: ${formatPluginSchemaIssues(parsed.error.issues)}`)
+    throw new Error(`invalid ${filename}: ${formatPluginSchemaIssues(parsed.error.issues, raw)}`)
   }
   return parsed.data
 }

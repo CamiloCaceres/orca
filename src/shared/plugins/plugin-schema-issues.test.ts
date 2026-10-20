@@ -82,8 +82,27 @@ describe('plugin schema issues', () => {
     })
     const lines = pluginSchemaIssueLines(
       [issue(0), issue(0), ...Array.from({ length: 10 }, (_, index) => issue(index + 1))],
+      {},
       3
     )
     expect(lines).toEqual(['items[0]: bad', 'items[1]: bad', 'items[2]: bad', '(8 more)'])
+  })
+
+  it('bounds unknown-key lists and line length', () => {
+    const keys = Object.fromEntries(
+      Array.from({ length: 40 }, (_, index) => [`extra${index}${'x'.repeat(60)}`, true])
+    )
+    const error = manifestError(v2Manifest(keys))
+    expect(error).toMatch(/and 35 more|…$/)
+    expect(error.length).toBeLessThanOrEqual(200)
+    const short = manifestError(v2Manifest({ a: 1, b: 2, c: 3, d: 4, e: 5, f: 6, g: 7 }))
+    expect(short).toBe('(root): unknown keys "a", "b", "c", "d", "e" and 2 more')
+  })
+
+  it('tells a missing field from a mistyped one by the input, not the message wording', () => {
+    expect(manifestError(v2Manifest({ name: undefined }))).toBe('name: is required')
+    expect(manifestError(v2Manifest({ name: 5 }))).toBe('name: must be a string')
+    expect(manifestError(v2Manifest({ engines: {} }))).toBe('engines.orca: is required')
+    expect(manifestError(v2Manifest({ engines: 'soon' }))).toBe('engines: must be an object')
   })
 })

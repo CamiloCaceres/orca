@@ -4,12 +4,16 @@ import { pluginMarketplaceV2DocumentSchema } from './plugin-marketplace'
 import { renderPluginSchemaReference } from './plugin-schema-reference-doc'
 import { PLUGIN_SCHEMA_SINCE_V1 } from './plugin-schema-field-docs'
 
-// Why a versioned directory: a later breaking format publishes beside v2, so a URL an author
+// Why the format in the file name: a later breaking format publishes beside v2, so a URL an author
 // pinned never changes meaning under them.
-export const PLUGIN_SCHEMA_DIRECTORY = 'schemas/plugins/v2'
-export const PLUGIN_SCHEMA_BASE_URL = `https://raw.githubusercontent.com/stablyai/orca/main/${PLUGIN_SCHEMA_DIRECTORY}/`
-export const PLUGIN_MANIFEST_SCHEMA_FILE = 'orca-plugin.schema.json'
-export const PLUGIN_CATALOG_SCHEMA_FILE = 'orca-marketplace.schema.json'
+export const PLUGIN_SCHEMA_DIRECTORY = 'schemas/plugins'
+export const PLUGIN_MANIFEST_SCHEMA_FILE = 'orca-plugin.v2.schema.json'
+export const PLUGIN_CATALOG_SCHEMA_FILE = 'orca-marketplace.v2.schema.json'
+/** Git ref the published `$id` points at. Why `main` for now: no release ships v2 yet; switch to
+ *  the release tag that does, so editors only offer fields a shipped Orca reads. A test enforces
+ *  the switch once that tag exists. */
+export const PLUGIN_SCHEMA_GIT_REF = 'main'
+export const PLUGIN_SCHEMA_BASE_URL = `https://raw.githubusercontent.com/stablyai/orca/${PLUGIN_SCHEMA_GIT_REF}/${PLUGIN_SCHEMA_DIRECTORY}/`
 /** The starter plugin authors copy; it carries the schema so completion works offline. */
 const PLUGIN_TEMPLATE_DIRECTORY = 'examples/plugins/orca-gleam-syntax'
 

@@ -4,7 +4,7 @@
 
 The orca-marketplace.v2.json file that lists installable plugin releases.
 
-Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/v2/orca-marketplace.schema.json"` to `orca-marketplace.v2.json` for completion and inline errors in your editor.
+Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/plugins/orca-marketplace.v2.schema.json"` to `orca-marketplace.v2.json` for completion and inline errors in your editor.
 `Since` is the first Orca release that reads the field. Older releases ignore fields they do not know.
 
 ## Fields
@@ -14,7 +14,7 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `$schema` | string | no | 1.4.232 | JSON Schema URL for editor completion. Ignored by Orca. |
 | `name` | string | yes | 1.4.232 | Marketplace display name. Example: `"Orca Plugins"` |
 | `owner` | string | yes | 1.4.232 | Account that publishes the marketplace. Example: `"stablyai"` |
-| `plugins` | [CatalogEntry](#catalogentry)[] | yes | 1.4.232 | Listed plugins, at most 2048. An entry this Orca cannot parse is skipped, not fatal. |
+| `plugins` | [CatalogEntry](#catalogentry)[] | yes | 1.4.232 | Listed plugins, at most 2048. Each `id` may appear once, or the whole catalog is refused. An entry this Orca cannot parse is skipped, not fatal. |
 
 ## CatalogEntry
 
@@ -22,10 +22,10 @@ One installable plugin.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | 1.4.232 | `<publisher>.<id>`, matching the plugin's manifest. Example: `"acme.gleam-syntax"` |
+| `id` | string | yes | 1.4.232 | `<publisher>.<id>`, matching the plugin's manifest. Each half is at most 64 characters, and the reserved names `constructor` and `prototype` are refused. Example: `"acme.gleam-syntax"` |
 | `source` | [CatalogGitSource](#cataloggitsource) | yes |  | Where the plugin source lives. |
 | `description` | string | no | 1.4.232 | Listing text shown in the marketplace. |
-| `categories` | string[] | no | 1.4.232 | Lowercase slugs used to filter the marketplace. Example: `["themes"]` |
+| `categories` | string[] | no | 1.4.232 | Lowercase slugs used to filter the marketplace, each listed once. Example: `["themes"]` |
 | `release` | [CatalogRelease](#catalogrelease) | yes |  | The exact release the catalog vouches for. Orca refuses bytes that differ. |
 
 ## CatalogGitSource
@@ -48,8 +48,8 @@ The exact release the catalog vouches for. Orca refuses bytes that differ.
 | `commit` | string | yes | 1.4.232 | Full SHA-1 commit Orca checks out for this release. |
 | `contentHash` | string | yes | 1.4.232 | SHA-256 of the plugin's installed files, as Orca computes it at install. |
 | `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | 1.4.232 | The manifest's `execution` profile. Example: `"data"` |
-| `minimumOrca` | string | yes | 1.4.232 | The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it. Example: `"1.4.223"` |
-| `types` | (`"interface-language"` \| `"app-theme"` \| `"terminal-theme"` \| `"icon-theme"` \| `"syntax"` \| `"instructions"` \| `"panel"` \| `"worker"`)[] | yes | 1.4.232 | Every kind of contribution the release carries, matching its manifest exactly. Example: `["syntax"]` |
+| `minimumOrca` | string | yes | 1.4.232 | The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it. Example: `"1.4.232"` |
+| `types` | (`"interface-language"` \| `"app-theme"` \| `"terminal-theme"` \| `"icon-theme"` \| `"syntax"` \| `"instructions"` \| `"panel"` \| `"worker"`)[] | yes | 1.4.232 | Every kind of contribution the release carries, matching its manifest exactly. `instructions` needs the `instructional` profile or higher, `panel` needs `sandboxed-ui`, and `worker` needs `trusted-worker`. Example: `["syntax"]` |
 | `name` | string | no | 1.4.232 | The manifest's `name`, so Orca can suggest the plugin before downloading it. Example: `"Gleam"` |
 | `license` | string | no | 1.4.232 | SPDX license expression. Example: `"MIT"` |
 | `repository` | string | no | 1.4.232 | Source repository page, https only. Example: `"https://github.com/acme/orca-gleam-syntax"` |

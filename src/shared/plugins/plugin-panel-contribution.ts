@@ -1,13 +1,21 @@
 import { z } from 'zod'
 import { pluginIdSchema, pluginRelativePathSchema } from './plugin-manifest-fields'
-import { pluginFieldDoc, PLUGIN_SCHEMA_SINCE_V1 } from './plugin-schema-field-docs'
+import {
+  pluginPathFieldDoc,
+  pluginFieldDoc,
+  PLUGIN_SCHEMA_SINCE_V1
+} from './plugin-schema-field-docs'
 
 export const PLUGIN_PANEL_LIMIT = 64
 
 export const pluginPanelContributionSchema = z
   .object({
     id: pluginIdSchema.meta(
-      pluginFieldDoc('Panel id, unique within the plugin.', PLUGIN_SCHEMA_SINCE_V1, ['dashboard'])
+      pluginFieldDoc(
+        "Panel id, unique among this plugin's panels. The reserved names `constructor` and `prototype` are refused.",
+        PLUGIN_SCHEMA_SINCE_V1,
+        ['dashboard']
+      )
     ),
     title: z
       .string()
@@ -31,7 +39,7 @@ export const pluginPanelContributionSchema = z
         )
       ),
     entry: pluginRelativePathSchema.meta(
-      pluginFieldDoc(
+      pluginPathFieldDoc(
         'HTML file, relative to the plugin root, rendered inside a sandboxed panel frame.',
         PLUGIN_SCHEMA_SINCE_V1,
         ['dist/panel.html']

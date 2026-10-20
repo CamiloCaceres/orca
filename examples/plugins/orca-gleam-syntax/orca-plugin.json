@@ -1,5 +1,5 @@
 {
-  "$schema": "./orca-plugin.schema.json",
+  "$schema": "./orca-plugin.v2.schema.json",
   "manifestVersion": 2,
   "execution": "data",
   "id": "orca-gleam-syntax",

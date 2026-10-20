@@ -9,7 +9,7 @@ import {
   type PluginExecutionProfile
 } from './plugin-execution-profile'
 import { pluginCatalogReleaseDetailFields } from './plugin-detail-fields'
-import { PLUGIN_FILE_TYPE_RE, pluginFileTypeSchema } from './plugin-file-type'
+import { pluginFileTypeSchema } from './plugin-file-type'
 import type { PluginManifest } from './plugin-manifest'
 import { pluginFieldDoc, PLUGIN_MANIFEST_V2_SINCE } from './plugin-schema-field-docs'
 
@@ -48,11 +48,11 @@ export const pluginCatalogReleaseSchema = z
     // Why SHA-1 only: plugin materialization rejects SHA-256 repositories.
     commit: z
       .string()
-      .regex(/^[0-9a-f]{40}$/)
+      .regex(/^[0-9a-f]{40}$/, 'must be a full lowercase SHA-1 commit')
       .meta(pluginFieldDoc('Full SHA-1 commit Orca checks out for this release.', NEXT)),
     contentHash: z
       .string()
-      .regex(/^[0-9a-f]{64}$/)
+      .regex(/^[0-9a-f]{64}$/, 'must be a lowercase SHA-256 hex digest')
       .meta(
         pluginFieldDoc(
           "SHA-256 of the plugin's installed files, as Orca computes it at install.",
@@ -64,12 +64,12 @@ export const pluginCatalogReleaseSchema = z
     ),
     minimumOrca: z
       .string()
-      .regex(/^\d+\.\d+\.\d+$/)
+      .regex(/^\d+\.\d+\.\d+$/, 'must be an x.y.z version')
       .meta(
         pluginFieldDoc(
           "The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it.",
           NEXT,
-          ['1.4.223']
+          [NEXT]
         )
       ),
     types: z
@@ -77,13 +77,14 @@ export const pluginCatalogReleaseSchema = z
       .min(1)
       .max(PLUGIN_CATALOG_TYPES.length)
       .refine((types) => new Set(types).size === types.length, 'duplicate contribution type')
-      .meta(
-        pluginFieldDoc(
-          'Every kind of contribution the release carries, matching its manifest exactly.',
+      .meta({
+        ...pluginFieldDoc(
+          'Every kind of contribution the release carries, matching its manifest exactly. `instructions` needs the `instructional` profile or higher, `panel` needs `sandboxed-ui`, and `worker` needs `trusted-worker`.',
           NEXT,
           [['syntax']]
-        )
-      ),
+        ),
+        uniqueItems: true
+      }),
     name: z
       .string()
       .min(1)
@@ -99,21 +100,18 @@ export const pluginCatalogReleaseSchema = z
     ...pluginCatalogReleaseDetailFields,
     /** Invalid entries are dropped, not fatal, so a newer catalog never hides the plugin. */
     fileTypes: z
-      .array(z.unknown())
+      .array(pluginFileTypeSchema.optional().catch(undefined))
       .transform((entries) =>
-        [...new Set(entries)]
-          .filter((entry): entry is string => pluginFileTypeSchema.safeParse(entry).success)
-          .slice(0, 32)
+        [...new Set(entries)].filter((entry): entry is string => entry !== undefined).slice(0, 32)
       )
       .optional()
-      .meta({
-        ...pluginFieldDoc(
+      .meta(
+        pluginFieldDoc(
           'Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer.',
           NEXT,
           [['gleam']]
-        ),
-        items: { type: 'string', pattern: PLUGIN_FILE_TYPE_RE.source }
-      })
+        )
+      )
   })
   .superRefine((release, ctx) => {
     for (const [index, type] of release.types.entries()) {

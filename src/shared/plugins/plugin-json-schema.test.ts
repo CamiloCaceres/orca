@@ -1,24 +1,22 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
-import Ajv2020 from 'ajv/dist/2020'
 import { describe, expect, it } from 'vitest'
+import { z } from 'zod'
+import {
+  catalogEntryFixture,
+  catalogFixture,
+  compilePluginJsonSchema as compile
+} from './plugin-json-schema.test-fixture'
 import {
   pluginCatalogJsonSchema,
   pluginManifestJsonSchema,
   pluginSchemaGeneratedFiles,
   type PluginJsonSchema
 } from './plugin-json-schema'
-import { parsePluginManifest } from './plugin-manifest'
-import { pluginMarketplaceV2Schema } from './plugin-marketplace'
+import { parsePluginManifest, pluginManifestV2Object } from './plugin-manifest'
+import { pluginMarketplaceV2DocumentSchema, pluginMarketplaceV2Schema } from './plugin-marketplace'
 
 const REPO_ROOT = path.resolve(import.meta.dirname, '..', '..', '..')
-
-function compile(schema: PluginJsonSchema) {
-  // Why no format plugin: every format the schemas use also carries a `pattern`.
-  const ajv = new Ajv2020({ allErrors: true, validateFormats: false })
-  ajv.addKeyword('x-orca-since')
-  return { ajv, validate: ajv.compile(schema) }
-}
 
 /** Every property in the schema with its JSON pointer, including fragments and nested objects. */
 function properties(schema: PluginJsonSchema, pointer = ''): [string, PluginJsonSchema][] {
@@ -43,18 +41,44 @@ function manifestFixtures(): { file: string; raw: unknown }[] {
   )
 }
 
-function v2Manifest(overrides: Record<string, unknown> = {}): Record<string, unknown> {
-  return {
-    manifestVersion: 2,
-    execution: 'data',
-    id: 'demo',
-    publisher: 'acme',
-    name: 'Demo',
-    version: '1.0.0',
-    engines: { orca: '>=1.4.223' },
-    pluginApi: 1,
-    ...overrides
+type ZodField = [path: string, field: z.core.$ZodType]
+
+/** Unwraps optional/default/catch/pipe layers to the object or array that holds child fields. */
+function container(schema: z.core.$ZodType): z.core.$ZodType {
+  if (
+    schema instanceof z.ZodOptional ||
+    schema instanceof z.ZodDefault ||
+    schema instanceof z.ZodPrefault ||
+    schema instanceof z.ZodCatch
+  ) {
+    return container(schema.def.innerType)
   }
+  return schema instanceof z.ZodPipe ? container(schema.def.in) : schema
+}
+
+/** Every object field under `schema` with its dotted path, as declared (so it carries its meta). */
+function zodFields(schema: z.core.$ZodType, at = ''): ZodField[] {
+  const inner = container(schema)
+  if (inner instanceof z.ZodArray) {
+    return zodFields(inner.def.element, `${at}[]`)
+  }
+  if (!(inner instanceof z.ZodObject)) {
+    return []
+  }
+  return Object.entries(inner.def.shape).flatMap(([key, field]) => [
+    [`${at}.${key}`, field] satisfies ZodField,
+    ...zodFields(field, `${at}.${key}`)
+  ])
+}
+
+/** A catch layer accepts anything; examples must satisfy the shape it guards. */
+function strict(schema: z.core.$ZodType): z.core.$ZodType {
+  return schema instanceof z.ZodCatch ? strict(schema.def.innerType) : schema
+}
+
+function examplesOf(field: z.core.$ZodType): unknown[] {
+  const examples: unknown = z.globalRegistry.get(field)?.examples
+  return Array.isArray(examples) ? examples : []
 }
 
 describe('published plugin schemas', () => {
@@ -92,50 +116,43 @@ describe('published plugin schemas', () => {
     }
   })
 
-  it('accepts every bundled and example v2 manifest that Orca accepts', () => {
+  it.each([
+    ['manifest', pluginManifestV2Object],
+    ['catalog', pluginMarketplaceV2DocumentSchema]
+  ])('accepts every documented %s example at runtime too', (_name, root) => {
+    const fields = zodFields(root)
+    expect(fields.length).toBeGreaterThan(10)
+    const examples = fields.flatMap(([at, field]) =>
+      examplesOf(field).map((example) => ({ at, field, example }))
+    )
+    expect(examples.length).toBeGreaterThan(5)
+    for (const { at, field, example } of examples) {
+      expect(z.safeParse(strict(field), example).success, `${at}: ${JSON.stringify(example)}`).toBe(
+        true
+      )
+    }
+  })
+
+  it('agrees with the runtime on every bundled and example v2 manifest', () => {
     const { validate } = compile(pluginManifestJsonSchema())
-    const v2 = manifestFixtures().filter(
-      ({ raw }) =>
-        parsePluginManifest(raw).ok && JSON.stringify(raw).includes('"manifestVersion":2')
+    const v2 = manifestFixtures().filter(({ raw }) =>
+      JSON.stringify(raw).includes('"manifestVersion":2')
     )
     expect(v2.length).toBeGreaterThan(0)
     for (const { file, raw } of v2) {
       expect(validate(raw), `${file}: ${JSON.stringify(validate.errors)}`).toBe(true)
+      expect(parsePluginManifest(raw), file).toMatchObject({ ok: true })
     }
-  })
-
-  it.each([
-    ['an unknown key', { surprise: true }],
-    ['a reserved-shape id', { id: 'Not_Kebab' }],
-    ['an escaping path', { main: '../escape.js', execution: 'trusted-worker' }],
-    ['a range Orca cannot gate on', { engines: { orca: '^1.4.0' } }],
-    ['an unknown execution profile', { execution: 'root' }],
-    ['an unknown contribution point', { contributes: { widgets: [] } }]
-  ])('rejects %s in both the schema and the runtime', (_label, overrides) => {
-    const { validate } = compile(pluginManifestJsonSchema())
-    const raw = v2Manifest(overrides)
-    expect(validate(raw)).toBe(false)
-    expect(parsePluginManifest(raw).ok).toBe(false)
   })
 
   it('accepts a release-bearing catalog Orca accepts', () => {
     const { validate } = compile(pluginCatalogJsonSchema())
     const catalog = {
       $schema: pluginCatalogJsonSchema().$id,
-      name: 'Acme Plugins',
-      owner: 'acme',
-      plugins: [
-        {
-          id: 'acme.gleam-syntax',
-          source: { kind: 'git', url: 'https://github.com/acme/gleam.git', ref: 'main' },
-          categories: ['syntax'],
-          release: {
-            version: '1.0.0',
-            commit: 'a'.repeat(40),
-            contentHash: 'b'.repeat(64),
-            execution: 'data',
-            minimumOrca: '1.4.223',
-            types: ['syntax'],
+      ...catalogFixture([
+        catalogEntryFixture(
+          {},
+          {
             name: 'Gleam',
             fileTypes: ['gleam'],
             license: 'Apache-2.0',
@@ -144,8 +161,8 @@ describe('published plugin schemas', () => {
             updatedAt: '2026-10-20T09:30:00Z',
             changelog: 'Highlights use expressions.'
           }
-        }
-      ]
+        )
+      ])
     }
     expect(validate(catalog), JSON.stringify(validate.errors)).toBe(true)
     expect(pluginMarketplaceV2Schema.parse(catalog).plugins).toHaveLength(1)

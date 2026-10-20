@@ -31,16 +31,36 @@ function units(origin: string, count: number | bigint): string {
   return String(count)
 }
 
-// Why rewrite: zod's defaults ("Invalid input: expected string, received undefined") read as
-// parser internals; authors need what to change. Messages the schemas set themselves pass through.
-function issueMessage(issue: z.core.$ZodIssue): string {
+/** Unknown keys named per issue; a near-limit manifest must not produce a near-limit error. */
+const UNKNOWN_KEY_LIMIT = 5
+const LINE_MAX_LENGTH = 200
+
+/** True when the issue's last path key is absent (or undefined) in the parsed input. */
+function isMissing(input: unknown, path: readonly PropertyKey[]): boolean {
+  let value: unknown = input
+  for (const segment of path) {
+    if (typeof value !== 'object' || value === null) {
+      return false
+    }
+    value = Reflect.get(value, segment)
+  }
+  return path.length > 0 && value === undefined
+}
+
+function unknownKeys(keys: readonly string[]): string {
+  const shown = quoted(keys.slice(0, UNKNOWN_KEY_LIMIT))
+  const rest = keys.length - UNKNOWN_KEY_LIMIT
+  return `unknown ${keys.length === 1 ? 'key' : 'keys'} ${shown}${rest > 0 ? ` and ${rest} more` : ''}`
+}
+
+// Why rewrite: zod's defaults read as parser internals and are locale-dependent; every message
+// here is built from structured issue fields, and only messages our schemas set pass through.
+function issueMessage(issue: z.core.$ZodIssue, input: unknown): string {
   switch (issue.code) {
     case 'invalid_type':
-      return issue.message.endsWith('received undefined')
-        ? 'is required'
-        : `must be ${article(issue.expected)}`
+      return isMissing(input, issue.path) ? 'is required' : `must be ${article(issue.expected)}`
     case 'unrecognized_keys':
-      return `unknown ${issue.keys.length === 1 ? 'key' : 'keys'} ${quoted(issue.keys)}`
+      return unknownKeys(issue.keys)
     case 'invalid_value':
       return issue.values.length === 1
         ? `must be ${quoted(issue.values)}`
@@ -51,12 +71,11 @@ function issueMessage(issue: z.core.$ZodIssue): string {
       return issue.origin === 'string' && issue.minimum === 1
         ? 'must not be empty'
         : `must be at least ${units(issue.origin, issue.minimum)}`
-    case 'invalid_format':
-      return issue.message.startsWith('Invalid ') ? 'has an invalid format' : issue.message
     case 'invalid_union':
       return 'options' in issue && Array.isArray(issue.options)
         ? `must be one of ${quoted(issue.options)}`
         : 'does not match any allowed shape'
+    case 'invalid_format':
     case 'custom':
     case 'invalid_element':
     case 'invalid_key':
@@ -65,14 +84,22 @@ function issueMessage(issue: z.core.$ZodIssue): string {
   }
 }
 
-/** Distinct `path: message` lines, at most `limit`, plus how many were left out. */
+function capped(line: string): string {
+  return line.length > LINE_MAX_LENGTH ? `${line.slice(0, LINE_MAX_LENGTH - 1)}…` : line
+}
+
+/** Distinct `path: message` lines, at most `limit`, plus how many were left out. `input` is the
+ *  parsed value, used to tell a missing field from a mistyped one. */
 export function pluginSchemaIssueLines(
   issues: readonly z.core.$ZodIssue[],
+  input: unknown,
   limit = PLUGIN_SCHEMA_ISSUE_LIMIT
 ): string[] {
   const lines = [
     ...new Set(
-      issues.map((issue) => `${formatPluginSchemaPath(issue.path)}: ${issueMessage(issue)}`)
+      issues.map((issue) =>
+        capped(`${formatPluginSchemaPath(issue.path)}: ${issueMessage(issue, input)}`)
+      )
     )
   ]
   return lines.length > limit ? [...lines.slice(0, limit), `(${lines.length - limit} more)`] : lines
@@ -80,7 +107,8 @@ export function pluginSchemaIssueLines(
 
 export function formatPluginSchemaIssues(
   issues: readonly z.core.$ZodIssue[],
+  input: unknown,
   limit = PLUGIN_SCHEMA_ISSUE_LIMIT
 ): string {
-  return pluginSchemaIssueLines(issues, limit).join('; ')
+  return pluginSchemaIssueLines(issues, input, limit).join('; ')
 }
