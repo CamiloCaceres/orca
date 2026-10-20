@@ -161,7 +161,7 @@ export function PluginAccessSection({
         <DetailRow
           icon={<ShieldCheck />}
           title={translate(
-            'auto.components.settings.PluginDetailSections.noAccess',
+            'auto.components.settings.PluginDetailSections.noAccessReach',
             'Can’t reach anything outside its own files'
           )}
           detail={

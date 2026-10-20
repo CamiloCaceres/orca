@@ -13355,7 +13355,8 @@
           "copyLogs": "Copy",
           "accessFailed": "Couldn’t read what it can access",
           "accessFailedDetail": "Orca couldn’t fetch or check this plugin’s files.",
-          "retry": "Retry"
+          "retry": "Retry",
+          "noAccessReach": "Can’t reach anything outside its own files"
         },
         "PluginManagerRows": {
           "crashedCount": "Crashed {{value0}} times in a row. View its logs on the plugin page.",
