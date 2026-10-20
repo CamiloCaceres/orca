@@ -28,7 +28,7 @@
       "description": "Elige cómo se ven y se comportan los chats.",
       "names": {
         "title": "Nombres de chats",
-        "description": "Usa un agente para nombrar los chats nuevos a partir de su primer mensaje. Si no se genera un nombre, se mantienen como Claude Chat o Codex Chat.",
+        "description": "Usa un agente para nombrar los chats nuevos a partir de su primer mensaje. Hasta que se genere un nombre, el chat muestra su primer mensaje.",
         "enable": "Nombrar chats automáticamente",
         "recipe": "Nombre del chat",
         "recipeDescription": "Genera un nombre breve a partir del primer mensaje de un chat nuevo.",
@@ -5420,7 +5420,8 @@
         },
         "PendingWorktreeRow": {
           "af21e953d1": "Cancelar creación del worktree",
-          "188f6922a0": "Cancelar"
+          "188f6922a0": "Cancelar",
+          "creatingWorkspace": "Creando workspace…"
         },
         "ProjectGroupDeleteDialog": {
           "ca65b78f78": "Cancelar",

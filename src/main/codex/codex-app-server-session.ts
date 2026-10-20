@@ -72,11 +72,12 @@ type JsonRpcResponse = {
 }
 
 export type CodexAppServerRpc = {
-  /** `timeoutMs` bounds one call inside the session deadline, so a caller can drop it and go on. */
+  /** `timeoutMs` bounds one call inside the session deadline, so a caller can drop it and go on;
+   *  absent or null, only the session deadline does. */
   request: (
     method: string,
     params?: Record<string, unknown>,
-    options?: { timeoutMs?: number }
+    options?: { timeoutMs?: number | null }
   ) => Promise<unknown>
   notify: (method: string, params?: Record<string, unknown>) => void
 }
@@ -241,7 +242,7 @@ export async function runCodexAppServerSession<T>(
   async function requestRpc(
     method: string,
     params?: Record<string, unknown>,
-    options: { timeoutMs?: number } = {}
+    options: { timeoutMs?: number | null } = {}
   ): Promise<unknown> {
     if (spawnError) {
       throw spawnError
@@ -256,8 +257,8 @@ export async function runCodexAppServerSession<T>(
     let requestTimer: ReturnType<typeof setTimeout> | undefined
     const response = await new Promise<JsonRpcResponse>((resolve, reject) => {
       pending.set(id, { resolve, reject })
-      if (options.timeoutMs !== undefined) {
-        const { timeoutMs } = options
+      const { timeoutMs } = options
+      if (typeof timeoutMs === 'number') {
         requestTimer = setTimeout(() => {
           pending.delete(id)
           reject(
