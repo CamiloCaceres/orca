@@ -1,3 +1,4 @@
+import { readCodexHistoryJournalView } from './codex-history-journal-view'
 import { registerCodexCatchUpEchoTests } from './codex-structured-thread-catch-up-echo.spec'
 // Turns made outside a Codex chat, through the real path they take:
 // Codex turns pages → translator → deferred sink → on-disk journal.
@@ -178,9 +179,13 @@ describe('Codex chat catch-up', () => {
       'assistant:answer 4'
     ])
 
+    await c.open([turn(1), turn(2), turn(4), turn(5)])
+    expect(c.texts().slice(-3)).toEqual(['(continued-outside)', 'user:ask 5', 'assistant:answer 5'])
+
     // An older Codex answers with summary turns: nothing is guessed from them.
-    await c.open([turn(1), turn(2), turn(4), turn(5, 'summary')])
-    expect(c.texts().slice(caughtUp.length + 3)).toEqual([])
+
+    await c.open([turn(1), turn(2), turn(4), turn(5), turn(6, 'summary')])
+    expect(c.texts().slice(caughtUp.length + 6)).toEqual([])
   })
 
   it('recovers an older gap behind newer native work after a failed read and restart', async () => {
@@ -214,8 +219,12 @@ describe('Codex chat catch-up', () => {
     await c.open([turn(1), turn(2), turn(3)])
     expect(c.journal.snapshot().items.slice(0, before.length)).toEqual(before)
     expect(c.texts().slice(-3)).toEqual(['(continued-outside)', 'user:ask 2', 'assistant:answer 2'])
+    await c.open([turn(1), turn(2), turn(3), turn(4)])
+    expect(c.texts().slice(-3)).toEqual(['(continued-outside)', 'user:ask 4', 'assistant:answer 4'])
+    await c.open([turn(3), turn(4), turn(5)])
+    expect(c.texts().slice(-3)).toEqual(['(continued-outside)', 'user:ask 5', 'assistant:answer 5'])
     const complete = c.journal.snapshot().items
-    const unchanged = codexWith([turn(1), turn(2), turn(3)])
+    const unchanged = codexWith([turn(3), turn(4), turn(5)])
     const reads = vi.fn(unchanged.request)
     await c.open([], { connection: { request: reads } })
     expect(reads).toHaveBeenCalledTimes(2)
@@ -233,6 +242,35 @@ describe('Codex chat catch-up', () => {
     )
     await c.open([turn(1), turn(2)])
     expect(c.texts().slice(-2)).toEqual(['user:ask 2', 'assistant:answer 2'])
+  })
+
+  it('orders receipt-only turns by the native prompt, with current-epoch receipt fallback', async () => {
+    const c = await chat({ now: 1_000 })
+    const body = { kind: 'message' as const, role: 'user' as const, blocks: [] }
+    await c.journal.appendSubmission({
+      clientMessageId: 'receipt',
+      body,
+      payloadFingerprint: 'receipt',
+      fence: 1
+    })
+    await c.journal.resolveDispatch({
+      clientMessageId: 'receipt',
+      state: 'accepted',
+      providerIdentity: { provider: 'codex', threadId: THREAD, turnId: 'turn-1', ordinal: 0 },
+      fence: 1
+    })
+    expect(readCodexHistoryJournalView(c.journal, THREAD).latest).toBe('turn-1')
+    await c.journal.appendTombstone({ provider: 'orca', clientMessageId: 'receipt' }, { fence: 1 })
+    expect(readCodexHistoryJournalView(c.journal, THREAD).latest).toBe('turn-1')
+    await c.journal.appendItem(
+      { provider: 'orca', clientMessageId: 'bookkeeping' },
+      { kind: 'status', text: 'Saved note' },
+      { fence: 1, turnScope: { kind: 'thread' } }
+    )
+    await c.open([turn(1), turn(2)])
+    expect(c.texts().slice(-3)).toEqual(['(continued-outside)', 'user:ask 2', 'assistant:answer 2'])
+    await c.open([turn(1), turn(2), turn(3)])
+    expect(c.texts().slice(-3)).toEqual(['(continued-outside)', 'user:ask 3', 'assistant:answer 3'])
   })
 
   it('commits a 600-message import once, rolls back a later partition failure, and recovers', async () => {

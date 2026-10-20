@@ -1,3 +1,4 @@
+import { AGENT_JOURNAL_THREAD_SCOPE } from '../../shared/agent-session-journal-types'
 import {
   codexItemIdentity,
   CodexTurnOrdinals,
@@ -32,20 +33,20 @@ export function createCodexHistoryImportPlan(input: {
   sessionId: string
   threadId: string
   journal: StructuredAgentSessionTransitionJournal
-  nativeClientIds: ReadonlySet<string>
+  nativePromptKeys: ReadonlySet<string>
+  outsideNotice?: AgentJournalItemBody
   check: () => void
 }) {
   const mutations: JournalLifecycleMutationInput[] = []
   const encoded = new Map<string, string>()
   const turnIds: string[] = []
   let bytes = 0
-  let hasOutside = false
+  let outsideNoted = false
   let omitted = new Map<string, string>()
   const append = (
     identity: AgentJournalItemIdentity,
     body: AgentJournalItemBody,
-    options: StructuredAgentSessionItemAppendOptions,
-    prepend = false
+    options: StructuredAgentSessionItemAppendOptions
   ) => {
     input.check()
     const key = agentJournalItemKey(identity)
@@ -75,11 +76,7 @@ export function createCodexHistoryImportPlan(input: {
     if (mutations.length >= CODEX_RESTORE_MAX_OPERATIONS || bytes > CODEX_RESTORE_MAX_BYTES) {
       throw new Error('too-large')
     }
-    if (prepend) {
-      mutations.unshift(mutation)
-    } else {
-      mutations.push(mutation)
-    }
+    mutations.push(mutation)
     encoded.set(key, serialized)
     return { accepted: true } as const
   }
@@ -104,7 +101,6 @@ export function createCodexHistoryImportPlan(input: {
   })
   return {
     append,
-    hasOutside: () => hasOutside,
     restore: (turn: Record<string, unknown>) => {
       input.check()
       omitted = new Map<string, string>()
@@ -127,7 +123,7 @@ export function createCodexHistoryImportPlan(input: {
           if (
             typeof item.clientId === 'string' &&
             item.clientId.length > 0 &&
-            input.nativeClientIds.has(item.clientId)
+            input.nativePromptKeys.has(agentJournalSubmissionKey(item.clientId))
           ) {
             native = true
             omitted.set(agentJournalItemKey(identity), agentJournalSubmissionKey(item.clientId))
@@ -136,7 +132,19 @@ export function createCodexHistoryImportPlan(input: {
           }
         }
       }
-      hasOutside ||= !native || outsideUser
+      if ((!native || outsideUser) && !outsideNoted && input.outsideNotice) {
+        append(
+          {
+            provider: 'legacy',
+            agent: 'codex',
+            sessionId: input.sessionId,
+            recordId: `continued-outside:${turn.id}`
+          },
+          input.outsideNotice,
+          { turnScope: AGENT_JOURNAL_THREAD_SCOPE }
+        )
+        outsideNoted = true
+      }
       const restored = translator.restoreThread(input.threadId, { turns: [turn] })
       if (!restored.accepted) {
         throw new Error(restored.reason)

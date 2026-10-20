@@ -6,7 +6,7 @@ import {
   readCodexJournalRecord,
   readCodexJournalString
 } from './codex-structured-journal-translation-values'
-import type { CodexJournalTurnAnchor } from './codex-structured-thread-catch-up'
+import type { CodexHistoryJournalView } from './codex-history-journal-view'
 
 function turnId(turn: Record<string, unknown>): string {
   const id = readCodexJournalString(turn, 'id')
@@ -65,19 +65,15 @@ async function readPage(
 /** Known identities exclude themselves, never the older gaps behind them. */
 export async function discoverCodexHistory(
   input: CodexHistoryRead,
-  anchor: CodexJournalTurnAnchor
+  anchor: CodexHistoryJournalView
 ) {
   if (anchor.unresolvedOrigin) {
     throw new Error('no-legacy-origin')
-  }
-  if (anchor.known.size === 0 && anchor.hasRows && anchor.importedAt === null) {
-    throw new Error('no-anchor')
   }
   const pages: MissingPage[] = []
   const seen = new Set<string>()
   const cursors = new Set<string | null>()
   let cursor: string | null = null
-  let newestKnown: string | null = null
   let count = 0
   do {
     if (cursors.has(cursor)) {
@@ -93,7 +89,6 @@ export async function discoverCodexHistory(
       }
       seen.add(id)
       if (anchor.known.has(id)) {
-        newestKnown ??= id
         continue
       }
       if (anchor.importedAt !== null) {
@@ -116,7 +111,7 @@ export async function discoverCodexHistory(
     cursor = page.next
     await setImmediate()
   } while (cursor !== null)
-  return { pages, anchorIsLatest: anchor.known.size === 0 || newestKnown === anchor.latest }
+  return { pages, rewound: anchor.latest !== null && !seen.has(anchor.latest) }
 }
 
 /** Same cursor semantics in both views; reject a provider that changed selection between reads. */
