@@ -7,7 +7,7 @@
   "properties": {
     "$schema": {
       "description": "JSON Schema URL for editor completion. Ignored by Orca.",
-      "x-orca-since": "1.4.232",
+      "x-orca-since": "1.4.233",
       "type": "string",
       "maxLength": 2048
     },
@@ -16,7 +16,7 @@
       "minLength": 1,
       "maxLength": 256,
       "description": "Marketplace display name.",
-      "x-orca-since": "1.4.232",
+      "x-orca-since": "1.4.233",
       "examples": [
         "Orca Plugins"
       ]
@@ -27,7 +27,7 @@
       "maxLength": 128,
       "pattern": "^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$",
       "description": "Account that publishes the marketplace.",
-      "x-orca-since": "1.4.232",
+      "x-orca-since": "1.4.233",
       "examples": [
         "stablyai"
       ]
@@ -39,7 +39,7 @@
         "$ref": "#/$defs/CatalogEntry"
       },
       "description": "Listed plugins, at most 2048. Each `id` may appear once, or the whole catalog is refused. An entry this Orca cannot parse is skipped, not fatal.",
-      "x-orca-since": "1.4.232"
+      "x-orca-since": "1.4.233"
     }
   },
   "required": [
@@ -55,7 +55,7 @@
           "type": "string",
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*\\.[a-z0-9]+(?:-[a-z0-9]+)*$",
           "description": "`<publisher>.<id>`, matching the plugin's manifest. Each half is at most 64 characters, and the reserved names `constructor` and `prototype` are refused.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "acme.gleam-syntax"
           ]
@@ -65,7 +65,7 @@
         },
         "description": {
           "description": "Listing text shown in the marketplace.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "type": "string",
           "minLength": 1,
           "maxLength": 4096
@@ -73,7 +73,7 @@
         "categories": {
           "default": [],
           "description": "Lowercase slugs used to filter the marketplace, each listed once.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             [
               "themes"
@@ -107,14 +107,14 @@
           "type": "string",
           "const": "git",
           "description": "Source kind. Only `git` is supported.",
-          "x-orca-since": "1.4.232"
+          "x-orca-since": "1.4.233"
         },
         "url": {
           "type": "string",
           "minLength": 1,
           "maxLength": 32768,
           "description": "HTTPS or SSH URL of the plugin repository.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "https://github.com/acme/orca-gleam-syntax.git"
           ]
@@ -124,7 +124,7 @@
           "minLength": 1,
           "maxLength": 4096,
           "description": "Branch or tag the author publishes from. A `release` pins the exact commit.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "main"
           ]
@@ -145,7 +145,7 @@
           "minLength": 1,
           "maxLength": 128,
           "description": "The manifest's `version` for this release.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "1.2.0"
           ]
@@ -154,13 +154,13 @@
           "type": "string",
           "pattern": "^[0-9a-f]{40}$",
           "description": "Full SHA-1 commit Orca checks out for this release.",
-          "x-orca-since": "1.4.232"
+          "x-orca-since": "1.4.233"
         },
         "contentHash": {
           "type": "string",
           "pattern": "^[0-9a-f]{64}$",
           "description": "SHA-256 of the plugin's installed files, as Orca computes it at install.",
-          "x-orca-since": "1.4.232"
+          "x-orca-since": "1.4.233"
         },
         "execution": {
           "type": "string",
@@ -171,7 +171,7 @@
             "trusted-worker"
           ],
           "description": "The manifest's `execution` profile.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "data"
           ]
@@ -180,9 +180,9 @@
           "type": "string",
           "pattern": "^\\d+\\.\\d+\\.\\d+$",
           "description": "The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
-            "1.4.232"
+            "1.4.233"
           ]
         },
         "types": {
@@ -203,7 +203,7 @@
             ]
           },
           "description": "Every kind of contribution the release carries, matching its manifest exactly. `instructions` needs the `instructional` profile or higher, `panel` needs `sandboxed-ui`, and `worker` needs `trusted-worker`.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             [
               "syntax"
@@ -213,7 +213,7 @@
         },
         "name": {
           "description": "The manifest's `name`, so Orca can suggest the plugin before downloading it.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "Gleam"
           ],
@@ -223,7 +223,7 @@
         },
         "license": {
           "description": "SPDX license expression.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "MIT"
           ],
@@ -233,7 +233,7 @@
         },
         "repository": {
           "description": "Source repository page, https only.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "https://github.com/acme/orca-gleam-syntax"
           ],
@@ -243,7 +243,7 @@
         },
         "homepage": {
           "description": "Project homepage, https only.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "https://example.com/gleam"
           ],
@@ -253,7 +253,7 @@
         },
         "updatedAt": {
           "description": "When this release was published, as an ISO 8601 date or date-time.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "2026-10-20"
           ],
@@ -272,7 +272,7 @@
         },
         "changelog": {
           "description": "What changed in this release, as plain text. At most 2000 characters.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "Adds highlighting for use expressions."
           ],
@@ -282,7 +282,7 @@
         },
         "fileTypes": {
           "description": "Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "type": "array",
           "items": {
             "type": "string",

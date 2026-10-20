@@ -11,9 +11,9 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `$schema` | string | no | 1.4.232 | JSON Schema URL for editor completion. Ignored by Orca. |
-| `manifestVersion` | `2` | yes | 1.4.232 | Manifest format. Use 2 for new plugins. |
-| `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | 1.4.232 | Most authority the plugin needs, least first: `data` (themes, syntaxes, translations), `instructional` (commands, shortcuts, recipes, agents), `sandboxed-ui` (panels), `trusted-worker` (`main` and events). Contributions beyond it fail validation. Example: `"data"` |
+| `$schema` | string | no | 1.4.233 | JSON Schema URL for editor completion. Ignored by Orca. |
+| `manifestVersion` | `2` | yes | 1.4.233 | Manifest format. Use 2 for new plugins. |
+| `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | 1.4.233 | Most authority the plugin needs, least first: `data` (themes, syntaxes, translations), `instructional` (commands, shortcuts, recipes, agents), `sandboxed-ui` (panels), `trusted-worker` (`main` and events). Contributions beyond it fail validation. Example: `"data"` |
 | `id` | string | yes | 1.4.160 | Plugin id, kebab-case. The install identity is `<publisher>.<id>`. The reserved names `constructor` and `prototype` are refused. Example: `"gleam-syntax"` |
 | `publisher` | string | yes | 1.4.160 | Publisher slug, kebab-case, usually your GitHub user or organization. The reserved names `constructor` and `prototype` are refused. Example: `"acme"` |
 | `name` | string | yes | 1.4.160 | Display name. Example: `"Gleam"` |
@@ -23,11 +23,11 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `author.name` | string | yes | 1.4.160 | Author or organization name. Example: `"Acme"` |
 | `author.url` | string | no | 1.4.160 | Author homepage. Example: `"https://example.com"` |
 | `repository` | string | no | 1.4.160 | Source repository URL. Example: `"https://github.com/acme/orca-gleam-syntax"` |
-| `license` | string | no | 1.4.232 | SPDX license expression. Example: `"MIT"` |
-| `homepage` | string | no | 1.4.232 | Project homepage, https only. Example: `"https://example.com/gleam"` |
+| `license` | string | no | 1.4.233 | SPDX license expression. Example: `"MIT"` |
+| `homepage` | string | no | 1.4.233 | Project homepage, https only. Example: `"https://example.com/gleam"` |
 | `icon` | string | no | 1.4.160 | Square image shown beside the plugin name. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"assets/icon.png"` |
 | `engines` | object | yes | 1.4.160 | Host versions this plugin supports. Older hosts refuse to load it. |
-| `engines.orca` | string | yes | 1.4.160 | Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it to the newest "Since" of any field you use; a format 2 manifest needs at least `>=1.4.232`, because older Orca cannot read format 2. Example: `">=1.4.232"` |
+| `engines.orca` | string | yes | 1.4.160 | Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it to the newest "Since" of any field you use; a format 2 manifest needs at least `>=1.4.233`, because older Orca cannot read format 2. Example: `">=1.4.233"` |
 | `pluginApi` | `1` | yes | 1.4.160 | Major version of the plugin host API this plugin targets. |
 | `main` | string | no | 1.4.160 | Node entry run in an out-of-process plugin worker. Requires the `trusted-worker` execution profile, and is required by it, by `contributes.events` and by any command without an `action`. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"dist/main.mjs"` |
 | `contributes` | object | no | 1.4.160 | What the plugin adds to Orca. Every point defaults to empty. |
@@ -38,10 +38,10 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 | `contributes.keybindings` | [KeybindingContribution](#keybindingcontribution)[] | no | 1.4.160 | Keyboard shortcuts for contributed commands. At most 256. |
 | `contributes.vmRecipes` | [VmRecipeContribution](#vmrecipecontribution)[] | no | 1.4.160 | Virtual machine environment recipes. At most 64. |
 | `contributes.agents` | [AgentProfileContribution](#agentprofilecontribution)[] | no | 1.4.160 | Coding agent profiles. At most 64. |
-| `contributes.themes` | [ThemeContribution](#themecontribution)[] | no | 1.4.232 | App color themes. At most 64. |
-| `contributes.terminalThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.232 | Terminal ANSI palettes. At most 64. |
-| `contributes.iconThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.232 | File icon themes. At most 32. |
-| `contributes.syntaxes` | [SyntaxContribution](#syntaxcontribution)[] | no | 1.4.232 | Syntax highlighting for editor languages. At most 16. |
+| `contributes.themes` | [ThemeContribution](#themecontribution)[] | no | 1.4.233 | App color themes. At most 64. |
+| `contributes.terminalThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.233 | Terminal ANSI palettes. At most 64. |
+| `contributes.iconThemes` | [ThemeContribution](#themecontribution)[] | no | 1.4.233 | File icon themes. At most 32. |
+| `contributes.syntaxes` | [SyntaxContribution](#syntaxcontribution)[] | no | 1.4.233 | Syntax highlighting for editor languages. At most 16. |
 | `capabilities` | [Capability](#capability)[] | no | 1.4.160 | Host APIs the plugin asks the user to grant. At most 32. |
 
 ## PanelContribution
@@ -115,9 +115,9 @@ A labelled theme file.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | 1.4.232 | Theme id, unique within its family in this plugin. The reserved names `constructor` and `prototype` are refused. Example: `"dusk"` |
-| `label` | string | yes | 1.4.232 | Name shown in the theme picker. Example: `"Dusk"` |
-| `path` | string | yes | 1.4.232 | JSON theme file, at most 16 KiB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"themes/dusk.json"` |
+| `id` | string | yes | 1.4.233 | Theme id, unique within its family in this plugin. The reserved names `constructor` and `prototype` are refused. Example: `"dusk"` |
+| `label` | string | yes | 1.4.233 | Name shown in the theme picker. Example: `"Dusk"` |
+| `path` | string | yes | 1.4.233 | JSON theme file, at most 16 KiB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"themes/dusk.json"` |
 
 ## SyntaxContribution
 
@@ -125,13 +125,13 @@ Syntax highlighting for one language.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | 1.4.232 | Language id, unique among this plugin's syntaxes. The reserved names `constructor` and `prototype` are refused. Example: `"gleam"` |
-| `label` | string | yes | 1.4.232 | Language name shown in the editor. Example: `"Gleam"` |
-| `scopeName` | string | yes | 1.4.232 | The grammar's root TextMate scope, unique among this plugin's syntaxes. Example: `"source.gleam"` |
-| `path` | string | yes | 1.4.232 | TextMate grammar JSON file. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"syntaxes/gleam.tmLanguage.json"` |
-| `configuration` | string | no | 1.4.232 | Language configuration JSON file: comments, brackets and auto-closing pairs. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"syntaxes/language-configuration.json"` |
-| `extensions` | string[] | no | 1.4.232 | File extensions this language opens, with the dot. Example: `[".gleam"]` |
-| `filenames` | string[] | no | 1.4.232 | Exact file names this language opens. Names must be portable: no path separators, `.`, `..` or characters Windows forbids. Example: `["gleam.toml"]` |
+| `id` | string | yes | 1.4.233 | Language id, unique among this plugin's syntaxes. The reserved names `constructor` and `prototype` are refused. Example: `"gleam"` |
+| `label` | string | yes | 1.4.233 | Language name shown in the editor. Example: `"Gleam"` |
+| `scopeName` | string | yes | 1.4.233 | The grammar's root TextMate scope, unique among this plugin's syntaxes. Example: `"source.gleam"` |
+| `path` | string | yes | 1.4.233 | TextMate grammar JSON file. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"syntaxes/gleam.tmLanguage.json"` |
+| `configuration` | string | no | 1.4.233 | Language configuration JSON file: comments, brackets and auto-closing pairs. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused. Example: `"syntaxes/language-configuration.json"` |
+| `extensions` | string[] | no | 1.4.233 | File extensions this language opens, with the dot. Example: `[".gleam"]` |
+| `filenames` | string[] | no | 1.4.233 | Exact file names this language opens. Names must be portable: no path separators, `.`, `..` or characters Windows forbids. Example: `["gleam.toml"]` |
 
 ## Capability
 

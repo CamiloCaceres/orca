@@ -7,7 +7,7 @@
   "properties": {
     "$schema": {
       "description": "JSON Schema URL for editor completion. Ignored by Orca.",
-      "x-orca-since": "1.4.232",
+      "x-orca-since": "1.4.233",
       "type": "string",
       "maxLength": 2048
     },
@@ -15,7 +15,7 @@
       "type": "number",
       "const": 2,
       "description": "Manifest format. Use 2 for new plugins.",
-      "x-orca-since": "1.4.232"
+      "x-orca-since": "1.4.233"
     },
     "execution": {
       "type": "string",
@@ -26,7 +26,7 @@
         "trusted-worker"
       ],
       "description": "Most authority the plugin needs, least first: `data` (themes, syntaxes, translations), `instructional` (commands, shortcuts, recipes, agents), `sandboxed-ui` (panels), `trusted-worker` (`main` and events). Contributions beyond it fail validation.",
-      "x-orca-since": "1.4.232",
+      "x-orca-since": "1.4.233",
       "examples": [
         "data"
       ]
@@ -116,7 +116,7 @@
     },
     "license": {
       "description": "SPDX license expression.",
-      "x-orca-since": "1.4.232",
+      "x-orca-since": "1.4.233",
       "examples": [
         "MIT",
         "Apache-2.0 OR MIT"
@@ -127,7 +127,7 @@
     },
     "homepage": {
       "description": "Project homepage, https only.",
-      "x-orca-since": "1.4.232",
+      "x-orca-since": "1.4.233",
       "examples": [
         "https://example.com/gleam"
       ],
@@ -153,10 +153,10 @@
           "type": "string",
           "maxLength": 64,
           "pattern": "^>=\\d+\\.\\d+\\.\\d+$",
-          "description": "Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it to the newest \"Since\" of any field you use; a format 2 manifest needs at least `>=1.4.232`, because older Orca cannot read format 2.",
+          "description": "Oldest Orca release this plugin runs on, as `>=x.y.z`. Raise it to the newest \"Since\" of any field you use; a format 2 manifest needs at least `>=1.4.233`, because older Orca cannot read format 2.",
           "x-orca-since": "1.4.160",
           "examples": [
-            ">=1.4.232"
+            ">=1.4.233"
           ]
         }
       },
@@ -261,7 +261,7 @@
         "themes": {
           "default": [],
           "description": "App color themes. At most 64.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "maxItems": 64,
           "type": "array",
           "items": {
@@ -271,7 +271,7 @@
         "terminalThemes": {
           "default": [],
           "description": "Terminal ANSI palettes. At most 64.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "maxItems": 64,
           "type": "array",
           "items": {
@@ -281,7 +281,7 @@
         "iconThemes": {
           "default": [],
           "description": "File icon themes. At most 32.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "maxItems": 32,
           "type": "array",
           "items": {
@@ -291,7 +291,7 @@
         "syntaxes": {
           "default": [],
           "description": "Syntax highlighting for editor languages. At most 16.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "maxItems": 16,
           "type": "array",
           "items": {
@@ -587,7 +587,7 @@
           "maxLength": 64,
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
           "description": "Theme id, unique within its family in this plugin. The reserved names `constructor` and `prototype` are refused.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "dusk"
           ]
@@ -597,7 +597,7 @@
           "minLength": 1,
           "maxLength": 128,
           "description": "Name shown in the theme picker.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "Dusk"
           ]
@@ -608,7 +608,7 @@
           "maxLength": 1024,
           "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
           "description": "JSON theme file, at most 16 KiB. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "themes/dusk.json"
           ]
@@ -630,7 +630,7 @@
           "maxLength": 64,
           "pattern": "^[a-z0-9]+(?:-[a-z0-9]+)*$",
           "description": "Language id, unique among this plugin's syntaxes. The reserved names `constructor` and `prototype` are refused.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "gleam"
           ]
@@ -640,7 +640,7 @@
           "minLength": 1,
           "maxLength": 128,
           "description": "Language name shown in the editor.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "Gleam"
           ]
@@ -650,7 +650,7 @@
           "maxLength": 128,
           "pattern": "^[A-Za-z][A-Za-z0-9_-]*(?:\\.[A-Za-z0-9_-]+)+$",
           "description": "The grammar's root TextMate scope, unique among this plugin's syntaxes.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "source.gleam"
           ]
@@ -661,14 +661,14 @@
           "maxLength": 1024,
           "pattern": "^[^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ](?:[\\\\/][^<>:\"|?*\\x00-\\x1f\\\\/]*[^<>:\"|?*\\x00-\\x1f\\\\/. ])*$",
           "description": "TextMate grammar JSON file. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "syntaxes/gleam.tmLanguage.json"
           ]
         },
         "configuration": {
           "description": "Language configuration JSON file: comments, brackets and auto-closing pairs. Relative to the plugin root; `..` segments and Windows device names such as `CON` are refused.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             "syntaxes/language-configuration.json"
           ],
@@ -680,7 +680,7 @@
         "extensions": {
           "default": [],
           "description": "File extensions this language opens, with the dot.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             [
               ".gleam"
@@ -697,7 +697,7 @@
         "filenames": {
           "default": [],
           "description": "Exact file names this language opens. Names must be portable: no path separators, `.`, `..` or characters Windows forbids.",
-          "x-orca-since": "1.4.232",
+          "x-orca-since": "1.4.233",
           "examples": [
             [
               "gleam.toml"

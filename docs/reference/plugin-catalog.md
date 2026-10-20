@@ -11,10 +11,10 @@ Add `"$schema": "https://raw.githubusercontent.com/stablyai/orca/main/schemas/pl
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `$schema` | string | no | 1.4.232 | JSON Schema URL for editor completion. Ignored by Orca. |
-| `name` | string | yes | 1.4.232 | Marketplace display name. Example: `"Orca Plugins"` |
-| `owner` | string | yes | 1.4.232 | Account that publishes the marketplace. Example: `"stablyai"` |
-| `plugins` | [CatalogEntry](#catalogentry)[] | yes | 1.4.232 | Listed plugins, at most 2048. Each `id` may appear once, or the whole catalog is refused. An entry this Orca cannot parse is skipped, not fatal. |
+| `$schema` | string | no | 1.4.233 | JSON Schema URL for editor completion. Ignored by Orca. |
+| `name` | string | yes | 1.4.233 | Marketplace display name. Example: `"Orca Plugins"` |
+| `owner` | string | yes | 1.4.233 | Account that publishes the marketplace. Example: `"stablyai"` |
+| `plugins` | [CatalogEntry](#catalogentry)[] | yes | 1.4.233 | Listed plugins, at most 2048. Each `id` may appear once, or the whole catalog is refused. An entry this Orca cannot parse is skipped, not fatal. |
 
 ## CatalogEntry
 
@@ -22,10 +22,10 @@ One installable plugin.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `id` | string | yes | 1.4.232 | `<publisher>.<id>`, matching the plugin's manifest. Each half is at most 64 characters, and the reserved names `constructor` and `prototype` are refused. Example: `"acme.gleam-syntax"` |
+| `id` | string | yes | 1.4.233 | `<publisher>.<id>`, matching the plugin's manifest. Each half is at most 64 characters, and the reserved names `constructor` and `prototype` are refused. Example: `"acme.gleam-syntax"` |
 | `source` | [CatalogGitSource](#cataloggitsource) | yes |  | Where the plugin source lives. |
-| `description` | string | no | 1.4.232 | Listing text shown in the marketplace. |
-| `categories` | string[] | no | 1.4.232 | Lowercase slugs used to filter the marketplace, each listed once. Example: `["themes"]` |
+| `description` | string | no | 1.4.233 | Listing text shown in the marketplace. |
+| `categories` | string[] | no | 1.4.233 | Lowercase slugs used to filter the marketplace, each listed once. Example: `["themes"]` |
 | `release` | [CatalogRelease](#catalogrelease) | yes |  | The exact release the catalog vouches for. Orca refuses bytes that differ. |
 
 ## CatalogGitSource
@@ -34,9 +34,9 @@ Where the plugin source lives.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `kind` | `"git"` | yes | 1.4.232 | Source kind. Only `git` is supported. |
-| `url` | string | yes | 1.4.232 | HTTPS or SSH URL of the plugin repository. Example: `"https://github.com/acme/orca-gleam-syntax.git"` |
-| `ref` | string | yes | 1.4.232 | Branch or tag the author publishes from. A `release` pins the exact commit. Example: `"main"` |
+| `kind` | `"git"` | yes | 1.4.233 | Source kind. Only `git` is supported. |
+| `url` | string | yes | 1.4.233 | HTTPS or SSH URL of the plugin repository. Example: `"https://github.com/acme/orca-gleam-syntax.git"` |
+| `ref` | string | yes | 1.4.233 | Branch or tag the author publishes from. A `release` pins the exact commit. Example: `"main"` |
 
 ## CatalogRelease
 
@@ -44,16 +44,16 @@ The exact release the catalog vouches for. Orca refuses bytes that differ.
 
 | Field | Type | Required | Since | Description |
 | --- | --- | --- | --- | --- |
-| `version` | string | yes | 1.4.232 | The manifest's `version` for this release. Example: `"1.2.0"` |
-| `commit` | string | yes | 1.4.232 | Full SHA-1 commit Orca checks out for this release. |
-| `contentHash` | string | yes | 1.4.232 | SHA-256 of the plugin's installed files, as Orca computes it at install. |
-| `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | 1.4.232 | The manifest's `execution` profile. Example: `"data"` |
-| `minimumOrca` | string | yes | 1.4.232 | The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it. Example: `"1.4.232"` |
-| `types` | (`"interface-language"` \| `"app-theme"` \| `"terminal-theme"` \| `"icon-theme"` \| `"syntax"` \| `"instructions"` \| `"panel"` \| `"worker"`)[] | yes | 1.4.232 | Every kind of contribution the release carries, matching its manifest exactly. `instructions` needs the `instructional` profile or higher, `panel` needs `sandboxed-ui`, and `worker` needs `trusted-worker`. Example: `["syntax"]` |
-| `name` | string | no | 1.4.232 | The manifest's `name`, so Orca can suggest the plugin before downloading it. Example: `"Gleam"` |
-| `license` | string | no | 1.4.232 | SPDX license expression. Example: `"MIT"` |
-| `repository` | string | no | 1.4.232 | Source repository page, https only. Example: `"https://github.com/acme/orca-gleam-syntax"` |
-| `homepage` | string | no | 1.4.232 | Project homepage, https only. Example: `"https://example.com/gleam"` |
-| `updatedAt` | string | no | 1.4.232 | When this release was published, as an ISO 8601 date or date-time. Example: `"2026-10-20"` |
-| `changelog` | string | no | 1.4.232 | What changed in this release, as plain text. At most 2000 characters. Example: `"Adds highlighting for use expressions."` |
-| `fileTypes` | string[] | no | 1.4.232 | Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer. |
+| `version` | string | yes | 1.4.233 | The manifest's `version` for this release. Example: `"1.2.0"` |
+| `commit` | string | yes | 1.4.233 | Full SHA-1 commit Orca checks out for this release. |
+| `contentHash` | string | yes | 1.4.233 | SHA-256 of the plugin's installed files, as Orca computes it at install. |
+| `execution` | `"data"` \| `"instructional"` \| `"sandboxed-ui"` \| `"trusted-worker"` | yes | 1.4.233 | The manifest's `execution` profile. Example: `"data"` |
+| `minimumOrca` | string | yes | 1.4.233 | The manifest's `engines.orca` without `>=`. Older Orca lists the plugin but will not install it. Example: `"1.4.233"` |
+| `types` | (`"interface-language"` \| `"app-theme"` \| `"terminal-theme"` \| `"icon-theme"` \| `"syntax"` \| `"instructions"` \| `"panel"` \| `"worker"`)[] | yes | 1.4.233 | Every kind of contribution the release carries, matching its manifest exactly. `instructions` needs the `instructional` profile or higher, `panel` needs `sandboxed-ui`, and `worker` needs `trusted-worker`. Example: `["syntax"]` |
+| `name` | string | no | 1.4.233 | The manifest's `name`, so Orca can suggest the plugin before downloading it. Example: `"Gleam"` |
+| `license` | string | no | 1.4.233 | SPDX license expression. Example: `"MIT"` |
+| `repository` | string | no | 1.4.233 | Source repository page, https only. Example: `"https://github.com/acme/orca-gleam-syntax"` |
+| `homepage` | string | no | 1.4.233 | Project homepage, https only. Example: `"https://example.com/gleam"` |
+| `updatedAt` | string | no | 1.4.233 | When this release was published, as an ISO 8601 date or date-time. Example: `"2026-10-20"` |
+| `changelog` | string | no | 1.4.233 | What changed in this release, as plain text. At most 2000 characters. Example: `"Adds highlighting for use expressions."` |
+| `fileTypes` | string[] | no | 1.4.233 | Extensions, without the dot, that this release opens. Orca suggests the plugin when such a file has no viewer. |
