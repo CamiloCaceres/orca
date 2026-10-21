@@ -94,6 +94,28 @@ function browserStrip(
   }
 }
 
+function splitBrowserStrips(left: string[], right: string[]): RuntimeMobileSessionTabsResult {
+  const leftStrip = browserStrip(left)
+  const rightStrip = right.length > 0 ? browserStrip(right) : null
+  return {
+    ...leftStrip,
+    activeGroupId: 'left',
+    tabGroups: [
+      { ...leftStrip.tabGroups![0]!, id: 'left' },
+      ...(rightStrip ? [{ ...rightStrip.tabGroups![0]!, id: 'right' }] : [])
+    ],
+    tabGroupLayout: rightStrip
+      ? {
+          type: 'split',
+          direction: 'horizontal',
+          first: { type: 'leaf', groupId: 'left' },
+          second: { type: 'leaf', groupId: 'right' }
+        }
+      : { type: 'leaf', groupId: 'left' },
+    tabs: [...leftStrip.tabs, ...(rightStrip?.tabs ?? [])]
+  }
+}
+
 describe('client session-tab selection', () => {
   it('keeps a client selection when a later host snapshot activates another tab', () => {
     const initial = snapshot()
@@ -404,6 +426,28 @@ describe('client session-tab selection', () => {
     restarted.hydrate(persisted.at(-1)!)
 
     expect(restarted.project(browserStrip(['a', 'b', 'd']), 'device-a').activeTabId).toBe('b')
+  })
+
+  it('moves a device to the split sibling when its shown group empties, as the desktop does', () => {
+    const store = new ClientSessionTabSelectionStore()
+    const full = splitBrowserStrips(['a', 'b', 'c'], ['doc'])
+    store.activate(full, 'device-a', 'c')
+    store.activate(full, 'device-a', 'doc')
+
+    expect(store.project(splitBrowserStrips(['a', 'b', 'c'], []), 'device-a').activeTabId).toBe('c')
+  })
+
+  it("uses the host's recency for a selection saved before devices kept their own", () => {
+    const store = new ClientSessionTabSelectionStore()
+    store.hydrate({
+      'device-a': {
+        'wt-1': { activeTabId: 'c', activeGroupId: 'group', activeTabIdByGroupId: { group: 'c' } }
+      }
+    })
+
+    const closed = browserStrip(['a', 'b', 'd'], { hostRecentTabIds: ['a', 'd', 'b'] })
+
+    expect(store.project(closed, 'device-a').activeTabId).toBe('b')
   })
 
   it('drops malformed persisted payloads instead of hydrating them', () => {

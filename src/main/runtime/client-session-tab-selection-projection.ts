@@ -3,6 +3,7 @@ import type {
   RuntimeMobileSessionTabsResult
 } from '../../shared/runtime-types'
 import { pickNextActiveTabAfterClose } from '../../shared/workspace-session-terminal-tab-close'
+import { findSiblingGroupId } from '../../shared/workspace-layout/tab-group-layout-tree'
 
 export type ClientSessionTabSelection = {
   activeTabId: string | null
@@ -11,6 +12,12 @@ export type ClientSessionTabSelection = {
   /** Top-level tabs this client showed, most recent last; picks its next tab when a shown one closes. */
   recentTabIds?: string[]
 }
+
+/** The groups and split a client was shown; a close reads where its tab and group sat. */
+export type ClientSessionTabTopology = Pick<
+  RuntimeMobileSessionTabsResult,
+  'tabGroups' | 'tabGroupLayout'
+>
 
 export function emptyClientSessionTabSelection(): ClientSessionTabSelection {
   return { activeTabId: null, activeGroupId: null, activeTabIdByGroupId: {} }
@@ -81,7 +88,7 @@ export function activateClientSessionTabSelection(
 export function projectClientSessionTabSelection(
   snapshot: RuntimeMobileSessionTabsResult,
   selection: ClientSessionTabSelection,
-  tabOrderBeforeByGroupId: Readonly<Record<string, string[]>> = {}
+  before?: ClientSessionTabTopology
 ): { snapshot: RuntimeMobileSessionTabsResult; selection: ClientSessionTabSelection } {
   const activeTabIdByGroupId: Record<string, string> = {}
   const tabGroups = snapshot.tabGroups?.map((group) => {
@@ -91,8 +98,11 @@ export function projectClientSessionTabSelection(
       selected && !group.tabOrder.includes(selected)
         ? pickNextActiveTabAfterClose(
             {
-              tabOrder: tabOrderBeforeByGroupId[group.id] ?? group.tabOrder,
-              recentTabIds: selection.recentTabIds
+              tabOrder:
+                before?.tabGroups?.find((candidate) => candidate.id === group.id)?.tabOrder ??
+                group.tabOrder,
+              // Why: a selection saved before clients kept recency falls back to the host's, as desktop's.
+              recentTabIds: selection.recentTabIds ?? group.recentTabIds
             },
             new Set([selected]),
             group.tabOrder,
@@ -104,7 +114,16 @@ export function projectClientSessionTabSelection(
     }
     return { ...group, activeTabId }
   })
-  const selectedGroup = tabGroups?.find((group) => group.id === selection.activeGroupId)
+  const shownGroups = tabGroups?.filter((group) => group.tabOrder.length > 0)
+  // Why: as the desktop's collapseGroupLayout, an emptied group hands over to its split sibling.
+  const siblingGroupId =
+    selection.activeGroupId && before?.tabGroupLayout
+      ? findSiblingGroupId(before.tabGroupLayout, selection.activeGroupId)
+      : null
+  const selectedGroup =
+    shownGroups?.find((group) => group.id === selection.activeGroupId) ??
+    shownGroups?.find((group) => group.id === siblingGroupId) ??
+    shownGroups?.[0]
   // Why: preserve the client's leaf and group choices before falling back to shared snapshot order.
   const activeTab =
     snapshot.tabs.find((tab) => tab.id === selection.activeTabId) ??

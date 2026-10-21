@@ -112,7 +112,7 @@ export class ClientSessionTabSelectionStore {
     const projected = projectClientSessionTabSelection(
       closed.snapshot,
       selection,
-      state.tabOrderByGroupId
+      state.topologyBeforeClose
     )
     // Why: a browser guest process swap drops its tab for one snapshot; the topology fallback
     // must not overwrite (and persist) the device's explicit pick, or focus never returns.
@@ -123,12 +123,10 @@ export class ClientSessionTabSelectionStore {
       revision: state.revision,
       shouldPersist: state.shouldPersist,
       closedTabIds: closed.retainedClosedTabIds,
-      // Why: frozen while the pick is gone, so a close's neighbour fallback holds across snapshots.
-      tabOrderByGroupId: selectionSurvived
-        ? Object.fromEntries(
-            closed.snapshot.tabGroups?.map((group) => [group.id, group.tabOrder]) ?? []
-          )
-        : state.tabOrderByGroupId
+      // Why: frozen while the pick is gone, so a close's fallback holds across snapshots.
+      topologyBeforeClose: selectionSurvived
+        ? { tabGroups: closed.snapshot.tabGroups, tabGroupLayout: closed.snapshot.tabGroupLayout }
+        : state.topologyBeforeClose
     })
     return {
       ...projected.snapshot,

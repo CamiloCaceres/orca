@@ -2,15 +2,18 @@ import type {
   RuntimeMobileSessionClientTab,
   RuntimeMobileSessionTabsResult
 } from '../../shared/runtime-types'
-import type { ClientSessionTabSelection } from './client-session-tab-selection-projection'
+import type {
+  ClientSessionTabSelection,
+  ClientSessionTabTopology
+} from './client-session-tab-selection-projection'
 
 export type StoredClientSessionTabSelection = {
   selection: ClientSessionTabSelection
   revision: number
   shouldPersist: boolean
   closedTabIds: ReadonlySet<string>
-  /** Group id → its tab order when this client last saw its pick; not persisted. */
-  tabOrderByGroupId?: Readonly<Record<string, string[]>>
+  /** What this client was shown while its pick was still there; not persisted. */
+  topologyBeforeClose?: ClientSessionTabTopology
 }
 
 function topLevelTabId(tab: RuntimeMobileSessionClientTab): string {
