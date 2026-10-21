@@ -1,9 +1,17 @@
 import { useMemo } from 'react'
+import type { PluginMarketplaceHostListing } from '../../../../preload/api-types'
 import { usePluginTerminalThemes, usePluginThemes } from '@/store/plugin-themes'
 import type { PluginArtPalette } from '../plugin-catalog/PluginCardArt'
 
-/** A theme plugin's own colours, from what Orca registered for it; empty until it is installed. */
-export function usePluginArtPalettes(pluginKey: string): readonly PluginArtPalette[] {
+type CatalogThemePreview = NonNullable<
+  NonNullable<PluginMarketplaceHostListing['release']>['themePreview']
+>
+
+/** A theme plugin's own colours: what Orca registered once installed, else the catalog's preview. */
+export function usePluginArtPalettes(
+  pluginKey: string,
+  themePreview: CatalogThemePreview | undefined
+): readonly PluginArtPalette[] {
   const appThemes = usePluginThemes()
   const terminalThemes = usePluginTerminalThemes()
   return useMemo(() => {
@@ -18,6 +26,14 @@ export function usePluginArtPalettes(pluginKey: string): readonly PluginArtPalet
     if (app.length > 0) {
       return app
     }
+    if (themePreview && themePreview.length > 0) {
+      return themePreview.map((theme) => ({
+        background: theme.background,
+        foreground: theme.foreground,
+        accent: theme.accent,
+        muted: theme.surface
+      }))
+    }
     return terminalThemes
       .filter((theme) => theme.pluginKey === pluginKey && theme.terminal.background)
       .map((theme) => ({
@@ -26,5 +42,5 @@ export function usePluginArtPalettes(pluginKey: string): readonly PluginArtPalet
         accent: theme.terminal.magenta ?? theme.terminal.blue ?? theme.terminal.green ?? '',
         muted: theme.terminal.black ?? theme.terminal.background ?? ''
       }))
-  }, [appThemes, terminalThemes, pluginKey])
+  }, [appThemes, terminalThemes, pluginKey, themePreview])
 }

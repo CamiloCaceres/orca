@@ -106,7 +106,7 @@ export function PluginCardAction({
   }
   if (phase?.kind === 'installing') {
     return (
-      <Button variant="outline" size="xs" className="w-28" disabled>
+      <Button variant="outline" size="xs" className="w-32" disabled>
         <Loader2 className="animate-spin" />
         {translate('auto.components.settings.PluginCardAction.installing', 'Installing…')}
       </Button>
@@ -117,6 +117,7 @@ export function PluginCardAction({
       <Button
         variant="outline"
         size="xs"
+        className="w-32"
         aria-label={translate(
           'auto.components.settings.PluginCardAction.reviewLabel',
           'Review and install {{value0}}',
@@ -132,7 +133,7 @@ export function PluginCardAction({
     <Button
       variant="outline"
       size="xs"
-      className="w-28"
+      className="w-32"
       aria-label={translate(
         'auto.components.settings.PluginManagerRows.installName',
         'Install {{value0}}',

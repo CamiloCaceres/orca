@@ -7,6 +7,7 @@ import { pluginExecutionProfile } from '../../../../shared/plugins/plugin-execut
 import { translate } from '@/i18n/i18n'
 import { pluginInstallErrorMessage } from './plugin-error-presentation'
 import type { PluginPagePreview } from './use-plugin-catalog'
+import { previewMatchesListing } from './use-plugin-page-model'
 
 /** How long a content-only install offers Undo in place. */
 export const PLUGIN_INSTALL_UNDO_MS = 10_000
@@ -124,6 +125,14 @@ export function usePluginInstallAction({
         return
       }
       const { preview } = read
+      // Why: preview reads the current catalog; never install a release other than the one shown.
+      if (!previewMatchesListing(preview, listing)) {
+        setPhase(pluginKey, {
+          kind: 'error',
+          message: catalogInstallErrorMessage(new Error('marketplace changed'))
+        })
+        return
+      }
       const execution = listing.release?.execution ?? pluginExecutionProfile(preview.manifest)
       try {
         const result = await window.api.plugins.installMarketplacePlugin({

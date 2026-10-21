@@ -1,4 +1,4 @@
-import { ArrowUpCircle, Copy, FileText, Loader2, RotateCcw, Trash2 } from 'lucide-react'
+import { ArrowUpCircle, Copy, FileText, Hash, Loader2, RotateCcw, Trash2 } from 'lucide-react'
 import type { PluginHostListEntry } from '../../../../preload/api-types'
 import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
@@ -14,7 +14,7 @@ import {
 } from './plugin-status-presentation'
 import { invalidPluginErrorMessage } from './plugin-error-presentation'
 import { usePluginRollbackVersion } from './use-plugin-rollback-version'
-import { copyPluginId, DetailsItem, MoreButton } from './PluginRowMenu'
+import { copyContentHash, copyPluginId, DetailsItem, MoreButton } from './PluginRowMenu'
 import { PluginChips } from '../plugin-catalog/PluginChips'
 import { StatusWord, statusWordFor } from '../plugin-catalog/PluginStatusWord'
 
@@ -160,7 +160,8 @@ export function installedPluginControls(
     statusText,
     description,
     tone,
-    status: <StatusWord kind={kind} />,
+    // Why none for review: the Review button and the off switch already say it.
+    status: kind === 'review' ? null : <StatusWord kind={kind} />,
     action,
     toggle: (
       <span className="relative inline-flex">
@@ -208,6 +209,15 @@ export function installedPluginControls(
           <Copy />
           {translate('auto.components.settings.PluginManagerRows.copyId', 'Copy plugin ID')}
         </DropdownMenuItem>
+        {inPage && plugin.source?.contentHash ? (
+          <DropdownMenuItem onSelect={() => void copyContentHash(plugin.source?.contentHash ?? '')}>
+            <Hash />
+            {translate(
+              'auto.components.settings.PluginManagerRows.copyContentHash',
+              'Copy content hash'
+            )}
+          </DropdownMenuItem>
+        ) : null}
         {canCheckUpdate ? (
           <DropdownMenuItem onSelect={() => handlers.onCheckUpdate(entry)}>
             <ArrowUpCircle />

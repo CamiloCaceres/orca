@@ -13384,7 +13384,8 @@
           "update": "Update {{value0}}",
           "needsOrca": "Needs Orca {{value0}}",
           "off": "Off",
-          "rollbackTo": "Roll back to {{value0}}…"
+          "rollbackTo": "Roll back to {{value0}}…",
+          "copyContentHash": "Copy content hash"
         },
         "PluginSettingsOverview": {
           "offTitle": "Plugins are off",
@@ -13460,7 +13461,8 @@
           "installHeading": "If you install {{value0}}, it can:",
           "enableHeading": "If you enable {{value0}}, it can:",
           "noOtherAccess": "It asks for no other access.",
-          "keepOff": "Keep off"
+          "keepOff": "Keep off",
+          "replacesShortcut": "{{value0}} ({{value1}}) replaces your shortcut for {{value2}}."
         },
         "PluginPageAction": {
           "failedTitle": "Couldn’t install {{value0}}",
@@ -13480,6 +13482,10 @@
           "catalogChanged": "The catalog changed since this page opened. Refresh it, then try again.",
           "blocked": "Orca’s safety list blocks this plugin.",
           "downloadFailed": "Couldn’t download this plugin. Check your connection, then try again. Nothing was installed."
+        },
+        "PluginPageHero": {
+          "screenshots": "Screenshots",
+          "openScreenshot": "Open screenshot: {{value0}}"
         }
       },
       "right": {

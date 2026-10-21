@@ -75,7 +75,7 @@ function CatalogCard({
   entry: PluginListEntry
   handlers: CatalogCardHandlers
 }): React.JSX.Element {
-  const palettes = usePluginArtPalettes(entry.pluginKey)
+  const palettes = usePluginArtPalettes(entry.pluginKey, entry.listing?.release?.themePreview)
   const phase = handlers.install.phaseOf(entry.pluginKey)
   const listing = entry.listing
   const installed = entry.installed

@@ -12,6 +12,25 @@ export type PluginArtPalette = {
 
 const isMac = (): boolean => navigator.userAgent.includes('Mac')
 
+// Why these tokens: they already paint accents in both themes, so art needs no new colours.
+const ART_INKS = [
+  'var(--callout-note)',
+  'var(--callout-important)',
+  'var(--status-success)',
+  'var(--status-warning)',
+  'var(--destructive)',
+  'var(--chart-3)'
+] as const
+const ART_TINTS = ['--chart-1', '--chart-2', '--chart-3', '--chart-4', '--chart-5'] as const
+
+function hashKey(key: string): number {
+  let hash = 0
+  for (const char of key) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0
+  }
+  return hash
+}
+
 function ThemeArt({ palettes }: { palettes: readonly PluginArtPalette[] }): React.JSX.Element {
   return (
     <div className="absolute inset-0 flex">
@@ -56,8 +75,20 @@ function SyntaxArt({ fileType }: { fileType: string | null }): React.JSX.Element
       <div className="space-y-1.5 px-2.5 py-2">
         {widths.map((width, line) => (
           <div key={line} className="flex gap-1.5" style={{ paddingLeft: line % 3 ? 12 : 0 }}>
-            <span className="h-1.5 w-5 rounded-full bg-foreground/45" />
-            <span className="h-1.5 rounded-full bg-foreground/20" style={{ width: `${width}%` }} />
+            <span
+              className="h-1.5 w-5 rounded-full"
+              style={{ background: ART_INKS[line % 2 === 0 ? 1 : 0] }}
+            />
+            <span
+              className="h-1.5 rounded-full"
+              style={{
+                width: `${width}%`,
+                background:
+                  line === 2
+                    ? ART_INKS[2]
+                    : 'color-mix(in srgb, var(--foreground) 20%, transparent)'
+              }}
+            />
           </div>
         ))}
       </div>
@@ -74,7 +105,7 @@ function IconThemeArt(): React.JSX.Element {
           key={index}
           className="flex size-9 items-center justify-center rounded-lg border border-border bg-background shadow-xs"
         >
-          <Glyph className="size-4 text-muted-foreground" />
+          <Glyph className="size-4" style={{ color: ART_INKS[index % ART_INKS.length] }} />
         </span>
       ))}
     </div>
@@ -162,13 +193,17 @@ export function PluginCardArt({
   name,
   types,
   fileType,
-  palettes
+  palettes,
+  tintKey
 }: {
   name: string
   types: readonly PluginCatalogType[]
   fileType: string | null
   palettes: readonly PluginArtPalette[]
+  /** Picks the backdrop tint, so each plugin's art stays the same colour everywhere. */
+  tintKey: string
 }): React.JSX.Element {
+  const tint = ART_TINTS[hashKey(tintKey) % ART_TINTS.length]
   let art: React.ReactNode
   if (palettes.length > 0) {
     art = <ThemeArt palettes={palettes} />
@@ -196,7 +231,8 @@ export function PluginCardArt({
   return (
     <div
       aria-hidden="true"
-      className="relative aspect-[16/10] overflow-hidden bg-muted/60 bg-[radial-gradient(color-mix(in_srgb,var(--foreground)_9%,transparent)_1px,transparent_1.2px)] bg-size-[14px_14px]"
+      className="relative aspect-[16/10] overflow-hidden bg-[radial-gradient(color-mix(in_srgb,var(--foreground)_9%,transparent)_1px,transparent_1.2px)] bg-size-[14px_14px]"
+      style={{ backgroundColor: `color-mix(in srgb, var(${tint}) 16%, var(--muted))` }}
     >
       {art}
     </div>

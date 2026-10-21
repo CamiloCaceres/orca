@@ -1,61 +1,60 @@
 import { translate } from '@/i18n/i18n'
-import type { PluginExecutionProfile } from '../../../../shared/plugins/plugin-execution-profile'
-import type { PluginConsentTier } from './plugin-access-profile'
+import type { PluginTrust } from './plugin-access-profile'
 
-export function consentTierForExecution(execution: PluginExecutionProfile): PluginConsentTier {
-  switch (execution) {
-    case 'trusted-worker':
-      return 'worker'
-    case 'instructional':
-      return 'instructional'
-    case 'sandboxed-ui':
-      return 'panel'
-    case 'data':
-      return 'declarative'
+/** One word for the profile chip: the broadest thing it may do. */
+export function pluginTrustLabel(trust: PluginTrust): string {
+  if (trust.worker) {
+    return translate('auto.components.settings.PluginConsentDialog.trustShortWorker', 'Worker')
   }
+  if (trust.instructional) {
+    return translate(
+      'auto.components.settings.PluginConsentDialog.trustShortInstructional',
+      'Instructional'
+    )
+  }
+  if (trust.panel) {
+    return translate('auto.components.settings.PluginConsentDialog.trustShortPanel', 'Panel')
+  }
+  return translate(
+    'auto.components.settings.PluginConsentDialog.trustShortDeclarative',
+    'Declarative'
+  )
 }
 
-/** One word for the profile chip; the warning carries the explanation. */
-export function consentTierLabel(tier: PluginConsentTier): string {
-  switch (tier) {
-    case 'worker':
-      return translate('auto.components.settings.PluginConsentDialog.trustShortWorker', 'Worker')
-    case 'instructional':
-      return translate(
-        'auto.components.settings.PluginConsentDialog.trustShortInstructional',
-        'Instructional'
-      )
-    case 'panel':
-      return translate('auto.components.settings.PluginConsentDialog.trustShortPanel', 'Panel')
-    case 'declarative':
-      return translate(
-        'auto.components.settings.PluginConsentDialog.trustShortDeclarative',
-        'Declarative'
-      )
-  }
-}
-
-export function consentTierWarning(tier: PluginConsentTier): string {
-  switch (tier) {
-    case 'worker':
-      return translate(
+/** Every warning that applies; the panel's "bounded" line only when nothing broader does. */
+export function pluginTrustWarnings(trust: PluginTrust): string[] {
+  const warnings: string[] = []
+  if (trust.worker) {
+    warnings.push(
+      translate(
         'auto.components.settings.PluginConsentDialog.warning',
         'Its worker runs as a normal process with full access to your files, network, and other processes.'
       )
-    case 'instructional':
-      return translate(
+    )
+  }
+  if (trust.instructional) {
+    warnings.push(
+      translate(
         'auto.components.settings.PluginConsentDialog.instructionalWarning',
         'Its commands and instructions can take actions when you or an agent use them.'
       )
-    case 'panel':
-      return translate(
+    )
+  }
+  if (trust.panel && warnings.length === 0) {
+    warnings.push(
+      translate(
         'auto.components.settings.PluginConsentDialog.panelWarning',
         'No background worker. These permissions limit what it can do in Orca.'
       )
-    case 'declarative':
-      return translate(
+    )
+  }
+  if (warnings.length === 0) {
+    warnings.push(
+      translate(
         'auto.components.settings.PluginConsentDialog.declarativeWarning',
         "Content only: no code, no background worker, and no access to Orca's API."
       )
+    )
   }
+  return warnings
 }

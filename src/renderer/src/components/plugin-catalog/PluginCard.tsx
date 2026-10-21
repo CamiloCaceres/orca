@@ -47,6 +47,7 @@ export function PluginCard({
           types={entry.types}
           fileType={entry.listing?.release?.fileTypes?.[0] ?? null}
           palettes={palettes}
+          tintKey={entry.pluginKey}
         />
       </div>
       <div className="flex flex-1 flex-col gap-1 px-3.5 pt-3 pb-3">

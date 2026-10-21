@@ -6,12 +6,19 @@ import { usePluginThemes } from '@/store/plugin-themes'
 import { Button } from '../ui/button'
 
 /** One-click "use it" for the app themes a plugin just added; never applied unasked. */
-export function PluginThemeUseNow({ pluginKey }: { pluginKey: string }): React.JSX.Element | null {
+export function PluginThemeUseNow({
+  pluginKey,
+  fallback = null
+}: {
+  pluginKey: string
+  /** Shown instead when the plugin adds no app theme. */
+  fallback?: React.ReactNode
+}): React.JSX.Element | null {
   const themes = usePluginThemes().filter((theme) => theme.pluginKey === pluginKey)
   const settings = useAppStore((state) => state.settings)
   const updateSettings = useAppStore((state) => state.updateSettings)
   if (themes.length === 0 || !settings) {
-    return null
+    return <>{fallback}</>
   }
   const use = (theme: (typeof themes)[number]): void => {
     const updates: Partial<GlobalSettings> = {
@@ -24,7 +31,7 @@ export function PluginThemeUseNow({ pluginKey }: { pluginKey: string }): React.J
     applyDocumentTheme(theme.base)
   }
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+    <div className="flex flex-wrap items-center gap-1.5">
       <span className="mr-1 text-xs text-muted-foreground">
         {translate('auto.components.settings.PluginThemeUseNow.label', 'Use now:')}
       </span>

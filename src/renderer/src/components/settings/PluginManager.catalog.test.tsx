@@ -248,7 +248,21 @@ describe('PluginManager catalog', () => {
         types: ['app-theme']
       }
     }
-    installApi({ listMarketplacePlugins: vi.fn().mockResolvedValue([themeListing]) })
+    installApi({
+      listMarketplacePlugins: vi.fn().mockResolvedValue([themeListing]),
+      previewMarketplacePlugin: vi.fn().mockResolvedValue({
+        ...preview,
+        manifest: {
+          ...preview.manifest,
+          main: undefined,
+          capabilities: [],
+          contributes: {
+            ...preview.manifest.contributes,
+            themes: [{ id: 'dusk', label: 'Dusk', path: 'themes/dusk.json' }]
+          }
+        }
+      })
+    })
     const { onInstalled } = await render()
     await act(async () => button('Install').click())
 

@@ -269,6 +269,62 @@ describe('PluginDetailPage', () => {
     )
   })
 
+  it('warns about the commands a panel plugin carries and discloses replaced shortcuts first', async () => {
+    vi.spyOn(navigator, 'userAgent', 'get').mockReturnValue('Macintosh')
+    const panelManifest = pluginManifestSchema.parse({
+      ...manifest,
+      contributes: {
+        panels: [{ id: 'board', title: 'Board', entry: 'board.html' }],
+        commands: [{ id: 'tasks', title: 'Open Tasks', action: 'sidebar.left.toggle' }],
+        keybindings: [{ command: 'tasks', key: 'Mod+Alt+T' }]
+      }
+    })
+    const panelListing: PluginMarketplaceHostListing = {
+      ...listing,
+      pluginKey: 'stablyai.board',
+      release: { ...listing.release!, execution: 'sandboxed-ui', types: ['panel', 'instructions'] }
+    }
+    const container = await render(pluginListEntryFromListing(panelListing), () =>
+      Promise.resolve({
+        ok: true,
+        preview: { ...preview, pluginKey: 'stablyai.board', manifest: panelManifest }
+      })
+    )
+    expect(container.textContent).toContain(
+      'Its commands and instructions can take actions when you or an agent use them.'
+    )
+    expect(container.textContent).not.toContain('These permissions limit what it can do')
+    expect(container.textContent).not.toContain('outside its own files')
+    expect(container.textContent).toMatch(/replaces your shortcut for/)
+  })
+
+  it('never arms Install & enable for a release other than the one the page shows', async () => {
+    install.install.mockClear()
+    const codeListing: PluginMarketplaceHostListing = {
+      ...listing,
+      pluginKey: 'stablyai.shortcuts',
+      release: { ...listing.release!, execution: 'instructional', types: ['instructions'] }
+    }
+    const container = await render(pluginListEntryFromListing(codeListing), () =>
+      Promise.resolve({
+        ok: true,
+        // Why a worker: the catalog moved on to a release that asks for more than the page shows.
+        preview: {
+          ...preview,
+          pluginKey: 'stablyai.shortcuts',
+          resolvedCommit: 'f'.repeat(40),
+          manifest: { ...preview.manifest, main: 'dist/main.mjs' }
+        }
+      })
+    )
+    expect(container.textContent).toContain('Newer version available')
+    const installButton = Array.from(container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Install & enable')
+    )
+    expect(installButton?.disabled).toBe(true)
+    expect(install.install).not.toHaveBeenCalled()
+  })
+
   it('names what a plugin under review adds from its installed manifest', async () => {
     vi.mocked(window.api.plugins.getInstalledManifest).mockResolvedValue(preview.manifest)
     const container = await render(

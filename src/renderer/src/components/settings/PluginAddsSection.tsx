@@ -22,8 +22,10 @@ import { ShortcutKeyCombo } from '../ShortcutKeyCombo'
 import { Button } from '../ui/button'
 import { DetailRow, DetailSection } from './PluginDetailSections'
 import { shadowedKeybindingTitles } from './PluginKeybindingConsentPreview'
+import type { PluginContributionSummaryItem } from '../../../../shared/plugins/plugin-contribution-summary'
 import {
   describePluginContributions,
+  summaryContributionSource,
   EMPTY_CONTRIBUTION_SOURCE,
   manifestContributionSource,
   uncoveredCatalogTypes,
@@ -112,20 +114,19 @@ function CommandRow({
       detailTone={shadowed.length > 0 ? 'warning' : 'default'}
       detail={
         shadowed.length > 0 ? (
-          <>
+          <span className="flex flex-col items-start">
             {translate(
               'auto.components.settings.PluginDetailSections.replaces',
               'Replaces your shortcut for {{value0}}',
               { value0: shadowed.join(', ') }
             )}
-            {' · '}
-            <Button variant="link" size="xs" onClick={onOpenShortcuts}>
+            <Button variant="link" size="xs" className="-ml-2" onClick={onOpenShortcuts}>
               {translate(
                 'auto.components.settings.PluginDetailSections.changeShortcuts',
                 'Change in Shortcuts'
               )}
             </Button>
-          </>
+          </span>
         ) : binding?.when === 'worktree' ? (
           translate(
             'auto.components.settings.PluginKeybindingConsentPreview.worktree',
@@ -150,34 +151,55 @@ function CommandRow({
 export function PluginAddsSection({
   plugin,
   preview,
+  summary,
+  themePreview,
   types,
   onOpenShortcuts
 }: {
   plugin: PluginHostListEntry | null
   preview: PluginMarketplaceHostInstallPreview | null
+  /** The catalog's summary, checked against the manifest at install; paints before preview. */
+  summary: readonly PluginContributionSummaryItem[] | undefined
+  themePreview: readonly { label: string; base: 'light' | 'dark' }[] | undefined
   types: readonly PluginCatalogType[]
   onOpenShortcuts: () => void
 }): React.JSX.Element | null {
   const installedSource = useInstalledPluginContributions(plugin)
+  // Why the summary over the preview: same names, known at first paint, so rows never appear late.
   const source = plugin
     ? installedSource
-    : preview
-      ? manifestContributionSource(preview.manifest)
-      : EMPTY_CONTRIBUTION_SOURCE
+    : summary
+      ? summaryContributionSource(summary, themePreview)
+      : preview
+        ? manifestContributionSource(preview.manifest)
+        : EMPTY_CONTRIBUTION_SOURCE
+  const previewCommands = preview?.manifest.contributes.commands.map((command) => ({
+    id: command.id,
+    title: command.title,
+    keybindings: preview.manifest.contributes.keybindings
+      .filter((binding) => binding.command === command.id)
+      .map((binding) => ({ key: binding.key, when: binding.when ?? 'global' }))
+  }))
   const commands: AddsCommand[] =
     plugin?.commands ??
-    preview?.manifest.contributes.commands.map((command) => ({
-      id: command.id,
-      title: command.title,
-      keybindings: preview.manifest.contributes.keybindings
-        .filter((binding) => binding.command === command.id)
-        .map((binding) => ({ key: binding.key, when: binding.when ?? 'global' }))
-    })) ??
+    (summary
+      ? summary
+          .filter((item) => item.kind === 'commands')
+          .map(
+            (item, index) =>
+              // Why by position: the summary lists commands in manifest order, without ids.
+              previewCommands?.[index] ?? {
+                id: `summary-${index}`,
+                title: item.name,
+                keybindings: []
+              }
+          )
+      : previewCommands) ??
     []
   const rows = describePluginContributions(source)
-  // Why: a fetched manifest is exact, so its types add nothing.
+  // Why: a fetched manifest or a catalog summary is exact, so its types add nothing.
   const fallbackTypes =
-    preview && !plugin ? [] : uncoveredCatalogTypes(types, rows, commands.length > 0)
+    (preview || summary) && !plugin ? [] : uncoveredCatalogTypes(types, rows, commands.length > 0)
   const total = rows.length + commands.length + fallbackTypes.length
   if (total === 0) {
     return null

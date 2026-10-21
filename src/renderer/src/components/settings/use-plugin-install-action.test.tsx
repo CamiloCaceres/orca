@@ -43,6 +43,14 @@ const preview: PluginMarketplaceHostInstallPreview = {
     version: '1.0.0',
     engines: { orca: '>=1.0.0' },
     pluginApi: 1,
+    contributes: { themes: [{ id: 'dusk', label: 'Dusk', path: 'themes/dusk.json' }] }
+  })
+}
+
+const codePreview: PluginMarketplaceHostInstallPreview = {
+  ...preview,
+  manifest: pluginManifestSchema.parse({
+    ...preview.manifest,
     contributes: { commands: [{ id: 'go', title: 'Go', action: 'sidebar.left.toggle' }] }
   })
 }
@@ -110,7 +118,7 @@ describe('usePluginInstallAction', () => {
       release: { ...listing.release!, execution: 'instructional' as const }
     }
     vi.mocked(window.api.plugins.installMarketplacePlugin).mockResolvedValue(installResult(false))
-    await act(async () => hook.current?.install(codeListing, { preview }))
+    await act(async () => hook.current?.install(codeListing, { preview: codePreview }))
     expect(window.api.plugins.installMarketplacePlugin).toHaveBeenCalledWith(
       expect.not.objectContaining({ enableIfData: true })
     )
@@ -118,6 +126,20 @@ describe('usePluginInstallAction', () => {
       pluginKey: listing.pluginKey,
       reviewedFingerprint: 'sha256-shown',
       decision: 'approve'
+    })
+  })
+
+  it('refuses a one-click install when the catalog moved past the release it showed', async () => {
+    const { hook, fetchPreview } = setup()
+    fetchPreview.mockResolvedValue({
+      ok: true,
+      preview: { ...preview, resolvedCommit: 'e'.repeat(40) }
+    })
+    await act(async () => hook.current?.install(listing))
+    expect(window.api.plugins.installMarketplacePlugin).not.toHaveBeenCalled()
+    expect(hook.current?.phaseOf(listing.pluginKey)).toEqual({
+      kind: 'error',
+      message: 'The catalog changed since this page opened. Refresh it, then try again.'
     })
   })
 

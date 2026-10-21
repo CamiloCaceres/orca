@@ -5,19 +5,26 @@ import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
 import { SecuritySurface } from '../ui/security-surface'
 import { pluginCapabilityDescription } from './plugin-capability-presentation'
-import type { PluginConsentTier } from './plugin-access-profile'
-import { consentTierLabel, consentTierWarning } from './plugin-consent-copy'
+import { formatKeybindingList } from '../../../../shared/keybindings'
+import { useAppStore } from '@/store'
+import type { PluginTrust } from './plugin-access-profile'
+import { pluginTrustLabel, pluginTrustWarnings } from './plugin-consent-copy'
 import { PluginConsentProvenance, type PluginConsentSource } from './PluginConsentProvenance'
-import { PluginKeybindingConsentPreview } from './PluginKeybindingConsentPreview'
+import { shadowedKeybindingTitles } from './PluginKeybindingConsentPreview'
 import { PluginVmRecipeConsentPreview } from './PluginVmRecipeConsentPreview'
+import type { PluginPageShortcut } from './use-plugin-page-model'
 
 type PluginInstallConsentProps = {
   name: string
   /** `install` grants on install; `enable` reviews a plugin already installed. */
   mode: 'install' | 'enable'
-  tier: PluginConsentTier
+  trust: PluginTrust
   /** Null until the plugin's own files were read; the button stays off until then. */
   capabilities: readonly { kind: string; description: string }[] | null
+  /** Shortcuts it binds; any that replace one of yours are named before consent. */
+  shortcuts: readonly PluginPageShortcut[] | null
+  /** Off while what it shows may not be what installs (not yet read, or the catalog moved). */
+  armed: boolean
   /** Its files couldn't be read, so nothing is known about what it can do. */
   failed?: boolean
   onRetry?: () => void
@@ -38,11 +45,20 @@ type PluginInstallConsentProps = {
  * What a plugin that runs code or instructions may do, directly above the one button that grants
  * it. On the host's security surface so a plugin theme cannot restyle the decision.
  */
+function shortcutPlatform(): NodeJS.Platform {
+  if (navigator.userAgent.includes('Mac')) {
+    return 'darwin'
+  }
+  return navigator.userAgent.includes('Windows') ? 'win32' : 'linux'
+}
+
 export function PluginInstallConsent({
   name,
   mode,
-  tier,
+  trust,
   capabilities,
+  shortcuts,
+  armed,
   failed = false,
   onRetry,
   installed,
@@ -57,6 +73,12 @@ export function PluginInstallConsent({
 }: PluginInstallConsentProps): React.JSX.Element {
   const headingId = useId()
   const ready = capabilities !== null
+  const overrides = useAppStore((state) => state.keybindings)
+  const platform = shortcutPlatform()
+  const conflicts = (shortcuts ?? []).flatMap((shortcut) => {
+    const replaced = shadowedKeybindingTitles(shortcut.key, platform, overrides)
+    return replaced.length > 0 ? [{ ...shortcut, replaced }] : []
+  })
   const confirmLabel =
     mode === 'install'
       ? translate('auto.components.settings.PluginInstallConsent.install', 'Install & enable')
@@ -66,9 +88,9 @@ export function PluginInstallConsent({
       <section
         aria-labelledby={headingId}
         data-plugin-consent=""
-        className="mt-5 overflow-hidden rounded-xl border border-border bg-card text-card-foreground"
+        className="mt-5 overflow-hidden rounded-xl border border-foreground/25 bg-card text-card-foreground shadow-xs"
       >
-        <div className="flex items-center gap-2 border-b border-border bg-muted/50 px-4 py-2.5">
+        <div className="flex items-center gap-2 border-b border-foreground/15 bg-muted px-4 py-2.5">
           <ShieldAlert className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <h3 id={headingId} className="min-w-0 flex-1 text-sm font-medium">
             {mode === 'install'
@@ -84,7 +106,7 @@ export function PluginInstallConsent({
                 )}
           </h3>
           <span className="shrink-0 rounded-md border border-border px-1.5 py-px text-2xs font-medium text-muted-foreground">
-            {consentTierLabel(tier)}
+            {pluginTrustLabel(trust)}
           </span>
         </div>
         <div className="space-y-2 px-4 py-3 text-sm leading-6">
@@ -96,10 +118,28 @@ export function PluginInstallConsent({
               )}
             </p>
           ) : null}
-          <p className="flex items-start gap-2">
-            <AlertTriangle className="mt-1 size-4 shrink-0 text-muted-foreground" />
-            <span>{consentTierWarning(tier)}</span>
-          </p>
+          {pluginTrustWarnings(trust).map((warning) => (
+            <p key={warning} className="flex items-start gap-2">
+              <AlertTriangle className="mt-1 size-4 shrink-0 text-muted-foreground" />
+              <span>{warning}</span>
+            </p>
+          ))}
+          {conflicts.map((conflict) => (
+            <p key={conflict.key} className="flex items-start gap-2 text-status-warning-text">
+              <AlertTriangle className="mt-1 size-4 shrink-0" />
+              <span>
+                {translate(
+                  'auto.components.settings.PluginInstallConsent.replacesShortcut',
+                  '{{value0}} ({{value1}}) replaces your shortcut for {{value2}}.',
+                  {
+                    value0: formatKeybindingList([conflict.key], platform),
+                    value1: conflict.command,
+                    value2: conflict.replaced.join(', ')
+                  }
+                )}
+              </span>
+            </p>
+          ))}
           {ready && capabilities.length === 0 ? (
             // Why a row: the reading row it replaces keeps its height, so nothing below moves.
             <p className="flex items-start gap-2 text-muted-foreground">
@@ -145,19 +185,14 @@ export function PluginInstallConsent({
               )}
             </p>
           )}
-          {installed ? (
-            <>
-              <PluginKeybindingConsentPreview commands={installed.commands} />
-              <PluginVmRecipeConsentPreview recipes={installed.vmRecipes ?? []} />
-            </>
-          ) : null}
+          {installed ? <PluginVmRecipeConsentPreview recipes={installed.vmRecipes ?? []} /> : null}
         </div>
         {error ? <p className="px-4 pb-2 text-xs text-destructive">{error}</p> : null}
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2.5">
           <Button
             size="sm"
             className="w-36"
-            disabled={!ready || busy}
+            disabled={!ready || !armed || busy}
             aria-label={`${confirmLabel}: ${name}`}
             onClick={onConfirm}
           >

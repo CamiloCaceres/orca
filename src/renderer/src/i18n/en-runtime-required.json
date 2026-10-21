@@ -1427,7 +1427,11 @@
           "whatChanged": "What changed",
           "workerTrust": "Background worker — runs its own process"
         },
+        "PluginDetailInfo": {
+          "copyHash": "Copy content hash {{value0}}"
+        },
         "PluginDetailPage": {
+          "content": "Content",
           "install": "Install…",
           "reviewBody": "Review what it adds and what it can reach, then enable it. Nothing runs before that."
         },
