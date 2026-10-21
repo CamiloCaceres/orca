@@ -93,7 +93,7 @@ export function projectClientSessionTabSelection(
   const activeTabIdByGroupId: Record<string, string> = {}
   const tabGroups = snapshot.tabGroups?.map((group) => {
     const selected = selection.activeTabIdByGroupId[group.id]
-    // Why: a closed pick moves as the desktop's close does, by this client's own recency.
+    // Why: a pick that left its group moves on by this client's recency, as desktop close and move do.
     const activeTabId =
       selected && !group.tabOrder.includes(selected)
         ? pickNextActiveTabAfterClose(
