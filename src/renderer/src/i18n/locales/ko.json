@@ -11901,10 +11901,7 @@
           "installFailed": "플러그인 설치에 실패했습니다. 소스를 확인하고 다시 시도하세요."
         },
         "PluginKeybindingConsentPreview": {
-          "heading": "키보드 단축키",
-          "worktree": "워크스페이스가 활성화된 동안만 실행됩니다.",
-          "global": "Orca 어디에서나 작동합니다.",
-          "shadows": "대체: {{value0}}"
+          "worktree": "워크스페이스가 활성화된 동안만 실행됩니다."
         },
         "PluginMarketplaceBrowser": {
           "loadFailed": "마켓플레이스 플러그인을 로드할 수 없습니다.",

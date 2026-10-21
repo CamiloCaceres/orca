@@ -332,13 +332,15 @@ describe('PluginManager catalog', () => {
     expect(buttons('Update plugin')).toHaveLength(0)
   })
 
-  it('opens a preview asked for from outside Settings, once', async () => {
+  it('opens the plugin page for a plugin asked for from outside Settings, with no dialog', async () => {
     await render()
     await act(async () =>
       requestPluginPreview({ marketplaceSourceId: SOURCE_ID, pluginKey: listing.pluginKey })
     )
-    expect(window.api.plugins.previewMarketplacePlugin).toHaveBeenCalledTimes(1)
-    expect(buttons('Install plugin')).toHaveLength(1)
+    expect(document.querySelector('#plugin-detail-heading')?.textContent).toBe('Worktree Notes')
+    expect(document.body.textContent).toContain('If you install Worktree Notes, it can:')
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+    expect(buttons('Install plugin')).toHaveLength(0)
   })
 
   it('reaches Update all from the Updates tab', async () => {

@@ -11896,10 +11896,7 @@
           "installFailed": "No se pudo instalar el plugin. Comprueba el origen e inténtalo de nuevo."
         },
         "PluginKeybindingConsentPreview": {
-          "heading": "Atajos de teclado",
-          "worktree": "Solo se ejecuta mientras hay un espacio de trabajo activo.",
-          "global": "Funciona en cualquier parte de Orca.",
-          "shadows": "Reemplaza: {{value0}}"
+          "worktree": "Solo se ejecuta mientras hay un espacio de trabajo activo."
         },
         "PluginMarketplaceBrowser": {
           "loadFailed": "No se pudieron cargar los plugins del marketplace.",

@@ -205,7 +205,8 @@ export function PluginCardArt({
   fileType,
   palettes,
   tintKey,
-  shortcut = null
+  shortcut = null,
+  fill = false
 }: {
   name: string
   types: readonly PluginCatalogType[]
@@ -213,6 +214,8 @@ export function PluginCardArt({
   palettes: readonly PluginArtPalette[]
   /** The plugin's first shortcut, so keycap art shows its own keys. */
   shortcut?: string | null
+  /** Fill a sized parent (the page hero) instead of setting its own 16:10 height. */
+  fill?: boolean
   /** Picks the backdrop tint, so each plugin's art stays the same colour everywhere. */
   tintKey: string
 }): React.JSX.Element {
@@ -244,7 +247,8 @@ export function PluginCardArt({
   return (
     <div
       aria-hidden="true"
-      className="relative aspect-[16/10] overflow-hidden bg-[radial-gradient(color-mix(in_srgb,var(--foreground)_9%,transparent)_1px,transparent_1.2px)] bg-size-[14px_14px]"
+      data-fill={fill}
+      className="relative aspect-[16/10] overflow-hidden data-[fill=true]:absolute data-[fill=true]:inset-0 data-[fill=true]:aspect-auto bg-[radial-gradient(color-mix(in_srgb,var(--foreground)_9%,transparent)_1px,transparent_1.2px)] bg-size-[14px_14px]"
       style={{ backgroundColor: `color-mix(in srgb, var(${tint}) 16%, var(--muted))` }}
     >
       {art}

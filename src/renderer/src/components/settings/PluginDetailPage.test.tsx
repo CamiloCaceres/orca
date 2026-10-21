@@ -375,6 +375,22 @@ describe('PluginDetailPage', () => {
     expect(installButton(container)?.disabled).toBe(true)
   })
 
+  it('gives no access verdict while the plugin is still being read', async () => {
+    const summarized = {
+      ...codeRelease,
+      release: { ...codeRelease.release, capabilities: [] }
+    }
+    let resolvePreview: (result: PluginPagePreview) => void = () => {}
+    const container = await render(
+      pluginListEntryFromListing(summarized),
+      () => new Promise((resolve) => (resolvePreview = resolve))
+    )
+    expect(container.textContent).toContain('Reading what it can access…')
+    expect(container.textContent).not.toContain('It asks for no other access.')
+    await act(async () => resolvePreview({ ok: true, preview: codePreview }))
+    expect(container.textContent).toContain('It asks for no other access.')
+  })
+
   it('disarms while a catalog refresh is in flight', async () => {
     const container = await render(
       pluginListEntryFromListing(codeRelease),

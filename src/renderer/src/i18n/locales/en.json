@@ -12181,10 +12181,7 @@
           "installFailed": "Plugin installation failed. Check the source and try again."
         },
         "PluginKeybindingConsentPreview": {
-          "heading": "Keyboard shortcuts",
-          "worktree": "Runs only while a workspace is active.",
-          "global": "Works anywhere in Orca.",
-          "shadows": "Replaces: {{value0}}"
+          "worktree": "Runs only while a workspace is active."
         },
         "PluginMarketplaceBrowser": {
           "loadFailed": "Could not load marketplace plugins.",
@@ -13304,7 +13301,8 @@
           "resultCount": "{{value0}} plugins match",
           "resultCountOne": "1 plugin matches",
           "updateAll": "Update all…",
-          "installedElsewhere": "Installed outside a catalog"
+          "installedElsewhere": "Installed outside a catalog",
+          "bundledAndLocal": "Bundled & local"
         },
         "PluginDetailPage": {
           "bundled": "Bundled with Orca",
@@ -13498,6 +13496,13 @@
           "addsCommands": "Adds commands",
           "addsPanel": "Adds a panel",
           "contentOnly": "Content only"
+        },
+        "pluginInstallAction": {
+          "mismatch": "The download didn’t match what the catalog published, so nothing was installed.",
+          "catalogChanged": "The catalog changed since this page opened. Refresh it, then try again.",
+          "blocked": "Orca’s safety list blocks this plugin.",
+          "downloadFailed": "Couldn’t download this plugin. Check your connection, then try again. Nothing was installed.",
+          "undoFailed": "Couldn’t remove it. It’s still installed; try Undo again."
         }
       },
       "right": {

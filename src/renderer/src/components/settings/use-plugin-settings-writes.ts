@@ -8,7 +8,8 @@ const saveFailed = (): string =>
     'Could not save plugin settings.'
   )
 
-/** The plugin system switch and development folders: save the setting, then re-discover. */
+/** Plugin settings writes: the system switch and development folders re-discover; all report
+ *  a failed save instead of dropping it. */
 export function usePluginSettingsWrites({
   settings,
   updateSettings,
@@ -70,5 +71,26 @@ export function usePluginSettingsWrites({
     }
   }
 
-  return { featureBusy, devPathsBusy, settingsError, reset, toggleFeature, updateDevPaths }
+  const toggleSuggestions = async (): Promise<void> => {
+    setSettingsError(null)
+    try {
+      await updateSettings({
+        pluginFileTypeSuggestions: settings.pluginFileTypeSuggestions === false
+      })
+    } catch {
+      if (mountedRef.current) {
+        setSettingsError(saveFailed())
+      }
+    }
+  }
+
+  return {
+    featureBusy,
+    devPathsBusy,
+    settingsError,
+    reset,
+    toggleFeature,
+    toggleSuggestions,
+    updateDevPaths
+  }
 }

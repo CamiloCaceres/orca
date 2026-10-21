@@ -97,8 +97,13 @@ export function PluginManager({
   const [updateAllOpens, setUpdateAllOpens] = useState(0)
   const [updateAllOpen, setUpdateAllOpen] = useState(false)
   const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(() => new Set())
-  const catalog = usePluginCatalog({ installedPlugins: plugins, onInstalled, onRefreshInstalled })
   const { openKey, open, back } = page
+  const catalog = usePluginCatalog({
+    installedPlugins: plugins,
+    onInstalled,
+    onRefreshInstalled,
+    onOpenRequested: open
+  })
   const install = usePluginInstallAction({
     fetchPreview: catalog.fetchPreview,
     onInstalled,
@@ -221,10 +226,7 @@ export function PluginManager({
         filter === 'updates'
           ? translate('auto.components.settings.PluginManager.updatesTitle', 'Updates')
           : filter === 'all'
-            ? translate(
-                'auto.components.settings.PluginManager.installedElsewhere',
-                'Installed outside a catalog'
-              )
+            ? translate('auto.components.settings.PluginManager.bundledAndLocal', 'Bundled & local')
             : translate('auto.components.settings.PluginManager.installed', 'Installed')
       }
       showHeading={filter === 'all'}
@@ -264,7 +266,6 @@ export function PluginManager({
         mode={catalog.previewMode}
         busy={catalog.installBusy}
         currentVersion={catalog.currentVersion}
-        accessOnly={catalog.previewAccessOnly}
         error={catalog.actionError}
         onClose={catalog.closePreview}
         onConfirm={() => void catalog.installPreview()}

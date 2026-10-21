@@ -26,11 +26,14 @@ function marketplaceError(cause: unknown, fallback: string): string {
 export function usePluginCatalog({
   installedPlugins,
   onInstalled,
-  onRefreshInstalled
+  onRefreshInstalled,
+  onOpenRequested
 }: {
   installedPlugins: readonly PluginHostListEntry[]
   onInstalled: (pluginKey: string) => Promise<void>
   onRefreshInstalled?: () => Promise<void>
+  /** A plugin asked for from outside Settings (a file-type suggestion); opens its page. */
+  onOpenRequested?: (pluginKey: string) => void
 }) {
   const [sources, setSources] = useState<PluginMarketplaceHostSourceState[]>([])
   const [listings, setListings] = useState<PluginMarketplaceHostListing[]>([])
@@ -39,8 +42,6 @@ export function usePluginCatalog({
   const [error, setError] = useState<string | null>(null)
   const [preview, setPreview] = useState<PluginMarketplaceHostInstallPreview | null>(null)
   const [previewMode, setPreviewMode] = useState<PluginMarketplacePreviewMode>('install')
-  // Why: opened from a plugin page, the review skips what the page already showed.
-  const [previewAccessOnly, setPreviewAccessOnly] = useState(false)
   const [previewBusyKey, setPreviewBusyKey] = useState<string | null>(null)
   const [installBusy, setInstallBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -120,8 +121,7 @@ export function usePluginCatalog({
 
   const openPreview = async (
     listing: PluginMarketplaceHostListing,
-    update: boolean,
-    accessOnly = false
+    update: boolean
   ): Promise<void> => {
     const requestId = ++previewRequestRef.current
     setPreviewBusyKey(listing.pluginKey)
@@ -136,7 +136,6 @@ export function usePluginCatalog({
           })
       if (mountedRef.current && requestId === previewRequestRef.current) {
         setPreviewMode(update ? 'update' : 'install')
-        setPreviewAccessOnly(accessOnly)
         setPreview(nextPreview)
       }
     } catch (cause) {
@@ -159,8 +158,9 @@ export function usePluginCatalog({
   }
 
   const previewRequest = usePluginPreviewRequestStore((state) => state.request)
-  const openPreviewRef = useRef(openPreview)
-  openPreviewRef.current = openPreview
+  const openRequestedRef = useRef(onOpenRequested)
+  openRequestedRef.current = onOpenRequested
+  // Why the page: a suggestion leads to the same one-action install as the catalog, not a dialog.
   useEffect(() => {
     if (!previewRequest || loading) {
       return
@@ -173,7 +173,7 @@ export function usePluginCatalog({
         candidate.pluginKey === previewRequest.pluginKey
     )
     if (listing) {
-      void openPreviewRef.current(listing, false)
+      openRequestedRef.current?.(listing.pluginKey)
     }
   }, [previewRequest, listings, loading])
 
@@ -253,7 +253,6 @@ export function usePluginCatalog({
     error,
     preview,
     previewMode,
-    previewAccessOnly,
     previewBusyKey,
     installBusy,
     actionError,

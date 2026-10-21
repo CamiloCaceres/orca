@@ -1446,6 +1446,7 @@
           "title": "Development"
         },
         "PluginManager": {
+          "installedElsewhere": "Installed outside a catalog",
           "sourcesLabel": "Catalog sources"
         },
         "PluginManagerRows": {
@@ -2115,6 +2116,13 @@
               }
             }
           }
+        },
+        "usePluginInstallAction": {
+          "blocked": "Orca’s safety list blocks this plugin.",
+          "catalogChanged": "The catalog changed since this page opened. Refresh it, then try again.",
+          "downloadFailed": "Couldn’t download this plugin. Check your connection, then try again. Nothing was installed.",
+          "mismatch": "The download didn’t match what the catalog published, so nothing was installed.",
+          "undoFailed": "Couldn’t remove it. It’s still installed; try Undo again."
         },
         "useWarpThemeImport": {
           "imported_one": "Imported 1 theme",

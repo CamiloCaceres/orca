@@ -27,19 +27,24 @@ type PluginPageActionProps = {
   ) => Promise<void>
 }
 
-/** Why fixed slots: the button, then "Installed · Undo", fill one width, so the note never moves. */
+/** Why fixed slots: the button, then "Installed · Undo", fill one width, so the note never moves;
+ *  a theme plugin also reserves the "Use now" line from first paint. */
 function DataActionRow({
   slot,
-  extra
+  extra,
+  reserveExtra
 }: {
   slot: React.ReactNode
   extra?: React.ReactNode
+  reserveExtra: boolean
 }): React.JSX.Element {
   return (
-    <div className="mt-4 flex min-h-9 flex-wrap items-center gap-x-3 gap-y-2">
-      <div className="flex w-48 shrink-0 items-center gap-2">{slot}</div>
-      <ContentOnlyNote />
-      {extra}
+    <div className="mt-4">
+      <div className="flex min-h-9 flex-wrap items-center gap-x-3 gap-y-2">
+        <div className="flex w-44 shrink-0 items-center gap-2">{slot}</div>
+        <ContentOnlyNote />
+      </div>
+      {reserveExtra ? <div className="mt-2 flex min-h-7 items-center">{extra}</div> : null}
     </div>
   )
 }
@@ -104,6 +109,7 @@ export function PluginPageAction({
     )
   }
   const undoFailed = phase?.kind === 'undo-failed' ? phase.message : null
+  const themed = entry.types.includes('app-theme')
   if (plugin) {
     if (plugin.execution !== 'data') {
       return null
@@ -137,6 +143,7 @@ export function PluginPageAction({
             </>
           }
           extra={<PluginThemeUseNow pluginKey={plugin.pluginKey} />}
+          reserveExtra={themed}
         />
         {undoFailed ? (
           <PluginDetailAlert
@@ -172,9 +179,10 @@ export function PluginPageAction({
     return (
       <>
         <DataActionRow
+          reserveExtra={themed}
           slot={
             <Button
-              className="w-36"
+              className="w-44"
               disabled={installing || model.disarmed}
               aria-label={translate(
                 'auto.components.settings.PluginManagerRows.installName',

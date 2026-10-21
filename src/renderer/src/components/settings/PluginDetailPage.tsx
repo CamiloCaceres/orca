@@ -231,9 +231,6 @@ export function PluginDetailPage({
           </div>
         ) : null}
       </div>
-      <div className="mt-4">
-        <PluginPageHero entry={entry} images={model.images} palettes={palettes} />
-      </div>
       {description ? <p className="mt-4 max-w-prose text-sm leading-6">{description}</p> : null}
       <PluginPageAction
         entry={entry}
@@ -245,6 +242,10 @@ export function PluginDetailPage({
         onConsent={onConsent}
       />
       {alert}
+      {/* Why after the decision: the picture must never push Install or Enable below the fold. */}
+      <div className="mt-6">
+        <PluginPageHero entry={entry} images={model.images} palettes={palettes} />
+      </div>
       <div className="mt-2 grid grid-cols-[minmax(0,1fr)_14.5rem] gap-7 @max-2xl/plugin-detail:grid-cols-1 @max-2xl/plugin-detail:gap-0">
         <div className="min-w-0">
           <PluginScreenshots images={model.images} />

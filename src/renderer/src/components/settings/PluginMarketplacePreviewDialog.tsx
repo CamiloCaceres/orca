@@ -24,7 +24,6 @@ type PluginMarketplacePreviewDialogProps = {
   busy: boolean
   currentVersion: boolean
   /** Opened from the plugin's page, which already showed what it adds: show access and source only. */
-  accessOnly?: boolean
   error: string | null
   onClose: () => void
   onConfirm: () => void
@@ -196,7 +195,6 @@ export function PluginMarketplacePreviewDialog({
   mode,
   busy,
   currentVersion,
-  accessOnly = false,
   error,
   onClose,
   onConfirm
@@ -248,36 +246,34 @@ export function PluginMarketplacePreviewDialog({
               </div>
             </DialogHeader>
             <PluginReviewBody>
-              {preview.manifest.description && !accessOnly ? (
+              {preview.manifest.description ? (
                 <PluginReviewSection>
                   <p className="text-sm leading-6">{preview.manifest.description}</p>
                 </PluginReviewSection>
               ) : null}
-              {accessOnly ? null : (
-                <PluginReviewSection
-                  title={translate(
-                    'auto.components.settings.PluginMarketplacePreviewDialog.includes',
-                    'Includes'
+              <PluginReviewSection
+                title={translate(
+                  'auto.components.settings.PluginMarketplacePreviewDialog.includes',
+                  'Includes'
+                )}
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {contributions.length > 0 ? (
+                    contributions.map((entry) => (
+                      <Badge key={entry.key} variant="secondary">
+                        {entry.label}
+                      </Badge>
+                    ))
+                  ) : (
+                    <span className="text-sm text-muted-foreground">
+                      {translate(
+                        'auto.components.settings.PluginMarketplacePreviewDialog.noContributions',
+                        'Manifest metadata only'
+                      )}
+                    </span>
                   )}
-                >
-                  <div className="flex flex-wrap gap-1.5">
-                    {contributions.length > 0 ? (
-                      contributions.map((entry) => (
-                        <Badge key={entry.key} variant="secondary">
-                          {entry.label}
-                        </Badge>
-                      ))
-                    ) : (
-                      <span className="text-sm text-muted-foreground">
-                        {translate(
-                          'auto.components.settings.PluginMarketplacePreviewDialog.noContributions',
-                          'Manifest metadata only'
-                        )}
-                      </span>
-                    )}
-                  </div>
-                </PluginReviewSection>
-              )}
+                </div>
+              </PluginReviewSection>
               {preview.manifest.capabilities.length > 0 ? (
                 <PluginReviewSection
                   title={translate(

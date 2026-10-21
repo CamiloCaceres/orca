@@ -10,7 +10,7 @@ import { useAppStore } from '@/store'
 import type { PluginTrust } from './plugin-access-profile'
 import { pluginTrustLabel, pluginTrustWarnings } from './plugin-consent-copy'
 import { PluginConsentProvenance, type PluginConsentSource } from './PluginConsentProvenance'
-import { shadowedKeybindingTitles } from './PluginKeybindingConsentPreview'
+import { shadowedKeybindingTitles } from './plugin-keybinding-conflicts'
 import { PluginVmRecipeConsentPreview } from './PluginVmRecipeConsentPreview'
 import type { PluginPageShortcut } from './use-plugin-page-model'
 
@@ -143,7 +143,16 @@ export function PluginInstallConsent({
               </span>
             </p>
           ))}
-          {ready && capabilities.length === 0 ? (
+          {reading && !failed ? (
+            // Why no verdict yet: "no other access" must wait for the files the button waits for.
+            <p className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="size-4 shrink-0 animate-spin" aria-hidden="true" />
+              {translate(
+                'auto.components.settings.PluginDetailSections.accessLoading',
+                'Reading the plugin…'
+              )}
+            </p>
+          ) : ready && capabilities.length === 0 ? (
             // Why a row: the reading row it replaces keeps its height, so nothing below moves.
             <p className="flex items-start gap-2 text-muted-foreground">
               <Check className="mt-1 size-4 shrink-0" />

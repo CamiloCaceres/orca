@@ -12000,10 +12000,7 @@
           "installFailed": "Échec de l'installation du plugin. Vérifiez la source et réessayez."
         },
         "PluginKeybindingConsentPreview": {
-          "heading": "Raccourcis clavier",
-          "worktree": "Ne fonctionne que lorsqu'un espace de travail est actif.",
-          "global": "Fonctionne partout dans Orca.",
-          "shadows": "Remplace : {{value0}}"
+          "worktree": "Ne fonctionne que lorsqu'un espace de travail est actif."
         },
         "PluginMarketplaceBrowser": {
           "loadFailed": "Impossible de charger les plugins du marketplace.",

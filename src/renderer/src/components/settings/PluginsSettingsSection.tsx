@@ -131,6 +131,7 @@ export function PluginsSettingsSection({
     settingsError,
     reset: resetSettingsWrites,
     toggleFeature,
+    toggleSuggestions,
     updateDevPaths
   } = usePluginSettingsWrites({
     settings,
@@ -285,14 +286,15 @@ export function PluginsSettingsSection({
   // Why one wrapper: a list mutation marks its plugin busy and shows a failure on the list.
   const mutateList = async (
     pluginKey: string,
-    request: () => Promise<PluginHostListEntry[]>
+    request: () => Promise<PluginHostListEntry[]>,
+    { reportFailure = true }: { reportFailure?: boolean } = {}
   ): Promise<boolean> => {
     setBusyPluginKeys((current) => new Set(current).add(pluginKey))
     try {
       applyCompletedMutation(await request())
       return true
     } catch (cause) {
-      if (mountedRef.current) {
+      if (mountedRef.current && reportFailure) {
         setPluginListError(cause)
       }
       return false
@@ -312,7 +314,10 @@ export function PluginsSettingsSection({
 
   const undoInstall = async (pluginKey: string): Promise<void> => {
     keepPageForRef.current = pluginKey
-    const removed = await mutateList(pluginKey, () => window.api.plugins.remove({ pluginKey }))
+    // Why not on the list: the card or page that offered Undo shows the failure and a retry.
+    const removed = await mutateList(pluginKey, () => window.api.plugins.remove({ pluginKey }), {
+      reportFailure: false
+    })
     keepPageForRef.current = null
     if (!removed) {
       throw new Error('undo install failed')
@@ -335,11 +340,7 @@ export function PluginsSettingsSection({
           featureEnabled={featureEnabled}
           featureBusy={featureBusy}
           suggestionsEnabled={settings.pluginFileTypeSuggestions !== false}
-          onToggleSuggestions={() =>
-            void updateSettings({
-              pluginFileTypeSuggestions: settings.pluginFileTypeSuggestions === false
-            })
-          }
+          onToggleSuggestions={() => void toggleSuggestions()}
           onAdd={setInstallKind}
           onSources={() => setSourcesOpen(true)}
           onDevelopment={() => setDevelopmentOpen(true)}

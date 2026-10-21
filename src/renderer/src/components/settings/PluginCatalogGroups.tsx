@@ -9,6 +9,10 @@ import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
 import { PluginCard } from '../plugin-catalog/PluginCard'
 import { PluginChips } from '../plugin-catalog/PluginChips'
 import { PluginCardAction } from './PluginCardAction'
+import { Badge } from '../ui/badge'
+import { PLUGIN_CONTRIBUTION_SUMMARY_LIMIT } from '../../../../shared/plugins/plugin-contribution-summary'
+import { pluginPointsFromSummary, pluginTrust } from './plugin-access-profile'
+import { pluginTrustLabel } from './plugin-consent-copy'
 import { statusWordFor } from '../plugin-catalog/PluginStatusWord'
 import { pluginStatusKind } from './plugin-status-presentation'
 import { usePluginArtPalettes } from './use-plugin-art-palettes'
@@ -81,6 +85,19 @@ function CatalogCard({
   const phase = handlers.install.phaseOf(entry.pluginKey)
   const listing = entry.listing
   const installed = entry.installed
+  const release = listing?.release
+  // Why the summary only below its cap: a capped list can't rule a command out.
+  const trustLabel = release
+    ? pluginTrustLabel(
+        pluginTrust({
+          execution: release.execution,
+          points:
+            release.contributes && release.contributes.length < PLUGIN_CONTRIBUTION_SUMMARY_LIMIT
+              ? pluginPointsFromSummary(release.contributes)
+              : null
+        })
+      )
+    : null
   const statusText = installed
     ? [
         statusWordFor(pluginStatusKind(installed)),
@@ -114,7 +131,12 @@ function CatalogCard({
               }
             : undefined
       }
-      chips={<PluginChips entry={entry} />}
+      chips={
+        <>
+          {trustLabel ? <Badge variant="hostContext">{trustLabel}</Badge> : null}
+          <PluginChips entry={entry} />
+        </>
+      }
       onOpen={() => handlers.openEntry(entry.pluginKey)}
       onIntent={listing && !entry.installed ? () => handlers.prefetch.intend(listing) : undefined}
       onIntentEnd={handlers.prefetch.cancel}

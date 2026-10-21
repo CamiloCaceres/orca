@@ -11901,10 +11901,7 @@
           "installFailed": "プラグインのインストールに失敗しました。ソースを確認して再試行してください。"
         },
         "PluginKeybindingConsentPreview": {
-          "heading": "キーボードショートカット",
-          "worktree": "ワークスペースがアクティブな間のみ実行。",
-          "global": "Orca のどこでも動作します。",
-          "shadows": "置換: {{value0}}"
+          "worktree": "ワークスペースがアクティブな間のみ実行。"
         },
         "PluginMarketplaceBrowser": {
           "loadFailed": "マーケットプレイスプラグインをロードできませんでした。",

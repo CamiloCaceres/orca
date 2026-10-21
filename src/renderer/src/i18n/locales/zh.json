@@ -11901,10 +11901,7 @@
           "installFailed": "插件安装失败。请检查来源后重试。"
         },
         "PluginKeybindingConsentPreview": {
-          "heading": "键盘快捷键",
-          "worktree": "仅在有活动工作区时运行。",
-          "global": "在 Orca 中任何位置都可用。",
-          "shadows": "替代：{{value0}}"
+          "worktree": "仅在有活动工作区时运行。"
         },
         "PluginMarketplaceBrowser": {
           "loadFailed": "无法加载插件市场中的插件。",

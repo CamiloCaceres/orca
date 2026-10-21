@@ -111,7 +111,3 @@ export function installedPluginTrust(
     hasWorker: plugin.hasWorker
   })
 }
-
-export function trustRunsNothing(trust: PluginTrust): boolean {
-  return !trust.worker && !trust.instructional && !trust.panel
-}

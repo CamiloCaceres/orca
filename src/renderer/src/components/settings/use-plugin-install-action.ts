@@ -20,23 +20,24 @@ export type PluginInstallPhase =
   /** Undo couldn't remove it; it stays installed and Undo can be tried again. */
   | { kind: 'undo-failed'; message: string }
 
+// Why the `plugin` key prefix: install errors are security copy language packs may not rewrite.
 function catalogInstallErrorMessage(cause: unknown): string {
   const detail = (cause instanceof Error ? cause.message : String(cause)).toLowerCase()
   if (/(do not match|does not match|no longer matches)/.test(detail)) {
     return translate(
-      'auto.components.settings.usePluginInstallAction.mismatch',
+      'auto.components.settings.pluginInstallAction.mismatch',
       'The download didn’t match what the catalog published, so nothing was installed.'
     )
   }
   if (detail.includes('marketplace changed')) {
     return translate(
-      'auto.components.settings.usePluginInstallAction.catalogChanged',
+      'auto.components.settings.pluginInstallAction.catalogChanged',
       'The catalog changed since this page opened. Refresh it, then try again.'
     )
   }
   if (detail.includes('safety list')) {
     return translate(
-      'auto.components.settings.usePluginInstallAction.blocked',
+      'auto.components.settings.pluginInstallAction.blocked',
       'Orca’s safety list blocks this plugin.'
     )
   }
@@ -45,7 +46,7 @@ function catalogInstallErrorMessage(cause: unknown): string {
 
 const downloadFailed = (): string =>
   translate(
-    'auto.components.settings.usePluginInstallAction.downloadFailed',
+    'auto.components.settings.pluginInstallAction.downloadFailed',
     'Couldn’t download this plugin. Check your connection, then try again. Nothing was installed.'
   )
 
@@ -199,7 +200,7 @@ export function usePluginInstallAction({
         setPhase(pluginKey, {
           kind: 'undo-failed',
           message: translate(
-            'auto.components.settings.usePluginInstallAction.undoFailed',
+            'auto.components.settings.pluginInstallAction.undoFailed',
             'Couldn’t remove it. It’s still installed; try Undo again.'
           )
         })

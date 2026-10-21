@@ -20,7 +20,7 @@ import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { ShortcutKeyCombo } from '../ShortcutKeyCombo'
 import { DetailRow, DetailSection } from './PluginDetailSections'
-import { shadowedKeybindingTitles } from './PluginKeybindingConsentPreview'
+import { shadowedKeybindingTitles } from './plugin-keybinding-conflicts'
 import type { PluginContributionSummaryItem } from '../../../../shared/plugins/plugin-contribution-summary'
 import {
   describePluginContributions,

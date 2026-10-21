@@ -18,7 +18,12 @@ const SECURITY_COPY_COMPONENTS = [
   'PluginMarketplaceListingRow',
   'PluginMarketplacePreviewDialog',
   'PluginMarketplaceSourceDialog',
-  'PluginVmRecipeConsentPreview'
+  'PluginVmRecipeConsentPreview',
+  // The inline consent and its copy replaced the review dialog.
+  'PluginInstallConsent',
+  'PluginPageAction',
+  'pluginConsentCopy',
+  'pluginInstallAction'
 ]
 
 function lookup(key: string): string | undefined {
