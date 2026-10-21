@@ -34,6 +34,7 @@ export function PluginCard({
   onIntentEnd
 }: PluginCardProps): React.JSX.Element {
   const category = entry.categories[0]
+  const cover = entry.installed?.images?.cover ?? entry.listing?.images?.cover
   return (
     <li
       data-plugin-key={entry.pluginKey}
@@ -42,13 +43,26 @@ export function PluginCard({
       onPointerLeave={onIntentEnd}
     >
       <div className="border-b border-border/70">
-        <PluginCardArt
-          name={entry.name}
-          types={entry.types}
-          fileType={entry.listing?.release?.fileTypes?.[0] ?? null}
-          palettes={palettes}
-          tintKey={entry.pluginKey}
-        />
+        {cover ? (
+          // Why alt="": the name link says what this is; the cover is decoration here.
+          <img
+            src={cover.url}
+            alt=""
+            width={cover.width}
+            height={cover.height}
+            loading="lazy"
+            decoding="async"
+            className="block aspect-[16/10] w-full bg-muted object-cover"
+          />
+        ) : (
+          <PluginCardArt
+            name={entry.name}
+            types={entry.types}
+            fileType={entry.listing?.release?.fileTypes?.[0] ?? null}
+            palettes={palettes}
+            tintKey={entry.pluginKey}
+          />
+        )}
       </div>
       <div className="flex flex-1 flex-col gap-1 px-3.5 pt-3 pb-3">
         <div className="flex min-w-0 items-center gap-1.5">
