@@ -410,4 +410,31 @@ describe('prepareMachineRequest', () => {
     expect(await prepareMachineRequest('creation-1', { ...REQUEST, machine }, machine)).toBeNull()
     expect(machines.connect).not.toHaveBeenCalled()
   })
+
+  it('never creates a machine when Retry is canceled while it checks the earlier attempt', async () => {
+    machines.list.mockImplementation(async () => {
+      store.pendingWorktreeCreations['creation-1'].machineProgress = {
+        activity: 'creating',
+        canceled: true
+      }
+      return { ok: true, value: { machines: [], pendingCreates: [] } }
+    })
+    const machine = {
+      ...MACHINE,
+      machineId: undefined,
+      create: {
+        operationId: 'op-1',
+        name: 'feature',
+        lifetime: 'persistent' as const,
+        attempted: true
+      }
+    }
+
+    expect(await prepareMachineRequest('creation-1', { ...REQUEST, machine }, machine)).toBeNull()
+    expect(machines.create).not.toHaveBeenCalled()
+    expect(store.updatePendingWorktreeCreation).not.toHaveBeenCalledWith(
+      'creation-1',
+      expect.objectContaining({ status: 'error' })
+    )
+  })
 })

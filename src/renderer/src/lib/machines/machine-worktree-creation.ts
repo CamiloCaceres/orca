@@ -54,15 +54,19 @@ type CreateRequest = NonNullable<MachineRequest['create']>
 /**
  * The machine for a create, made at most once per operation id. A retried create first asks the
  * provider whether the earlier attempt left a machine and adopts it; while that is unknown, it
- * refuses rather than risk a second machine.
+ * refuses rather than risk a second machine. Null once canceled: a Cancel during the check must
+ * never go on to create (and bill) a machine.
  */
 async function ensureCreatedMachine(
   creationId: string,
   machine: MachineRequest,
   create: CreateRequest
-): Promise<MachineStep<string>> {
+): Promise<MachineStep<string> | null> {
   if (create.attempted) {
     const outcome = await checkCreateOutcome(machine.providerKey, create.operationId)
+    if (!stillPending(creationId)) {
+      return null
+    }
     switch (outcome.kind) {
       case 'found': {
         // Why: the earlier attempt may have left it mid-create; connect only once it runs.
@@ -97,7 +101,11 @@ async function ensureCreatedMachine(
     }
   }
   const entry = currentEntry(creationId)
-  if (entry && !create.attempted) {
+  // Why: the last check before a paid create; anything earlier may have been canceled since.
+  if (!entry) {
+    return null
+  }
+  if (!create.attempted) {
     // Why: recorded before the call, so a Retry after any outcome knows to look first.
     recordRequest(creationId, {
       ...entry.request,
@@ -237,6 +245,9 @@ export async function prepareMachineRequest(
   if (!machineId && machine.create) {
     setActivity(creationId, 'creating')
     const created = await ensureCreatedMachine(creationId, machine, machine.create)
+    if (!created) {
+      return null
+    }
     if (!created.ok) {
       return fail(creationId, created.error, created.detail)
     }
