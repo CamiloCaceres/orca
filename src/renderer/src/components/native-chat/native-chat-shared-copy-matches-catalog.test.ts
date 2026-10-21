@@ -22,7 +22,6 @@ import { NATIVE_CHAT_TASK_LIST_COPY } from '../../../../shared/native-chat-task-
 const catalog = en as unknown as {
   components: {
     'native-chat': {
-      composer: Record<string, string>
       status: Record<string, string>
       tool: Record<string, string>
     }
@@ -31,6 +30,7 @@ const catalog = en as unknown as {
 
 const rowVerbCatalog: Record<string, string> = en.components['native-chat'].tool.row
 const taskListCatalog: Record<string, string> = en.components['native-chat'].taskList
+const composerCatalog: Record<string, string> = en.components['native-chat'].composer
 
 describe('native-chat shared copy matches the English catalog', () => {
   it.each(Object.entries(NATIVE_CHAT_TURN_STATUS_COPY))(
@@ -41,9 +41,7 @@ describe('native-chat shared copy matches the English catalog', () => {
   )
 
   it('composer.placeholder matches the shared composer placeholder', () => {
-    expect(catalog.components['native-chat'].composer.placeholder).toBe(
-      NATIVE_CHAT_COMPOSER_PLACEHOLDER
-    )
+    expect(composerCatalog.placeholder).toBe(NATIVE_CHAT_COMPOSER_PLACEHOLDER)
   })
 
   it.each(Object.entries(NATIVE_CHAT_TOOL_ACTIVITY_COPY))(
