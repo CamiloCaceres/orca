@@ -10,8 +10,6 @@ export const NATIVE_CHAT_TURN_STATUS_COPY = {
   thinking: 'Thinking',
   working: 'Working…',
   stopping: 'Stopping…',
-  /** The composer's placeholder while the chat takes a message as usual. */
-  composerPlaceholder: 'Ask anything, @ to mention files, / for commands',
   /** The composer's placeholder while the chat reads Stopping, where the host queues sends. */
   queueAfterStop: 'Queue a message to run after the stop',
   /** The same where it does not: the host holds the send until the stop lands. */
@@ -23,6 +21,9 @@ export const NATIVE_CHAT_TURN_STATUS_COPY = {
   toggleDetails: 'Toggle turn details',
   responding: 'Agent is responding'
 } as const
+
+/** The composer's placeholder while the chat takes a message as usual. */
+export const NATIVE_CHAT_COMPOSER_PLACEHOLDER = 'Ask anything, @ to mention files, / for commands'
 
 /** Format turn time without exposing an ever-growing raw seconds count. */
 export function formatNativeChatDuration(seconds: number): string {

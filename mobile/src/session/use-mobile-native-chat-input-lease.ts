@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { NATIVE_CHAT_TURN_STATUS_COPY } from '../../../src/shared/native-chat-turn-status'
+import {
+  NATIVE_CHAT_COMPOSER_PLACEHOLDER,
+  NATIVE_CHAT_TURN_STATUS_COPY
+} from '../../../src/shared/native-chat-turn-status'
 import type { MobileNativeChatInputLockReason } from './MobileNativeChatView'
 
 export function useMobileNativeChatInputLease(args: {
@@ -112,5 +115,5 @@ export function mobileNativeChatComposerPlaceholder(
       ? NATIVE_CHAT_TURN_STATUS_COPY.queueAfterStop
       : NATIVE_CHAT_TURN_STATUS_COPY.sendAfterStop
   }
-  return NATIVE_CHAT_TURN_STATUS_COPY.composerPlaceholder
+  return NATIVE_CHAT_COMPOSER_PLACEHOLDER
 }
