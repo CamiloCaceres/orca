@@ -20,7 +20,7 @@ export function ptyTerminationReason(reason: string): string {
     case 'unsupported':
       return translate(
         'resourceManager.pty.endUnsupported',
-        'End this terminal manually from its terminal tab or on its host.'
+        'End is unavailable for this terminal. Its host does not support the required safety checks. Close it from its tab or on its host.'
       )
     default:
       return translate(

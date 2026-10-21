@@ -1,12 +1,5 @@
 import { useMemo, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue
-} from '@/components/ui/select'
 import { translate } from '@/i18n/i18n'
 import { buildResourcePtyRows, groupResourcePtyRows } from './resource-pty-view-model'
 import { ResourcePtyList } from './ResourcePtyList'
@@ -32,7 +25,6 @@ export function ResourcePtyPanel({
   runtimePaneTitlesByTabId
 }: Props) {
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null)
-  const [bindingFilter, setBindingFilter] = useState('all')
   const { sessions } = inventory.sessionInventory
   const rows = useMemo(
     () =>
@@ -48,11 +40,7 @@ export function ResourcePtyPanel({
         : [],
     [active, sessions, bindings, worktrees, repos, projectGroups, runtimePaneTitlesByTabId]
   )
-  const filteredRows = useMemo(
-    () => rows.filter((row) => bindingFilter === 'all' || row.binding === bindingFilter),
-    [rows, bindingFilter]
-  )
-  const groups = useMemo(() => groupResourcePtyRows(filteredRows), [filteredRows])
+  const groups = useMemo(() => groupResourcePtyRows(rows), [rows])
   const unbound = rows.filter((row) => row.binding === 'unbound').length
   return (
     <div className="flex h-[420px] flex-col">
@@ -85,38 +73,6 @@ export function ResourcePtyPanel({
             })}
           </div>
         )}
-        <div className="flex items-center gap-2">
-          <Select
-            value={bindingFilter}
-            onValueChange={(value) => {
-              setBindingFilter(value)
-              scrollElement?.scrollTo({ top: 0 })
-            }}
-          >
-            <SelectTrigger
-              aria-label={translate('resourceManager.pty.bindingFilter', 'Tab filter')}
-            >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{translate('resourceManager.pty.all', 'All')}</SelectItem>
-              <SelectItem value="bound">
-                {translate('resourceManager.pty.bound', 'Has tab')}
-              </SelectItem>
-              <SelectItem value="unbound">
-                {translate('resourceManager.pty.unbound', 'No tab')}
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        {inventory.observedAt !== null && (
-          <p role="status" className="text-xs text-muted-foreground">
-            {translate('resourceManager.pty.showing', 'Showing {{shown}} of {{total}}', {
-              shown: filteredRows.length,
-              total: sessions.length
-            })}
-          </p>
-        )}
       </div>
       {inventory.sessionsError && (
         <div role="alert" className="px-3 py-2 text-xs text-destructive">
@@ -144,20 +100,6 @@ export function ResourcePtyPanel({
           <p className="p-3 text-xs text-muted-foreground">
             {translate('resourceManager.pty.noLocalOrcaPtys', 'No local Orca PTYs')}
           </p>
-        )}
-        {sessions.length > 0 && filteredRows.length === 0 && (
-          <div className="p-3 text-xs text-muted-foreground">
-            <p>{translate('resourceManager.pty.noMatches', 'No matching terminals')}</p>
-            <Button
-              variant="link"
-              size="xs"
-              onClick={() => {
-                setBindingFilter('all')
-              }}
-            >
-              {translate('resourceManager.pty.clearFilters', 'Clear filters')}
-            </Button>
-          </div>
         )}
         <ResourcePtyList
           groups={groups}

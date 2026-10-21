@@ -20822,18 +20822,13 @@
   },
   "resourceManager": {
     "pty": {
-      "bindingFilter": "Tab filter",
-      "all": "All",
       "bound": "Has tab",
       "unbound": "No tab",
-      "showing": "Showing {{shown}} of {{total}}",
-      "noMatches": "No matching terminals",
-      "clearFilters": "Clear filters",
       "unavailable": "Unavailable",
       "ownerPresent": "Present",
       "ownerAbsent": "Absent",
       "ownerUnknown": "Unknown",
-      "sessionId": "Session ID",
+      "sessionId": "Orca session ID",
       "incarnation": "Incarnation",
       "workspace": "Workspace",
       "cwd": "Last-reported cwd",
@@ -20841,12 +20836,13 @@
       "agentOwnership": "Agent ownership evidence",
       "observationTime": "Observation time",
       "pid": "PID",
-      "idCopied": "Session ID copied",
-      "copyFailed": "Could not copy session ID",
+      "idCopied": "Orca session ID copied",
+      "copyFailed": "Could not copy Orca session ID",
       "detailsNamed": "Details for {{terminal}}",
       "goToTerminal": "Go to terminal",
-      "actionsNamed": "Actions for {{terminal}}",
-      "copyId": "Copy session ID"
+      "copyId": "Copy Orca session ID",
+      "refreshBeforeEnd": "End is unavailable until PTYs are refreshed.",
+      "endUnsupported": "End is unavailable for this terminal. Its host does not support the required safety checks. Close it from its tab or on its host."
     }
   }
 }

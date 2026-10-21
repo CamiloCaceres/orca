@@ -1,18 +1,12 @@
 import { memo } from 'react'
-import { ArrowUpRight, ChevronRight, Copy, MoreHorizontal, Terminal } from 'lucide-react'
-import { toast } from 'sonner'
+import { ArrowUpRight, ChevronRight, Terminal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger
-} from '@/components/ui/dropdown-menu'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
 import { translate } from '@/i18n/i18n'
 import type { ResourcePtyRow as PtyRow } from './resource-pty-view-model'
 import { ResourcePtyDetails, resourcePtyBindingLabel } from './ResourcePtyDetails'
+import { ptyTerminationReason } from './use-resource-pty-actions'
 
 export const ResourcePtyRow = memo(function ResourcePtyRow({
   row,
@@ -32,12 +26,12 @@ export const ResourcePtyRow = memo(function ResourcePtyRow({
   onNavigate: (tabId: string, paneKey: string | null) => void
 }) {
   const endUnavailable = unverifiable
-    ? translate('resourceManager.pty.refreshBeforeEnd', 'Refresh PTYs before ending this terminal.')
+    ? translate(
+        'resourceManager.pty.refreshBeforeEnd',
+        'End is unavailable until PTYs are refreshed.'
+      )
     : !row.session.incarnationId || !row.session.fencedTermination
-      ? translate(
-          'resourceManager.pty.endUnsupported',
-          'End this terminal manually from its terminal tab or on its host.'
-        )
+      ? ptyTerminationReason('unsupported')
       : null
   const processName = row.session.foregroundProcess?.trim()
   const context = processName
@@ -46,14 +40,6 @@ export const ResourcePtyRow = memo(function ResourcePtyRow({
       })
     : null
   const folder = !row.workspace ? row.session.cwd : null
-  const copySessionId = async (): Promise<void> => {
-    try {
-      await window.api.ui.writeClipboardText(row.session.id)
-      toast.success(translate('resourceManager.pty.idCopied', 'Session ID copied'))
-    } catch {
-      toast.error(translate('resourceManager.pty.copyFailed', 'Could not copy session ID'))
-    }
-  }
   return (
     <div data-resource-pty-row={row.identity} className="px-2 py-1">
       <Collapsible>
@@ -130,29 +116,6 @@ export const ResourcePtyRow = memo(function ResourcePtyRow({
                 )}
             </TooltipContent>
           </Tooltip>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon-xs"
-                aria-label={translate(
-                  'resourceManager.pty.actionsNamed',
-                  'Actions for {{terminal}}',
-                  {
-                    terminal: row.label
-                  }
-                )}
-              >
-                <MoreHorizontal className="size-3" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onSelect={() => void copySessionId()}>
-                <Copy className="size-3.5" />
-                {translate('resourceManager.pty.copyId', 'Copy session ID')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         </div>
         {(context || folder) && (
           <p

@@ -71,7 +71,7 @@ for (const theme of ['dark', 'light'] as const) {
         ...(index === 999 ? { foregroundProcess: 'node' } : {}),
         cwd: `/workspace/folder-${index}`,
         agentOwnership: index === 0 ? 'unknown' : 'absent',
-        fencedTermination: true
+        fencedTermination: index !== 998
       }))
       const counts: { listing: number; metrics: number; kills: unknown[] } = {
         listing: 0,
@@ -120,10 +120,20 @@ for (const theme of ['dark', 'light'] as const) {
     const before = await electronApp.evaluate(() => Reflect.get(globalThis, '__ptyViewCounts'))
     const panel = orcaPage.getByRole('tabpanel', { name: /^PTYs/ })
     await expect(panel.getByRole('searchbox')).toHaveCount(0)
+    await expect(panel.getByRole('combobox')).toHaveCount(0)
     const body = orcaPage.locator('[data-resource-pty-body]')
     await body.evaluate((element) => {
       element.scrollTop = element.scrollHeight
     })
+    const unsupportedEnd = panel.getByRole('button', {
+      name: 'End Terminal 998',
+      exact: true
+    })
+    await expect(unsupportedEnd).toBeDisabled()
+    await unsupportedEnd.locator('..').hover()
+    await expect(orcaPage.getByRole('tooltip', { name: /^End is unavailable/ })).toContainText(
+      'End is unavailable for this terminal. Its host does not support the required safety checks.'
+    )
     const details = panel.getByRole('button', { name: 'Details for Terminal 999', exact: true })
     await details.focus()
     await orcaPage.keyboard.press('Enter')
@@ -131,8 +141,7 @@ for (const theme of ['dark', 'light'] as const) {
     await expect(panel.locator('dl').getByText('local-pty-0999', { exact: true })).toBeVisible()
     await expect(panel.locator('dl').getByText('incarnation-999', { exact: true })).toBeVisible()
     await expect(panel.locator('dl').getByText('Unavailable', { exact: true })).toHaveCount(2)
-    await panel.getByRole('button', { name: 'Actions for Terminal 999', exact: true }).click()
-    await orcaPage.getByRole('menuitem', { name: 'Copy session ID', exact: true }).click()
+    await panel.getByRole('button', { name: 'Copy Orca session ID', exact: true }).click()
     expect(await electronApp.evaluate(({ clipboard }) => clipboard.readText())).toBe(
       'local-pty-0999'
     )
@@ -144,17 +153,11 @@ for (const theme of ['dark', 'light'] as const) {
       element.scrollTop = 0
     })
     await expect(panel.getByRole('button', { name: 'End Terminal 0', exact: true })).toBeVisible()
-    await panel.getByRole('combobox', { name: 'Tab filter' }).click()
-    await orcaPage.getByRole('option', { name: 'Has tab', exact: true }).click()
-    await expect(panel.getByText('Showing 0 of 1000', { exact: true })).toBeVisible()
-    await panel.getByRole('button', { name: 'Clear filters', exact: true }).click()
-    await expect(panel.getByText('Showing 1000 of 1000', { exact: true })).toBeVisible()
     const firstTerminal = orcaPage.getByRole('button', { name: 'End Terminal 0', exact: true })
     await expect(firstTerminal).toBeVisible()
     expect(await orcaPage.getByRole('button', { name: /^End Terminal/ }).count()).toBeLessThan(50)
     await firstTerminal.focus()
     for (let index = 1; index <= 30; index++) {
-      await orcaPage.keyboard.press('Tab')
       await orcaPage.keyboard.press('Tab')
       await orcaPage.keyboard.press('Tab')
       const terminal = orcaPage.getByRole('button', { name: `End Terminal ${index}`, exact: true })
