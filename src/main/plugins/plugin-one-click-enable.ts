@@ -10,6 +10,8 @@ export async function enableIfDataPlugin(input: {
   pluginKey: string
   /** Fingerprint of the bytes just installed; approval binds to exactly these. */
   installedFingerprint: string
+  /** The fingerprint the user was shown at preview; when given, nothing else is approved. */
+  expectedFingerprint?: string
   findValidPlugin: (pluginKey: string) => ValidDiscoveredPlugin | null
   approve: (pluginKey: string, reviewedFingerprint: string) => Promise<void>
 }): Promise<{ needsReview: boolean }> {
@@ -19,6 +21,8 @@ export async function enableIfDataPlugin(input: {
     // Why: a development override shadows the install, so it is not the bytes just reviewed.
     plugin.isDev ||
     plugin.consentFingerprint !== input.installedFingerprint ||
+    (input.expectedFingerprint !== undefined &&
+      input.expectedFingerprint !== input.installedFingerprint) ||
     pluginExecutionProfile(plugin.manifest) !== 'data'
   ) {
     return { needsReview: true }

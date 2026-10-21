@@ -232,12 +232,17 @@ export type PluginsApi = {
     pluginKey: string
   }) => Promise<PluginMarketplaceHostInstallPreview>
   /** With `enableIfData`, main also turns the plugin on when the installed manifest is
-   *  `execution: 'data'`; anything else comes back `needsReview: true`. Older hosts ignore it. */
+   *  `execution: 'data'` and, if given, its fingerprint is `expectedFingerprint`; anything else
+   *  comes back `needsReview: true`. Older hosts ignore both fields. */
   installMarketplacePlugin: (
     preview: Pick<
       PluginMarketplaceHostInstallPreview,
       'marketplaceSourceId' | 'marketplaceCommit' | 'pluginKey' | 'resolvedCommit'
-    > & { enableIfData?: true }
+    > & {
+      enableIfData?: true
+      /** The preview's consentFingerprint; with it, main approves only those exact bytes. */
+      expectedFingerprint?: string
+    }
   ) => Promise<PluginHostInstallResult>
   previewMarketplaceUpdate: (args: {
     pluginKey: string

@@ -230,6 +230,16 @@ describe('plugin marketplace IPC authority', () => {
     expect(approve).toHaveBeenCalledWith(PLUGIN_KEY, 'sha256-fp', 7)
 
     approve.mockClear()
+    await expect(
+      handler?.(event, { ...identity, enableIfData: true, expectedFingerprint: 'sha256-other' })
+    ).resolves.toMatchObject({ needsReview: true })
+    expect(approve).not.toHaveBeenCalled()
+    await expect(
+      handler?.(event, { ...identity, enableIfData: true, expectedFingerprint: 'sha256-fp' })
+    ).resolves.toMatchObject({ needsReview: false })
+    expect(approve).toHaveBeenCalledWith(PLUGIN_KEY, 'sha256-fp', 7)
+
+    approve.mockClear()
     execution.value = 'instructional'
     await expect(handler?.(event, { ...identity, enableIfData: true })).resolves.toMatchObject({
       needsReview: true

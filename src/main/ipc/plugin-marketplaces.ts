@@ -35,7 +35,9 @@ const installMarketplacePluginSchema = marketplacePluginSchema.extend({
   marketplaceCommit: z.string().regex(PLUGIN_COMMIT_PATTERN),
   resolvedCommit: z.string().regex(PLUGIN_COMMIT_PATTERN),
   /** Ask main to approve in the same step if the installed plugin is content only. */
-  enableIfData: z.literal(true).optional()
+  enableIfData: z.literal(true).optional(),
+  /** The preview's consentFingerprint: one-click approves only these exact bytes. */
+  expectedFingerprint: z.string().min(1).max(256).optional()
 })
 const installedPluginSchema = z.strictObject({
   pluginKey: z.string().refine(isQualifiedPluginKey, 'invalid qualified plugin key')
@@ -82,7 +84,8 @@ export function registerPluginMarketplaceHandlers(
     return services.installer.preview(parsed.marketplaceSourceId, parsed.pluginKey)
   })
   ipcMain.handle('plugins:installMarketplacePlugin', async (event, args: unknown) => {
-    const { enableIfData, ...identity } = installMarketplacePluginSchema.parse(args)
+    const { enableIfData, expectedFingerprint, ...identity } =
+      installMarketplacePluginSchema.parse(args)
     const result = await services.installer.install(identity)
     if (!result.ok) {
       return result
@@ -94,6 +97,7 @@ export function registerPluginMarketplaceHandlers(
     const { needsReview } = await enableIfDataPlugin({
       pluginKey: result.pluginKey,
       installedFingerprint: result.consentFingerprint,
+      ...(expectedFingerprint ? { expectedFingerprint } : {}),
       findValidPlugin: (key) => pluginService.findValidPlugin(key),
       approve: (pluginKey, reviewedFingerprint) =>
         approveConsent(pluginKey, reviewedFingerprint, event.sender.id)

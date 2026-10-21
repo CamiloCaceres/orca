@@ -59,4 +59,21 @@ describe('enableIfDataPlugin', () => {
     ).resolves.toEqual({ needsReview: true })
     expect(approve).not.toHaveBeenCalled()
   })
+
+  it('approves only the fingerprint the user saw at preview', async () => {
+    const approve = vi.fn(async () => undefined)
+    const run = (expectedFingerprint: string) =>
+      enableIfDataPlugin({
+        pluginKey: 'acme.demo',
+        installedFingerprint: 'sha256-installed',
+        expectedFingerprint,
+        findValidPlugin: () => installed('data', theme),
+        approve
+      })
+    await expect(run('sha256-installed')).resolves.toEqual({ needsReview: false })
+    expect(approve).toHaveBeenCalledOnce()
+    approve.mockClear()
+    await expect(run('sha256-previewed-earlier')).resolves.toEqual({ needsReview: true })
+    expect(approve).not.toHaveBeenCalled()
+  })
 })
