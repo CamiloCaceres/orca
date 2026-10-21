@@ -53,7 +53,12 @@ type Scroller = MobileNativeChatScrollNode & {
   removeEventListener: Listen
 }
 /** What a scrolling reader sees below them, held until they rest. */
-type Held = { rows: readonly NativeChatMessage[]; footer: ReactElement | null }
+type Held = {
+  rows: readonly NativeChatMessage[]
+  footer: ReactElement | null
+  /** Drawn as they were: a row's look comes from the chat's state too (a run's members, its turn). */
+  renderItem: (row: Row) => ReactElement
+}
 
 type Props = {
   roots?: MobileNativeChatScrollRoots
@@ -110,14 +115,12 @@ export function MobileNativeChatPageList({
   const heldRef = useRef<Held | null>(null)
   const [, release] = useState(0)
   const held = heldRef.current
-  const rows = useMemo(() => {
+  const { rows, heldFrom } = useMemo(() => {
     const head = held?.rows[0]
-    if (!held || !head) {
-      return liveRows
-    }
-    const key = rowKeys.keyOf(head)
-    const at = liveRows.findIndex((row) => rowKeys.keyOf(row) === key)
-    return at === -1 ? liveRows : [...liveRows.slice(0, at), ...held.rows]
+    const at = head ? liveRows.findIndex((row) => rowKeys.keyOf(row) === rowKeys.keyOf(head)) : -1
+    return !held || at === -1
+      ? { rows: liveRows, heldFrom: Infinity }
+      : { rows: [...liveRows.slice(0, at), ...held.rows], heldFrom: at }
   }, [held, liveRows, rowKeys])
   const footer = held ? held.footer : liveFooter
   const keys = useMemo(() => rows.map(rowKeys.keyOf), [rows, rowKeys.keyOf])
@@ -140,14 +143,14 @@ export function MobileNativeChatPageList({
   const place = useRef<MobileNativeChatReadingUnit[] | null>(null)
   const placedLayout = useRef(layoutKey)
   const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
-  const live = useRef<Held>({ rows: liveRows, footer: liveFooter })
+  const live = useRef<Held>({ rows: liveRows, footer: liveFooter, renderItem })
   const ask = useRef(onNearTop)
   // Read at event time, so a scroll or resize between commits acts on the latest render.
   const latest = useRef({ first, n, keys, layoutKey, rowKeys })
   useLayoutEffect(() => {
     latest.current = { first, n, keys, layoutKey, rowKeys }
     ask.current = onNearTop
-    live.current = { rows: liveRows, footer: liveFooter }
+    live.current = { rows: liveRows, footer: liveFooter, renderItem }
   })
 
   const write = useCallback((s: Scroller, to: number) => {
@@ -222,23 +225,17 @@ export function MobileNativeChatPageList({
   })
   useEffect(() => () => clearTimeout(settleTimer.current), [])
 
-  const drawAndFetch = useCallback(
-    (s: Scroller) => {
-      const { first: at, keys: drawnKeys, n: total, rowKeys: current } = latest.current
-      const screens = (s.scrollHeight - s.clientHeight + s.scrollTop) / s.clientHeight
-      if (at > 0 && screens < DRAW_AHEAD_SCREENS) {
-        const next = Math.max(0, at - DRAW_BATCH)
-        setDrawn({ scope: current.scope, firstKey: drawnKeys[next]!, count: total - next })
-      } else if (isFollowing() && at < total - FIRST_ROWS && screens > 3 * DRAW_AHEAD_SCREENS) {
-        // Back at the end, rows far above go: taking them away moves nothing.
-        setDrawn({ scope: current.scope, firstKey: null, count: 0 })
-      }
-      if (at < FETCH_AHEAD_ROWS && screens < FETCH_REACH_SCREENS) {
-        ask.current?.()
-      }
-    },
-    [isFollowing]
-  )
+  const drawAndFetch = useCallback((s: Scroller) => {
+    const { first: at, keys: drawnKeys, n: total, rowKeys: current } = latest.current
+    const screens = (s.scrollHeight - s.clientHeight + s.scrollTop) / s.clientHeight
+    if (at > 0 && screens < DRAW_AHEAD_SCREENS) {
+      const next = Math.max(0, at - DRAW_BATCH)
+      setDrawn({ scope: current.scope, firstKey: drawnKeys[next]!, count: total - next })
+    }
+    if (at < FETCH_AHEAD_ROWS && screens < FETCH_REACH_SCREENS) {
+      ask.current?.()
+    }
+  }, [])
 
   useImperativeHandle(
     ref,
@@ -360,9 +357,16 @@ export function MobileNativeChatPageList({
           // Keyed by the chat, so no row carries into another. Rows above the drawn ones aren't in the
           // document; what the reader opened in them is kept in the chat's disclosure store.
           <Fragment key={rowKeys.scope}>
-            {rows.slice(first).map((item, at) => (
-              <Fragment key={keys[first + at]}>{renderItem({ item, index: first + at })}</Fragment>
-            ))}
+            {rows.slice(first).map((item, at) => {
+              const index = first + at
+              return (
+                <Fragment key={keys[index]}>
+                  {held && index >= heldFrom
+                    ? held.renderItem({ item, index: index - heldFrom })
+                    : renderItem({ item, index })}
+                </Fragment>
+              )
+            })}
           </Fragment>
         )}
         {footer}

@@ -202,11 +202,20 @@ function page(tree: () => Node | Node[] | null) {
   return node
 }
 
-function Row({ message, rowKey }: { message: NativeChatMessage; rowKey: string }): ReactElement {
+function Row({
+  message,
+  rowKey,
+  joined = 0
+}: {
+  message: NativeChatMessage
+  rowKey: string
+  /** Lines the chat's state adds to the row, as a run's new members do. */
+  joined?: number
+}): ReactElement {
   const { prose, tools } = splitNativeChatBlocks(message.blocks)
-  const words = prose.map((block, i) =>
-    h('span', { key: i }, block.type === 'text' ? block.text : '')
-  )
+  const words = prose
+    .map((block, i) => h('span', { key: i }, block.type === 'text' ? block.text : ''))
+    .concat(Array.from({ length: joined }, (_, i) => h('span', { key: `joined:${i}` }, 'joined')))
   const run = tools.length > 0 && h(ToolRun, { blocks: tools })
   return h('div', { testID: mobileNativeChatRowId(rowKey) }, words, run)
 }
@@ -217,6 +226,8 @@ function Chat(props: {
   messages: NativeChatMessage[]
   following: boolean
   live: boolean
+  /** Lines the last row's state adds, outside its messages. */
+  joined?: number
 }): ReactElement {
   const folded = useMemo(
     () => foldMobileNativeChatMessages(props.messages, 'claude'),
@@ -230,7 +241,12 @@ function Chat(props: {
     rowKeys: keys,
     isFollowing: () => props.following,
     onEndDistance: () => {},
-    renderItem: ({ item }) => h(Row, { message: item, rowKey: keys.keyOf(item) }),
+    renderItem: ({ item }) =>
+      h(Row, {
+        message: item,
+        rowKey: keys.keyOf(item),
+        joined: item === folded.at(-1) ? props.joined : 0
+      }),
     layoutKey: 'layout',
     contentContainerStyle: null,
     header: h('div', { testID: 'header' }, h('span', null, 'Loading')),
@@ -247,9 +263,9 @@ function mount(messages: NativeChatMessage[], options = { following: false, live
   })
   const scroller = page(() => renderer.toJSON())
   scrollable.node = scroller
-  const show = (next: NativeChatMessage[]): number => {
+  const show = (next: NativeChatMessage[], joined = 0): number => {
     const before = scroller.writes
-    act(() => renderer.update(h(Chat, { ...options, messages: next })))
+    act(() => renderer.update(h(Chat, { ...options, messages: next, joined })))
     return scroller.writes - before
   }
   // The reader's own scroll, as RN Web reports it, on a clock the test moves.
@@ -345,6 +361,33 @@ it('holds back a change below a scrolling reader until they rest, then keeps the
   chat0.rest()
   expect(chat0.drawn(mobileNativeChatRowId('n1'))).toBe(1)
   expect(chat0.scroller.top(mobileNativeChatRowId('m4'))).toBe(line)
+})
+
+it("holds a row's look with its messages: what the chat's state adds lands once the reader rests", () => {
+  const rows = Array.from({ length: 12 }, (_, i) => say(`m${i}`, i % 2 ? 'assistant' : 'user', 'x'))
+  const chat0 = mount(rows)
+  chat0.scroller.showFrom(40)
+  chat0.scrolled()
+  const line = chat0.scroller.top(mobileNativeChatRowId('m4'))
+  // Moving: a new member of the last row's run is drawn by the renderer, not by a new message.
+  expect(chat0.show(rows, 3)).toBe(0)
+  expect(chat0.lines(mobileNativeChatRowId('m11'))).toBe(1)
+  expect(chat0.scroller.top(mobileNativeChatRowId('m4'))).toBe(line)
+  chat0.rest()
+  expect(chat0.lines(mobileNativeChatRowId('m11'))).toBe(4)
+  expect(chat0.scroller.top(mobileNativeChatRowId('m4'))).toBe(line)
+})
+
+it('opens a chat whose newest rows are short and older ones tall without drawing in a loop', () => {
+  const tall = Array.from({ length: 12 }, (_, i) => ({
+    ...say(`t${i}`, 'assistant', ''),
+    blocks: Array.from({ length: 12 }, () => ({ type: 'text' as const, text: 'line' }))
+  }))
+  const short = Array.from({ length: 24 }, (_, i) =>
+    say(`s${i}`, i % 2 ? 'assistant' : 'user', 'x')
+  )
+  const chat0 = mount([...tall, ...short], { following: true, live: false })
+  expect(chat0.drawn(mobileNativeChatRowId('t11'))).toBe(1)
 })
 
 it('holds a row the reader taps open in place, and a reply below waits out a flick', () => {
