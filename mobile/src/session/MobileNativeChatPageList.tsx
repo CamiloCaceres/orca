@@ -28,6 +28,10 @@ import {
 } from './mobile-native-chat-reading-place'
 import type { MobileNativeChatListHandle } from './use-mobile-native-chat-tail-follow'
 import type { MobileNativeChatScrollRoots } from './mobile-native-chat-scroll-roots'
+import {
+  createMobileNativeChatGrowthHold,
+  MobileNativeChatGrowthHoldContext
+} from './mobile-native-chat-growth-hold'
 
 /** Rows a chat opens with; more are drawn as the reader nears the top of what is drawn. */
 const FIRST_ROWS = 24
@@ -191,15 +195,18 @@ export function MobileNativeChatPageList({
 
   // The reader moves while parked: hold what is below them, and let it in once they rest.
   const settle = useRef(() => {})
+  const [growth] = useState(createMobileNativeChatGrowthHold)
   const unhold = useCallback(() => {
     if (heldRef.current) {
       heldRef.current = null
+      growth.set(false)
       release((n) => n + 1)
     }
   }, [])
   const hold = useCallback(() => {
     if (!isFollowing()) {
       heldRef.current ??= live.current
+      growth.set(true)
       clearTimeout(settleTimer.current)
       settleTimer.current = setTimeout(() => settle.current(), REST_MS)
     }
@@ -345,19 +352,21 @@ export function MobileNativeChatPageList({
       onScroll={scrolled}
       scrollEventThrottle={16}
     >
-      {header}
-      {rows.length === 0 ? (
-        emptyStateView
-      ) : (
-        // Keyed by the chat, so no row carries into another. Rows above the drawn ones aren't in the
-        // document; what the reader opened in them is kept in the chat's disclosure store.
-        <Fragment key={rowKeys.scope}>
-          {rows.slice(first).map((item, at) => (
-            <Fragment key={keys[first + at]}>{renderItem({ item, index: first + at })}</Fragment>
-          ))}
-        </Fragment>
-      )}
-      {footer}
+      <MobileNativeChatGrowthHoldContext.Provider value={growth}>
+        {header}
+        {rows.length === 0 ? (
+          emptyStateView
+        ) : (
+          // Keyed by the chat, so no row carries into another. Rows above the drawn ones aren't in the
+          // document; what the reader opened in them is kept in the chat's disclosure store.
+          <Fragment key={rowKeys.scope}>
+            {rows.slice(first).map((item, at) => (
+              <Fragment key={keys[first + at]}>{renderItem({ item, index: first + at })}</Fragment>
+            ))}
+          </Fragment>
+        )}
+        {footer}
+      </MobileNativeChatGrowthHoldContext.Provider>
     </MobileNativeChatPageScroll>
   )
 }
