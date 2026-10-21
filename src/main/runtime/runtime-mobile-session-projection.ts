@@ -11,6 +11,7 @@ import type {
   RuntimeMobileSessionTabsSnapshot
 } from '../../shared/runtime-types'
 import { isTerminalLeafId, makePaneKey } from '../../shared/stable-pane-id'
+import { resolveTerminalTabTitle } from '../../shared/tab-title-resolution'
 import { indexAgentStatusRowsByPaneKey } from '../agent-hooks/agent-status-pane-index'
 import {
   renewRuntimeMobileAgentStatusFromPtyTitle,
@@ -180,10 +181,10 @@ export function projectRuntimeMobileSessionTabs(
       ownerRecord?.agent ?? liveLeafPty?.foregroundAgent ?? pty?.foregroundAgent ?? null
     const ownerOptions = { ownerIsLaunch: ownerRecord?.ownerIsLaunch === true }
     const liveTitle = trackerOnlyTitle ?? leafTitle ?? ptyTitle ?? syncedTab?.title ?? tab.title
-    // Why: agents repaint their title constantly, so a user's rename must outrank it.
-    const title =
-      tab.customTitle?.trim() ||
-      normalizeCompatibleAgentTitleForOwner(liveTitle, ownerAgent, ownerOptions)
+    const agentTitle = normalizeCompatibleAgentTitleForOwner(liveTitle, ownerAgent, ownerOptions)
+    // Why: the desktop's ranking over main's fresher live title; the window sends a generated
+    // name only while the desktop shows it, so it is passed as enabled.
+    const title = resolveTerminalTabTitle({ ...tab, title: agentTitle }, true, agentTitle)
     const liveTitleEvidence = leafTitle ?? ptyTitle
     // Why: renderer status can precede hook session identity, leaving native chat with no transcript address.
     const rendererStatusAgent =
