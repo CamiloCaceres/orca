@@ -12,7 +12,9 @@ const paths = [
   'file:///C:/repo/src/a.ts',
   'file:///repo/src/a.ts',
   '/repo/src/a b.ts',
-  '/repo/src/a#b.ts'
+  '/repo/src/a%20b.ts',
+  '/repo/src/a#b.ts',
+  '\\\\wsl$\\Ubuntu\\home\\a.ts'
 ]
 
 describe('toEditorModelUri', () => {
@@ -38,15 +40,31 @@ describe('toEditorModelUri', () => {
     expect(toEditorModelUri('/repo/a b.ts')).not.toBe(toEditorModelUri('/repo/a%20b.ts'))
   })
 
-  it.each(paths)('isolates owners while preserving the filesystem path for %s', (path) => {
+  it.each(paths)('isolates owners while keeping the file name last for %s', (path) => {
     const local = URI.parse(toEditorModelUri(path))
     const remoteUri = toEditorModelUri(path, '["hub-a","ssh:target#1"]')
     const remote = URI.parse(remoteUri)
     expect(remote.scheme).toBe('file')
-    expect(remote.fsPath).toBe(local.fsPath)
+    expect(remote.authority).toBe(local.authority)
+    expect(remote.path).toMatch(/^\/\.orca-owner\/[0-9a-f]{16}\//)
+    expect(remote.path.endsWith(local.path)).toBe(true)
+    expect(remote.fragment).toBe('')
     expect(remote.toString()).not.toBe(local.toString())
     expect(remote.toString()).toBe(remoteUri)
     expect(toEditorModelUri(remoteUri)).toBe(remoteUri)
     expect(toEditorModelUri(path, '["hub-b","ssh:target#1"]')).not.toBe(remoteUri)
+    expect(toEditorModelUri(remoteUri, '["hub-a","ssh:target#1"]')).toBe(remoteUri)
+  })
+
+  it('folds drive-letter case under an owner folder too', () => {
+    const owner = '["hub-a","ssh:target"]'
+    expect(toEditorModelUri('C:/repo/a.ts', owner)).toBe(toEditorModelUri('c:/repo/a.ts', owner))
+  })
+
+  it('treats a real folder named .orca-owner as part of the path', () => {
+    const owner = '["hub-a","ssh:target"]'
+    expect(toEditorModelUri('/.orca-owner/notes/a.ts', owner)).not.toBe(
+      toEditorModelUri('/notes/a.ts', owner)
+    )
   })
 })

@@ -21,6 +21,7 @@ import { installMonacoDiffEditorDisposalGuard } from './monaco-diff-editor-dispo
 import { installMonacoPeekReferencesPreviewOptions } from './monaco-peek-preview-options'
 import { installMonacoContextMenuPaste } from '@/components/editor/install-monaco-context-menu-paste'
 import { runMonacoSetupSteps } from './monaco-setup-steps'
+import { initializeMonacoServices } from './monaco-label-service'
 
 globalThis.MonacoEnvironment = {
   getWorker(_workerId, label) {
@@ -43,6 +44,19 @@ globalThis.MonacoEnvironment = {
     }
   }
 }
+
+// Why first: Monaco keeps only the first initialization's service overrides, and any editor,
+// model or language-feature call before this would initialize it without Orca's label service.
+runMonacoSetupSteps([
+  [
+    'service overrides',
+    () => {
+      if (!initializeMonacoServices()) {
+        throw new Error('Monaco services were initialized before Orca could override them')
+      }
+    }
+  ]
+])
 
 // Why: Monaco here is a viewer/diff surface, not a type checker — users edit
 // real code in their own IDE. The sandboxed TS worker cannot resolve imports

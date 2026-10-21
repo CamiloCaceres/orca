@@ -51,9 +51,61 @@ declare module 'monaco-editor/esm/vs/base/common/uri.js' {
     static file(path: string): URI
     static parse(value: string): URI
     readonly scheme: string
+    readonly authority: string
+    readonly path: string
+    readonly fragment: string
     readonly fsPath: string
+    with(change: { path?: string; fragment?: string }): URI
     toString(skipEncoding?: boolean): string
   }
+}
+
+// Standalone Monaco takes service overrides only on its first initialization.
+declare module 'monaco-editor/esm/vs/editor/standalone/browser/standaloneServices.js' {
+  export const StandaloneServices: {
+    initialize(overrides: Record<string, unknown>): unknown
+    get(serviceId: unknown): unknown
+  }
+}
+
+declare module 'monaco-editor/esm/vs/platform/label/common/label.js' {
+  export const ILabelService: { toString(): string }
+}
+
+declare module 'monaco-editor/esm/vs/editor/contrib/snippet/browser/snippetVariables.js' {
+  export class ModelBasedVariableResolver {
+    constructor(labelService: unknown, model: unknown)
+    resolve(variable: { name: string }): string | undefined
+  }
+}
+
+// Only the model-URI language-service test drives the TypeScript worker directly.
+declare module 'monaco-editor/esm/vs/language/typescript/tsWorker.js' {
+  import type { URI } from 'monaco-editor/esm/vs/base/common/uri.js'
+  type MirrorModel = {
+    uri: URI
+    version: number
+    getValue(): string
+  }
+  export class TypeScriptWorker {
+    constructor(
+      context: { getMirrorModels(): MirrorModel[] },
+      createData: {
+        compilerOptions: Record<string, unknown>
+        extraLibs: Record<string, unknown>
+        inlayHintsOptions: Record<string, unknown>
+      }
+    )
+    getScriptKind(fileName: string): number
+    getDefinitionAtPosition(
+      fileName: string,
+      position: number
+    ): Promise<readonly { fileName: string }[] | undefined>
+  }
+}
+
+declare module 'monaco-editor/esm/vs/language/typescript/lib/typescriptServices.js' {
+  export const ScriptKind: { readonly TSX: number }
 }
 
 declare module 'monaco-editor/esm/vs/base/common/async.js' {
