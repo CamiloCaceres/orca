@@ -17,6 +17,7 @@ import {
   selectRuntimeHookAgentRowForPane
 } from './runtime-mobile-agent-status-projection'
 import { finalizeRuntimeMobileSessionTabsResult } from './runtime-mobile-session-result-finalization'
+import { withStructuredChatStatus } from './runtime-mobile-structured-tab-status'
 import type { RuntimeMobileSessionProjectionHost } from './runtime-mobile-session-projection-contract'
 import {
   getLatestAgentCandidateTitle,
@@ -109,7 +110,7 @@ export function projectRuntimeMobileSessionTabs(
       continue
     }
     if (tab.type === 'agent-session') {
-      tabs.push(tab)
+      tabs.push(withStructuredChatStatus(tab, snapshot.worktree, getHookRowsForPane))
       continue
     }
     const syncedTab = host.tabs.get(tab.parentTabId)

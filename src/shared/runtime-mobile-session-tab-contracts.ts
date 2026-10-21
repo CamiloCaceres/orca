@@ -106,10 +106,23 @@ export type RuntimeMobileSessionAgentTab = {
   /** An agent the host registered. Beyond Claude and Codex, published only to clients advertising
    *  the registered-agents capability. */
   agent: StructuredAgentId
+  /** The host's structured status row for this chat. Optional: old hosts never send it. */
+  chatStatus?: RuntimeMobileSessionAgentTabStatus
   color?: string | null
   isPinned?: boolean
   isActive: boolean
 }
+
+export type RuntimeMobileSessionAgentTabStatus = Pick<
+  AgentStatusEntry,
+  | 'state'
+  | 'workingMode'
+  | 'interrupted'
+  | 'mainAgent'
+  | 'updatedAt'
+  | 'evidenceObservedAt'
+  | 'structuredHostOwned'
+>
 
 export type RuntimeMobileSessionSnapshotTab =
   | RuntimeMobileSessionTerminalTab
