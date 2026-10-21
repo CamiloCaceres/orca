@@ -188,7 +188,7 @@ export class MachineService {
           )
         }
       }
-      this.client.commit(provider, (inventory) => markUnreachable(inventory, machineId, error))
+      this.client.markUnreachableSince(provider, machineId, read, error)
       throw error
     }
     const record = this.client.commitRead(provider, machineId, read, (inventory) =>
@@ -294,7 +294,7 @@ export class MachineService {
       delay: (ms) => this.delay(ms),
       now: () => this.client.now(),
       deadline: this.client.now() + WAKE_POLL_LIMIT_MS
-    })
+    }).then((settled) => this.client.settled(provider, settled))
   }
 
   /** "Checking what happened": one read, never a re-run of the mutation. */

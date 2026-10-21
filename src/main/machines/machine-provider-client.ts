@@ -17,7 +17,7 @@ import type {
 import { readMachineInventoryStore, writeMachineInventoryStore } from './machine-inventory-store'
 import { runMachineProviderVerb, type MachineProviderSource } from './machine-provider-process'
 import { MachineMutationFence } from './machine-mutation-fence'
-import { requireRecord } from './machine-inventory-records'
+import { markUnreachable, requireRecord } from './machine-inventory-records'
 
 export type MachineProviderEntry = {
   providerKey: MachineProviderKey
@@ -90,6 +90,24 @@ export class MachineProviderClient {
     const result = this.commit(provider, change)
     this.fence.mutated(provider.providerKey, machineId)
     return result
+  }
+
+  /** A lifecycle that polled to its settled state: reads that began before the settle are stale. */
+  settled(provider: MachineProviderEntry, record: MachineRecord): MachineRecord {
+    this.fence.mutated(provider.providerKey, record.id)
+    return record
+  }
+
+  /** Loss of contact seen by a read or connect that began at `startedAt`, unless a newer result settled it. */
+  markUnreachableSince(
+    provider: MachineProviderEntry,
+    machineId: string,
+    startedAt: number,
+    error: unknown
+  ): void {
+    if (!this.fence.changedSince(provider.providerKey, machineId, startedAt)) {
+      this.commit(provider, (inventory) => markUnreachable(inventory, machineId, error))
+    }
   }
 
   /** A read's answer for one machine; dropped when a mutation of it finished since the read began. */

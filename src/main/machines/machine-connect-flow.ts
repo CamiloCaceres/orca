@@ -18,12 +18,7 @@ import {
   type MachineSshTargets
 } from './machine-connect'
 import type { SshTargetStartWindow } from '../ssh/ssh-target-start-window'
-import {
-  findRecord,
-  markUnreachable,
-  pairingCodeSha256,
-  patchRecord
-} from './machine-inventory-records'
+import { findRecord, pairingCodeSha256, patchRecord } from './machine-inventory-records'
 import type { MachineProviderClient, MachineProviderEntry } from './machine-provider-client'
 
 type MachineFetch = (
@@ -81,6 +76,7 @@ export class MachineConnectFlow {
     operationId?: string
   ): Promise<MachineConnection> {
     const provider = this.client.provider(providerKey)
+    const since = this.client.fence.readStarted()
     const onStderr = this.client.progress(provider, 'connect', operationId, machineId)
     const cached = findRecord(this.client.inventory(providerKey), machineId)
     // Cached ssh access is reused; pairing codes are never stored, so orca-server always asks.
@@ -93,11 +89,11 @@ export class MachineConnectFlow {
         // The machine may have come back on a new endpoint; ask once, retry only if it moved.
         const fresh = await this.fetch(providerKey, machineId, onStderr).catch(() => null)
         if (fresh?.machine && machineEndpointChanged(reusable.access, fresh.machine.access)) {
-          return this.connectOrMark(provider, fresh.record, fresh.machine.access, cached)
+          return this.connectOrMark(provider, fresh.record, fresh.machine.access, cached, since)
         }
       }
       // The target stays: worktrees are keyed to it and the next connect may succeed.
-      this.client.commit(provider, (inventory) => markUnreachable(inventory, machineId, error))
+      this.client.markUnreachableSince(provider, machineId, since, error)
       throw error
     }
   }
@@ -106,12 +102,13 @@ export class MachineConnectFlow {
     provider: MachineProviderEntry,
     record: MachineRecord,
     access: MachineAccess | undefined,
-    previous: MachineRecord | undefined
+    previous: MachineRecord | undefined,
+    since: number
   ): Promise<MachineConnection> {
     try {
       return await this.connectTo(provider, record, access, previous)
     } catch (error) {
-      this.client.commit(provider, (inventory) => markUnreachable(inventory, record.id, error))
+      this.client.markUnreachableSince(provider, record.id, since, error)
       throw error
     }
   }
@@ -129,6 +126,7 @@ export class MachineConnectFlow {
         `${record?.name ?? 'The machine'} is ${record?.state ?? 'unknown'}.`
       )
     }
+    // Only a connect that succeeds is a lifecycle result; its own earlier writes don't fence it.
     const patch = (fields: Partial<MachineRecord>): void => {
       this.client.commitMutation(provider, record.id, (inventory) =>
         patchRecord(inventory, record.id, fields)
@@ -136,7 +134,11 @@ export class MachineConnectFlow {
     }
     if (access.kind === 'ssh') {
       // Recorded before connecting: the target exists from here on, even if this connect fails.
-      patch({ sshTargetId: machineSshTargetId(provider.providerKey, record.id) })
+      this.client.commit(provider, (inventory) =>
+        patchRecord(inventory, record.id, {
+          sshTargetId: machineSshTargetId(provider.providerKey, record.id)
+        })
+      )
       const result = await this.dialSsh(record, access)
       patch({
         lastError: undefined,

@@ -82,6 +82,69 @@ describe('MachineService reads against lifecycle results', () => {
   })
 })
 
+describe('MachineService fences failures and settled polls', () => {
+  it('keeps a wake that settled by polling over a list that began mid-poll', async () => {
+    const settlingGet = held(reply(machine()))
+    const staleList = held(inventory([machine({ state: 'waking', access: undefined })]))
+    const { service, verbs } = await setup({
+      list: [inventory([SLEEPING]), staleList.handler],
+      wake: reply(machine({ state: 'waking', access: undefined })),
+      get: settlingGet.handler
+    })
+    await service.list(KEY)
+    const waking = service.wake(KEY, 'sbx-1')
+    while (!verbs().includes('get')) {
+      await tick()
+    }
+    const listing = service.list(KEY, { force: true })
+    await tick()
+    settlingGet.release()
+    await expect(waking).resolves.toMatchObject({ state: 'running' })
+    staleList.release()
+    await listing
+    expect(service.snapshots()[0]?.machines[0]?.state).toBe('running')
+  })
+
+  it('does not mark unreachable from a get that failed after a newer sleep settled', async () => {
+    const failingGet = held(fail('unavailable'))
+    const { service } = await setup({
+      list: inventory([machine()]),
+      get: failingGet.handler,
+      sleep: reply(SLEEPING)
+    })
+    await service.list(KEY)
+    const reading = service.get(KEY, 'sbx-1').catch(() => undefined)
+    await tick()
+    await service.sleep(KEY, 'sbx-1')
+    failingGet.release()
+    await reading
+    expect(service.snapshots()[0]?.machines[0]?.state).toBe('sleeping')
+  })
+
+  it('does not mark unreachable from a connect that failed after a newer sleep settled', async () => {
+    const { service, sshTargets } = await setup({
+      list: inventory([machine()]),
+      sleep: reply(SLEEPING),
+      get: reply(SLEEPING)
+    })
+    let failConnect: () => void = () => undefined
+    vi.mocked(sshTargets.connect).mockImplementationOnce(
+      (id) =>
+        new Promise((resolve) => {
+          failConnect = () =>
+            resolve({ targetId: id, status: 'error', error: 'refused', reconnectAttempt: 0 })
+        })
+    )
+    await service.list(KEY)
+    const connecting = service.connect(KEY, 'sbx-1').catch(() => undefined)
+    await tick()
+    await service.sleep(KEY, 'sbx-1')
+    failConnect()
+    await connecting
+    expect(service.snapshots()[0]?.machines[0]?.state).toBe('sleeping')
+  })
+})
+
 describe('MachineService never flashes unreachable on an answered provider', () => {
   it('keeps a woken machine running when a list that began before the wake then fails', async () => {
     const failingList = held(fail('unavailable'))

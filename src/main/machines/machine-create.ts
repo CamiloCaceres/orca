@@ -139,7 +139,7 @@ export class MachineCreateFlow {
       delay: this.deps.delay,
       now: () => this.client.now(),
       deadline: startedAt + MACHINE_CREATE_RECONCILE_WINDOW_MS
-    })
+    }).then((settled) => this.client.settled(this.client.provider(providerKey), settled))
   }
 
   /** Kills the local process; the pending row stays until a list proves what happened. */
