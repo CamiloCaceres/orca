@@ -1,5 +1,6 @@
 import { Cpu, File, FileCode, FileJson, FileText, Folder, Image } from 'lucide-react'
 import type { PluginCatalogType } from '../../../../shared/plugins/plugin-catalog-release'
+import { formatKeybinding } from '../../../../shared/keybindings/formatting'
 import { pluginMonogram } from './plugin-display-name'
 
 /** Colours a theme plugin paints with, read from its live registration or its catalog entry. */
@@ -112,15 +113,24 @@ function IconThemeArt(): React.JSX.Element {
   )
 }
 
-function KeycapArt(): React.JSX.Element {
-  // Why modifiers only: a made-up letter would read as a real shortcut this plugin binds.
-  const keys = isMac() ? ['⌘', '⌥', '⇧'] : ['Ctrl', 'Alt', 'Shift']
+function KeycapArt({ shortcut }: { shortcut: string | null }): React.JSX.Element {
+  const platform: NodeJS.Platform = isMac()
+    ? 'darwin'
+    : navigator.userAgent.includes('Windows')
+      ? 'win32'
+      : 'linux'
+  // Why modifiers only without a shortcut: a made-up letter would read as a real binding.
+  const keys = shortcut
+    ? formatKeybinding(shortcut, platform)
+    : isMac()
+      ? ['⌘', '⌥', '⇧']
+      : ['Ctrl', 'Alt', 'Shift']
   return (
-    <div className="absolute inset-0 flex items-center justify-center gap-2">
-      {keys.map((key) => (
+    <div className="absolute inset-0 flex items-center justify-center gap-2.5">
+      {keys.map((key, index) => (
         <span
-          key={key}
-          className="flex h-11 min-w-11 items-center justify-center rounded-lg border border-border border-b-[3px] bg-background px-2.5 font-mono text-sm text-muted-foreground"
+          key={`${key}-${index}`}
+          className="flex h-16 min-w-16 items-center justify-center rounded-xl border border-border border-b-4 bg-background px-3 text-2xl font-medium text-foreground shadow-xs"
         >
           {key}
         </span>
@@ -194,12 +204,15 @@ export function PluginCardArt({
   types,
   fileType,
   palettes,
-  tintKey
+  tintKey,
+  shortcut = null
 }: {
   name: string
   types: readonly PluginCatalogType[]
   fileType: string | null
   palettes: readonly PluginArtPalette[]
+  /** The plugin's first shortcut, so keycap art shows its own keys. */
+  shortcut?: string | null
   /** Picks the backdrop tint, so each plugin's art stays the same colour everywhere. */
   tintKey: string
 }): React.JSX.Element {
@@ -214,7 +227,7 @@ export function PluginCardArt({
   } else if (types.includes('icon-theme')) {
     art = <IconThemeArt />
   } else if (types.includes('instructions')) {
-    art = <KeycapArt />
+    art = <KeycapArt shortcut={shortcut} />
   } else if (types.includes('interface-language')) {
     art = <LanguageArt />
   } else if (types.includes('app-theme') || types.includes('terminal-theme')) {

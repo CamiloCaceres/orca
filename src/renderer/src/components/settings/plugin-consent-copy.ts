@@ -1,24 +1,18 @@
 import { translate } from '@/i18n/i18n'
 import type { PluginTrust } from './plugin-access-profile'
 
-/** One word for the profile chip: the broadest thing it may do. */
+/** Plain words for the chip: the broadest thing it may do. */
 export function pluginTrustLabel(trust: PluginTrust): string {
   if (trust.worker) {
-    return translate('auto.components.settings.PluginConsentDialog.trustShortWorker', 'Worker')
+    return translate('auto.components.settings.pluginConsentCopy.runsWorker', 'Runs a worker')
   }
   if (trust.instructional) {
-    return translate(
-      'auto.components.settings.PluginConsentDialog.trustShortInstructional',
-      'Instructional'
-    )
+    return translate('auto.components.settings.pluginConsentCopy.addsCommands', 'Adds commands')
   }
   if (trust.panel) {
-    return translate('auto.components.settings.PluginConsentDialog.trustShortPanel', 'Panel')
+    return translate('auto.components.settings.pluginConsentCopy.addsPanel', 'Adds a panel')
   }
-  return translate(
-    'auto.components.settings.PluginConsentDialog.trustShortDeclarative',
-    'Declarative'
-  )
+  return translate('auto.components.settings.pluginConsentCopy.contentOnly', 'Content only')
 }
 
 /** Every warning that applies; the panel's "bounded" line only when nothing broader does. */

@@ -27,6 +27,23 @@ type PluginPageActionProps = {
   ) => Promise<void>
 }
 
+/** Why fixed slots: the button, then "Installed · Undo", fill one width, so the note never moves. */
+function DataActionRow({
+  slot,
+  extra
+}: {
+  slot: React.ReactNode
+  extra?: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div className="mt-4 flex min-h-9 flex-wrap items-center gap-x-3 gap-y-2">
+      <div className="flex w-48 shrink-0 items-center gap-2">{slot}</div>
+      <ContentOnlyNote />
+      {extra}
+    </div>
+  )
+}
+
 function ContentOnlyNote(): React.JSX.Element {
   return (
     <span className="plugin-security-chrome inline-flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -86,35 +103,52 @@ export function PluginPageAction({
       />
     )
   }
+  const undoFailed = phase?.kind === 'undo-failed' ? phase.message : null
   if (plugin) {
     if (plugin.execution !== 'data') {
       return null
     }
+    const undoable = phase?.kind === 'undoable' || phase?.kind === 'undo-failed'
     return (
-      <div className="mt-4 flex min-h-9 flex-wrap items-center gap-3">
-        {phase?.kind === 'undoable' ? (
-          <>
-            <span className="inline-flex items-center gap-1.5 text-sm">
-              <Check className="size-4" aria-hidden="true" />
-              {translate('auto.components.settings.PluginCardAction.installed', 'Installed')}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"
-              aria-label={translate(
-                'auto.components.settings.PluginCardAction.undoLabel',
-                'Undo installing {{value0}}',
-                { value0: name }
-              )}
-              onClick={() => void install.undo(entry.pluginKey)}
-            >
-              <Undo2 />
-              {translate('auto.components.settings.PluginCardAction.undo', 'Undo')}
-            </Button>
-          </>
+      <>
+        <DataActionRow
+          slot={
+            <>
+              <span className="inline-flex items-center gap-1.5 text-sm">
+                <Check className="size-4" aria-hidden="true" />
+                {translate('auto.components.settings.PluginCardAction.installed', 'Installed')}
+              </span>
+              {undoable ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={busy}
+                  aria-label={translate(
+                    'auto.components.settings.PluginCardAction.undoLabel',
+                    'Undo installing {{value0}}',
+                    { value0: name }
+                  )}
+                  onClick={() => void install.undo(entry.pluginKey)}
+                >
+                  <Undo2 />
+                  {translate('auto.components.settings.PluginCardAction.undo', 'Undo')}
+                </Button>
+              ) : null}
+            </>
+          }
+          extra={<PluginThemeUseNow pluginKey={plugin.pluginKey} />}
+        />
+        {undoFailed ? (
+          <PluginDetailAlert
+            tone="destructive"
+            title={translate(
+              'auto.components.settings.PluginPageAction.undoFailedTitle',
+              'Couldn’t undo the install'
+            )}
+            body={undoFailed}
+          />
         ) : null}
-        <PluginThemeUseNow pluginKey={plugin.pluginKey} fallback={<ContentOnlyNote />} />
-      </div>
+      </>
     )
   }
   if (!listing || unavailable) {
@@ -137,29 +171,30 @@ export function PluginPageAction({
   if (execution === 'data') {
     return (
       <>
-        <div className="mt-4 flex min-h-9 flex-wrap items-center gap-3">
-          <Button
-            className="w-36"
-            disabled={installing || model.stale}
-            aria-label={translate(
-              'auto.components.settings.PluginManagerRows.installName',
-              'Install {{value0}}',
-              { value0: name }
-            )}
-            onClick={() => void install.install(listing)}
-          >
-            {installing ? <Loader2 className="animate-spin" /> : null}
-            {installing
-              ? translate('auto.components.settings.PluginCardAction.installing', 'Installing…')
-              : phase?.kind === 'error'
-                ? translate('auto.components.settings.PluginCardAction.retry', 'Try again')
-                : translate(
-                    'auto.components.settings.PluginMarketplaceListingRow.install',
-                    'Install'
-                  )}
-          </Button>
-          <ContentOnlyNote />
-        </div>
+        <DataActionRow
+          slot={
+            <Button
+              className="w-36"
+              disabled={installing || model.disarmed}
+              aria-label={translate(
+                'auto.components.settings.PluginManagerRows.installName',
+                'Install {{value0}}',
+                { value0: name }
+              )}
+              onClick={() => void install.install(listing, preview ? { preview } : undefined)}
+            >
+              {installing ? <Loader2 className="animate-spin" /> : null}
+              {installing
+                ? translate('auto.components.settings.PluginCardAction.installing', 'Installing…')
+                : phase?.kind === 'error'
+                  ? translate('auto.components.settings.PluginCardAction.retry', 'Try again')
+                  : translate(
+                      'auto.components.settings.PluginMarketplaceListingRow.install',
+                      'Install'
+                    )}
+            </Button>
+          }
+        />
         {errorAlert}
       </>
     )
@@ -173,7 +208,8 @@ export function PluginPageAction({
         capabilities={model.capabilities}
         shortcuts={model.shortcuts}
         // Why the preview: it carries the fingerprint approved, and must be the release shown.
-        armed={preview !== null && !model.stale}
+        armed={preview !== null && !model.disarmed}
+        reading={preview === null && !model.stale}
         failed={model.previewFailed}
         onRetry={model.retryPreview}
         installed={null}
@@ -183,7 +219,7 @@ export function PluginPageAction({
         changed={false}
         error={null}
         onConfirm={() => {
-          if (preview && !model.stale) {
+          if (preview && !model.disarmed) {
             void install.install(listing, { preview })
           }
         }}

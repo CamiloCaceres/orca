@@ -17,6 +17,8 @@ export type PluginInstallPhase =
   | { kind: 'error'; message: string }
   /** Installed and turned on by main as content only; Undo removes it. */
   | { kind: 'undoable' }
+  /** Undo couldn't remove it; it stays installed and Undo can be tried again. */
+  | { kind: 'undo-failed'; message: string }
 
 function catalogInstallErrorMessage(cause: unknown): string {
   const detail = (cause instanceof Error ? cause.message : String(cause)).toLowerCase()
@@ -140,7 +142,10 @@ export function usePluginInstallAction({
           marketplaceCommit: preview.marketplaceCommit,
           pluginKey,
           resolvedCommit: preview.resolvedCommit,
-          ...(execution === 'data' ? { enableIfData: true as const } : {})
+          // Why the fingerprint: main turns on only the exact bytes this preview showed.
+          ...(execution === 'data'
+            ? { enableIfData: true as const, expectedFingerprint: preview.consentFingerprint }
+            : {})
         })
         if (!result.ok) {
           throw new Error(result.error)
@@ -184,10 +189,23 @@ export function usePluginInstallAction({
 
   const undo = useCallback(
     async (pluginKey: string): Promise<void> => {
-      dismiss(pluginKey)
-      await onUndo(pluginKey)
+      clearTimeout(timersRef.current.get(pluginKey))
+      timersRef.current.delete(pluginKey)
+      try {
+        await onUndo(pluginKey)
+        setPhase(pluginKey, null)
+      } catch (cause) {
+        console.warn('[plugins] undo install failed:', cause)
+        setPhase(pluginKey, {
+          kind: 'undo-failed',
+          message: translate(
+            'auto.components.settings.usePluginInstallAction.undoFailed',
+            'Couldn’t remove it. It’s still installed; try Undo again.'
+          )
+        })
+      }
     },
-    [dismiss, onUndo]
+    [onUndo, setPhase]
   )
 
   const phaseOf = useCallback((pluginKey: string) => phases[pluginKey] ?? null, [phases])

@@ -312,8 +312,11 @@ export function PluginsSettingsSection({
 
   const undoInstall = async (pluginKey: string): Promise<void> => {
     keepPageForRef.current = pluginKey
-    await mutateList(pluginKey, () => window.api.plugins.remove({ pluginKey }))
+    const removed = await mutateList(pluginKey, () => window.api.plugins.remove({ pluginKey }))
     keepPageForRef.current = null
+    if (!removed) {
+      throw new Error('undo install failed')
+    }
   }
 
   const refresh = async (): Promise<void> => {

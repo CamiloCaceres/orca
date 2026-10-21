@@ -96,8 +96,9 @@ describe('usePluginInstallAction', () => {
   it('asks main to turn on a content-only release and offers Undo only when it did', async () => {
     const { hook, onUndo } = setup()
     await act(async () => hook.current?.install(listing))
+    // Why the fingerprint: main turns on only the bytes this preview showed.
     expect(window.api.plugins.installMarketplacePlugin).toHaveBeenCalledWith(
-      expect.objectContaining({ enableIfData: true })
+      expect.objectContaining({ enableIfData: true, expectedFingerprint: 'sha256-shown' })
     )
     expect(window.api.plugins.consent).not.toHaveBeenCalled()
     expect(hook.current?.phaseOf(listing.pluginKey)).toEqual({ kind: 'undoable' })
@@ -129,11 +130,16 @@ describe('usePluginInstallAction', () => {
     })
   })
 
-  it('refuses a one-click install when the catalog moved past the release it showed', async () => {
+  it.each([
+    ['catalog commit', { marketplaceCommit: 'e'.repeat(40) }],
+    ['release commit', { resolvedCommit: 'e'.repeat(40) }],
+    ['content hash', { contentHash: 'f'.repeat(64) }],
+    ['execution profile', { manifest: codePreview.manifest }]
+  ])('refuses a one-click install when the preview differs by %s', async (_field, change) => {
     const { hook, fetchPreview } = setup()
     fetchPreview.mockResolvedValue({
       ok: true,
-      preview: { ...preview, resolvedCommit: 'e'.repeat(40) }
+      preview: { ...preview, ...change }
     })
     await act(async () => hook.current?.install(listing))
     expect(window.api.plugins.installMarketplacePlugin).not.toHaveBeenCalled()
@@ -141,6 +147,19 @@ describe('usePluginInstallAction', () => {
       kind: 'error',
       message: 'The catalog changed since this page opened. Refresh it, then try again.'
     })
+  })
+
+  it('keeps Undo and says so when removing the plugin fails', async () => {
+    const { hook, onUndo } = setup()
+    await act(async () => hook.current?.install(listing))
+    onUndo.mockRejectedValueOnce(new Error('remove failed'))
+    await act(async () => hook.current?.undo(listing.pluginKey))
+    expect(hook.current?.phaseOf(listing.pluginKey)).toEqual({
+      kind: 'undo-failed',
+      message: 'Couldn’t remove it. It’s still installed; try Undo again.'
+    })
+    await act(async () => hook.current?.undo(listing.pluginKey))
+    expect(hook.current?.phaseOf(listing.pluginKey)).toBeNull()
   })
 
   it('names a download that differs from the catalog and installs nothing', async () => {

@@ -69,3 +69,12 @@ export function PluginRowArt({ entry }: { entry: PluginListEntry }): React.JSX.E
     </div>
   )
 }
+
+/** The first shortcut a plugin binds, for keycap art: the catalog's summary, else its install. */
+export function pluginArtShortcut(entry: PluginListEntry): string | null {
+  const fromCatalog = entry.listing?.release?.contributes?.find(
+    (item) => item.kind === 'keybindings'
+  )?.name
+  const fromInstall = entry.installed?.commands.flatMap((command) => command.keybindings)[0]?.key
+  return fromCatalog ?? fromInstall ?? null
+}

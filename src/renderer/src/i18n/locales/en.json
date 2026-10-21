@@ -13462,11 +13462,13 @@
           "enableHeading": "If you enable {{value0}}, it can:",
           "noOtherAccess": "It asks for no other access.",
           "keepOff": "Keep off",
-          "replacesShortcut": "{{value0}} ({{value1}}) replaces your shortcut for {{value2}}."
+          "replacesShortcut": "{{value0}} ({{value1}}) replaces your shortcut for {{value2}}.",
+          "reading": "Reading what it can access…"
         },
         "PluginPageAction": {
           "failedTitle": "Couldn’t install {{value0}}",
-          "contentOnly": "Can’t reach anything outside its own files"
+          "contentOnly": "Can’t reach anything outside its own files",
+          "undoFailedTitle": "Couldn’t undo the install"
         },
         "PluginSettingsMenu": {
           "label": "Plugin settings",
@@ -13481,11 +13483,21 @@
           "mismatch": "The download didn’t match what the catalog published, so nothing was installed.",
           "catalogChanged": "The catalog changed since this page opened. Refresh it, then try again.",
           "blocked": "Orca’s safety list blocks this plugin.",
-          "downloadFailed": "Couldn’t download this plugin. Check your connection, then try again. Nothing was installed."
+          "downloadFailed": "Couldn’t download this plugin. Check your connection, then try again. Nothing was installed.",
+          "undoFailed": "Couldn’t remove it. It’s still installed; try Undo again."
         },
         "PluginPageHero": {
           "screenshots": "Screenshots",
-          "openScreenshot": "Open screenshot: {{value0}}"
+          "openScreenshot": "Open screenshot: {{value0}}",
+          "position": "{{value0}} of {{value1}}",
+          "previous": "Previous screenshot",
+          "next": "Next screenshot"
+        },
+        "pluginConsentCopy": {
+          "runsWorker": "Runs a worker",
+          "addsCommands": "Adds commands",
+          "addsPanel": "Adds a panel",
+          "contentOnly": "Content only"
         }
       },
       "right": {

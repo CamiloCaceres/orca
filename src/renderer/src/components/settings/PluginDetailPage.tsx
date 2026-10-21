@@ -26,6 +26,8 @@ type PluginDetailPageProps = {
   handlers: InstalledRowHandlers
   fetchPreview: (listing: NonNullable<PluginListEntry['listing']>) => Promise<PluginPagePreview>
   install: ReturnType<typeof usePluginInstallAction>
+  /** A catalog refresh is in flight. */
+  refreshing: boolean
   onConsent: (
     pluginKey: string,
     reviewedFingerprint: string,
@@ -58,11 +60,12 @@ export function PluginDetailPage({
   handlers,
   fetchPreview,
   install,
+  refreshing,
   onConsent,
   onBack,
   onOpenShortcuts
 }: PluginDetailPageProps): React.JSX.Element {
-  const model = usePluginPageModel({ entry, fetchPreview })
+  const model = usePluginPageModel({ entry, fetchPreview, refreshing })
   const { plugin, listing, preview, stale } = model
   const palettes = usePluginArtPalettes(entry.pluginKey, listing?.release?.themePreview)
   const headingRef = useRef<HTMLHeadingElement>(null)
@@ -228,7 +231,7 @@ export function PluginDetailPage({
           </div>
         ) : null}
       </div>
-      <div className="mt-4 max-w-md">
+      <div className="mt-4">
         <PluginPageHero entry={entry} images={model.images} palettes={palettes} />
       </div>
       {description ? <p className="mt-4 max-w-prose text-sm leading-6">{description}</p> : null}

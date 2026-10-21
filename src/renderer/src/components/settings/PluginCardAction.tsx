@@ -28,9 +28,11 @@ export function PluginCardAction({
   onInstall,
   onOpen,
   onUndo,
-  onUpdate
+  onUpdate,
+  refreshing = false
 }: {
   entry: PluginListEntry
+  refreshing?: boolean
   phase: PluginInstallPhase | null
   orcaVersion: string | null
   onInstall: () => void
@@ -39,7 +41,7 @@ export function PluginCardAction({
   onUpdate: () => void
 }): React.JSX.Element | null {
   const installed = entry.installed
-  if (phase?.kind === 'undoable') {
+  if (phase?.kind === 'undoable' || phase?.kind === 'undo-failed') {
     return (
       <>
         <span className="inline-flex items-center gap-1 text-xs text-foreground">
@@ -134,6 +136,7 @@ export function PluginCardAction({
       variant="outline"
       size="xs"
       className="w-32"
+      disabled={refreshing}
       aria-label={translate(
         'auto.components.settings.PluginManagerRows.installName',
         'Install {{value0}}',

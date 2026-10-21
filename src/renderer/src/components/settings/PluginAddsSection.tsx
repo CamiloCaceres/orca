@@ -19,7 +19,6 @@ import type { PluginCatalogType } from '../../../../shared/plugins/plugin-catalo
 import { translate } from '@/i18n/i18n'
 import { useAppStore } from '@/store'
 import { ShortcutKeyCombo } from '../ShortcutKeyCombo'
-import { Button } from '../ui/button'
 import { DetailRow, DetailSection } from './PluginDetailSections'
 import { shadowedKeybindingTitles } from './PluginKeybindingConsentPreview'
 import type { PluginContributionSummaryItem } from '../../../../shared/plugins/plugin-contribution-summary'
@@ -120,12 +119,16 @@ function CommandRow({
               'Replaces your shortcut for {{value0}}',
               { value0: shadowed.join(', ') }
             )}
-            <Button variant="link" size="xs" className="-ml-2" onClick={onOpenShortcuts}>
+            <button
+              type="button"
+              className="mt-0.5 rounded-sm text-xs text-foreground underline underline-offset-2 outline-none hover:text-foreground/80 focus-visible:ring-2 focus-visible:ring-ring"
+              onClick={onOpenShortcuts}
+            >
               {translate(
                 'auto.components.settings.PluginDetailSections.changeShortcuts',
                 'Change in Shortcuts'
               )}
-            </Button>
+            </button>
           </span>
         ) : binding?.when === 'worktree' ? (
           translate(

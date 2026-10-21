@@ -25,6 +25,8 @@ type PluginInstallConsentProps = {
   shortcuts: readonly PluginPageShortcut[] | null
   /** Off while what it shows may not be what installs (not yet read, or the catalog moved). */
   armed: boolean
+  /** Its files are still being read; says so beside the disabled button. */
+  reading?: boolean
   /** Its files couldn't be read, so nothing is known about what it can do. */
   failed?: boolean
   onRetry?: () => void
@@ -59,6 +61,7 @@ export function PluginInstallConsent({
   capabilities,
   shortcuts,
   armed,
+  reading = false,
   failed = false,
   onRetry,
   installed,
@@ -199,6 +202,14 @@ export function PluginInstallConsent({
             {busy ? <Loader2 className="animate-spin" /> : null}
             {confirmLabel}
           </Button>
+          {reading && !failed ? (
+            <span className="text-xs text-muted-foreground" aria-live="polite">
+              {translate(
+                'auto.components.settings.PluginInstallConsent.reading',
+                'Reading what it can access…'
+              )}
+            </span>
+          ) : null}
           {onKeepOff ? (
             <Button variant="ghost" size="sm" disabled={busy} onClick={onKeepOff}>
               {translate('auto.components.settings.PluginInstallConsent.keepOff', 'Keep off')}

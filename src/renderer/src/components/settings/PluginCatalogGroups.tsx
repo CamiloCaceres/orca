@@ -66,6 +66,8 @@ export type CatalogCardHandlers = {
   openEntry: (pluginKey: string) => void
   onUpdate: (entry: PluginListEntry) => void
   orcaVersion: string | null
+  /** A catalog refresh is in flight; installs wait for it. */
+  refreshing: boolean
 }
 
 function CatalogCard({
@@ -99,7 +101,7 @@ function CatalogCard({
       statusText={statusText}
       palettes={palettes}
       notice={
-        phase?.kind === 'error'
+        phase?.kind === 'error' || phase?.kind === 'undo-failed'
           ? { text: phase.message, tone: 'destructive' }
           : listing?.blockedByKillList && !entry.installed
             ? {
@@ -121,6 +123,7 @@ function CatalogCard({
           entry={entry}
           phase={phase}
           orcaVersion={handlers.orcaVersion}
+          refreshing={handlers.refreshing}
           onInstall={() => {
             if (listing) {
               void handlers.install.install(listing)

@@ -105,7 +105,8 @@ const install = {
 
 async function render(
   entry: PluginListEntry,
-  fetchPreview: (target: PluginMarketplaceHostListing) => Promise<PluginPagePreview>
+  fetchPreview: (target: PluginMarketplaceHostListing) => Promise<PluginPagePreview>,
+  { refreshing = false }: { refreshing?: boolean } = {}
 ): Promise<HTMLDivElement> {
   const container = document.createElement('div')
   document.body.appendChild(container)
@@ -129,6 +130,7 @@ async function render(
         }}
         fetchPreview={fetchPreview}
         install={install}
+        refreshing={refreshing}
         onConsent={vi.fn().mockResolvedValue(undefined)}
         onBack={vi.fn()}
         onOpenShortcuts={vi.fn()}
@@ -179,7 +181,7 @@ describe('PluginDetailPage', () => {
       (candidate) => candidate.textContent === 'Install'
     )
     await act(async () => button?.click())
-    expect(install.install).toHaveBeenCalledWith(listing)
+    expect(install.install).toHaveBeenCalledWith(listing, { preview })
   })
 
   it('never claims no access when the plugin could not be read, and retries', async () => {
@@ -323,6 +325,97 @@ describe('PluginDetailPage', () => {
     )
     expect(installButton?.disabled).toBe(true)
     expect(install.install).not.toHaveBeenCalled()
+  })
+
+  const codeRelease = {
+    ...listing,
+    pluginKey: 'stablyai.shortcuts',
+    release: {
+      ...listing.release!,
+      commit: 'd'.repeat(40),
+      contentHash: 'e'.repeat(64),
+      execution: 'instructional' as const,
+      types: ['instructions' as const]
+    }
+  }
+  const codeManifest = pluginManifestSchema.parse({
+    ...manifest,
+    contributes: { commands: [{ id: 'go', title: 'Go', action: 'sidebar.left.toggle' }] }
+  })
+  const codePreview = {
+    ...preview,
+    pluginKey: 'stablyai.shortcuts',
+    resolvedCommit: 'd'.repeat(40),
+    contentHash: 'e'.repeat(64),
+    manifest: codeManifest
+  }
+  const installButton = (container: HTMLElement) =>
+    Array.from(container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Install & enable')
+    )
+
+  it('arms Install & enable only for the exact release it shows', async () => {
+    const container = await render(pluginListEntryFromListing(codeRelease), () =>
+      Promise.resolve({ ok: true, preview: codePreview })
+    )
+    expect(installButton(container)?.disabled).toBe(false)
+    expect(container.textContent).not.toContain('Newer version available')
+  })
+
+  it.each([
+    ['catalog commit', { marketplaceCommit: 'f'.repeat(40) }],
+    ['release commit', { resolvedCommit: 'f'.repeat(40) }],
+    ['content hash', { contentHash: 'f'.repeat(64) }],
+    ['execution profile', { manifest: { ...codeManifest, main: 'dist/main.mjs' } }]
+  ])('disarms when the preview differs by %s', async (_field, change) => {
+    const container = await render(pluginListEntryFromListing(codeRelease), () =>
+      Promise.resolve({ ok: true, preview: { ...codePreview, ...change } })
+    )
+    expect(container.textContent).toContain('Newer version available')
+    expect(installButton(container)?.disabled).toBe(true)
+  })
+
+  it('disarms while a catalog refresh is in flight', async () => {
+    const container = await render(
+      pluginListEntryFromListing(codeRelease),
+      () => Promise.resolve({ ok: true, preview: codePreview }),
+      { refreshing: true }
+    )
+    expect(installButton(container)?.disabled).toBe(true)
+  })
+
+  it('trusts the full preview over a capped catalog summary', async () => {
+    const capped = Array.from({ length: 64 }, (_, index) => ({
+      kind: 'panels' as const,
+      name: `Panel ${index}`
+    }))
+    const panelListing = {
+      ...codeRelease,
+      release: { ...codeRelease.release, execution: 'sandboxed-ui' as const, contributes: capped }
+    }
+    const panelManifest = pluginManifestSchema.parse({
+      ...manifest,
+      contributes: {
+        panels: [{ id: 'p', title: 'P', entry: 'p.html' }],
+        commands: [{ id: 'go', title: 'Go', action: 'sidebar.left.toggle' }]
+      }
+    })
+    // Why both: before the preview the capped summary is unknown, after it the manifest decides.
+    let resolvePreview: (result: PluginPagePreview) => void = () => {}
+    const container = await render(
+      pluginListEntryFromListing(panelListing),
+      () => new Promise((resolve) => (resolvePreview = resolve))
+    )
+    expect(container.textContent).toContain(
+      'Its commands and instructions can take actions when you or an agent use them.'
+    )
+    await act(async () =>
+      resolvePreview({ ok: true, preview: { ...codePreview, manifest: panelManifest } })
+    )
+    expect(container.textContent).toContain(
+      'Its commands and instructions can take actions when you or an agent use them.'
+    )
+    expect(container.textContent).not.toContain('These permissions limit what it can do')
   })
 
   it('names what a plugin under review adds from its installed manifest', async () => {

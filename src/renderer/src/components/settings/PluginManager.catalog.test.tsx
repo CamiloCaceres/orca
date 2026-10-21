@@ -252,6 +252,7 @@ describe('PluginManager catalog', () => {
       listMarketplacePlugins: vi.fn().mockResolvedValue([themeListing]),
       previewMarketplacePlugin: vi.fn().mockResolvedValue({
         ...preview,
+        contentHash: 'd'.repeat(64),
         manifest: {
           ...preview.manifest,
           main: undefined,
@@ -271,7 +272,8 @@ describe('PluginManager catalog', () => {
       marketplaceCommit: MARKETPLACE_COMMIT,
       pluginKey: listing.pluginKey,
       resolvedCommit: PLUGIN_COMMIT,
-      enableIfData: true
+      enableIfData: true,
+      expectedFingerprint: preview.consentFingerprint
     })
     expect(window.api.plugins.consent).not.toHaveBeenCalled()
     expect(buttons('Install plugin')).toHaveLength(0)

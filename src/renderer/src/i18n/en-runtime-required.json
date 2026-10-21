@@ -1424,6 +1424,10 @@
           "reviewTitle": "Review plugin",
           "subtitle": "{{value0}} v{{value1}} · {{value2}}",
           "title": "Review permissions",
+          "trustShortDeclarative": "Declarative",
+          "trustShortInstructional": "Instructional",
+          "trustShortPanel": "Panel",
+          "trustShortWorker": "Worker",
           "whatChanged": "What changed",
           "workerTrust": "Background worker — runs its own process"
         },

@@ -169,6 +169,7 @@ export function PluginManager({
     prefetch,
     openEntry,
     orcaVersion,
+    refreshing: catalog.refreshBusy,
     onUpdate: (entry: PluginListEntry) => {
       if (entry.listing) {
         void catalog.openPreview(entry.listing, true)
@@ -293,6 +294,7 @@ export function PluginManager({
           handlers={rowHandlers}
           fetchPreview={catalog.fetchPreview}
           install={install}
+          refreshing={catalog.refreshBusy}
           onConsent={onConsent}
           onBack={back}
           onOpenShortcuts={onOpenShortcuts}
