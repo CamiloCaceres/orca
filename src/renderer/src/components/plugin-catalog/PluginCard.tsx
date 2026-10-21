@@ -103,7 +103,10 @@ export function PluginCard({
         </p>
         <div className="mt-1.5 flex min-h-6 items-center gap-1.5">
           <div className="flex min-w-0 gap-1 overflow-hidden">{chips}</div>
-          <div className="relative z-10 ml-auto flex shrink-0 items-center gap-1.5">{action}</div>
+          {/* Why a fixed width: Install, then "Installed ⋯", fill one slot, so the footer never moves. */}
+          <div className="relative z-10 ml-auto flex w-40 shrink-0 items-center justify-end gap-1.5">
+            {action}
+          </div>
         </div>
       </div>
     </li>

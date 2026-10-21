@@ -57,15 +57,14 @@ const codePreview: PluginMarketplaceHostInstallPreview = {
 
 function setup() {
   const onInstalled = vi.fn().mockResolvedValue(undefined)
-  const onUndo = vi.fn().mockResolvedValue(undefined)
   const fetchPreview = vi.fn().mockResolvedValue({ ok: true, preview })
   const hook: { current: ReturnType<typeof usePluginInstallAction> | null } = { current: null }
   function Probe(): null {
-    hook.current = usePluginInstallAction({ fetchPreview, onInstalled, onUndo })
+    hook.current = usePluginInstallAction({ fetchPreview, onInstalled })
     return null
   }
   act(() => createRoot(document.createElement('div')).render(<Probe />))
-  return { hook, onInstalled, onUndo, fetchPreview }
+  return { hook, onInstalled, fetchPreview }
 }
 
 function installResult(on: boolean) {
@@ -93,22 +92,15 @@ beforeEach(() => {
 })
 
 describe('usePluginInstallAction', () => {
-  it('asks main to turn on a content-only release and offers Undo only when it did', async () => {
-    const { hook, onUndo } = setup()
+  it('asks main to turn on a content-only release and leaves nothing pending after', async () => {
+    const { hook, onInstalled } = setup()
     await act(async () => hook.current?.install(listing))
     // Why the fingerprint: main turns on only the bytes this preview showed.
     expect(window.api.plugins.installMarketplacePlugin).toHaveBeenCalledWith(
       expect.objectContaining({ enableIfData: true, expectedFingerprint: 'sha256-shown' })
     )
     expect(window.api.plugins.consent).not.toHaveBeenCalled()
-    expect(hook.current?.phaseOf(listing.pluginKey)).toEqual({ kind: 'undoable' })
-
-    await act(async () => hook.current?.undo(listing.pluginKey))
-    expect(onUndo).toHaveBeenCalledWith(listing.pluginKey)
-    expect(hook.current?.phaseOf(listing.pluginKey)).toBeNull()
-
-    vi.mocked(window.api.plugins.installMarketplacePlugin).mockResolvedValue(installResult(false))
-    await act(async () => hook.current?.install(listing))
+    expect(onInstalled).toHaveBeenCalledWith(listing.pluginKey)
     expect(hook.current?.phaseOf(listing.pluginKey)).toBeNull()
   })
 
@@ -147,19 +139,6 @@ describe('usePluginInstallAction', () => {
       kind: 'error',
       message: 'The catalog changed since this page opened. Refresh it, then try again.'
     })
-  })
-
-  it('keeps Undo and says so when removing the plugin fails', async () => {
-    const { hook, onUndo } = setup()
-    await act(async () => hook.current?.install(listing))
-    onUndo.mockRejectedValueOnce(new Error('remove failed'))
-    await act(async () => hook.current?.undo(listing.pluginKey))
-    expect(hook.current?.phaseOf(listing.pluginKey)).toEqual({
-      kind: 'undo-failed',
-      message: 'Couldn’t remove it. It’s still installed; try Undo again.'
-    })
-    await act(async () => hook.current?.undo(listing.pluginKey))
-    expect(hook.current?.phaseOf(listing.pluginKey)).toBeNull()
   })
 
   it('names a download that differs from the catalog and installs nothing', async () => {

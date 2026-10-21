@@ -251,18 +251,56 @@ describe('PluginsSettingsSection lifecycle', () => {
     expect(unsubscribe).toHaveBeenCalledOnce()
   })
 
-  it('offers no switch to turn the plugin system off or back on', async () => {
+  it('offers turning plugins on only from the off state, not off from the menu', async () => {
     const { container: on } = await renderSection()
     expect(on.textContent).not.toContain('Turn off plugins')
     document.body.innerHTML = ''
-    // Why still listed: off only comes from policy, so the page explains it without a switch.
     const { container: off } = await renderSection({
       ...getDefaultSettings('/tmp'),
       pluginSystemEnabled: false
     })
-    expect(off.textContent).toContain('Plugins are off')
-    expect(off.textContent).toContain('Notes')
-    expect(off.textContent).not.toContain('Turn on plugins')
+    expect(off.textContent).toContain('Turn on plugins')
+  })
+
+  it('persists the feature switch before refreshing discovery', async () => {
+    const updateSettings = vi.fn().mockResolvedValue(undefined)
+    const { container } = await renderSection(
+      { ...getDefaultSettings('/tmp'), pluginSystemEnabled: false },
+      updateSettings
+    )
+    const turnOn = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Turn on plugins'
+    )
+    if (!turnOn) {
+      throw new Error('missing turn-on action')
+    }
+    // Why: with plugins off the pane still lists what is installed, dimmed.
+    expect(container.textContent).toContain('Notes')
+
+    await act(async () => click(turnOn))
+
+    expect(updateSettings).toHaveBeenCalledWith({ pluginSystemEnabled: true })
+    expect(window.api.plugins.refresh).toHaveBeenCalledOnce()
+  })
+
+  it('clears feature busy state and skips refresh when the setting write fails', async () => {
+    const updateSettings = vi.fn().mockRejectedValue(new Error('disk write failed'))
+    const { container } = await renderSection(
+      { ...getDefaultSettings('/tmp'), pluginSystemEnabled: false },
+      updateSettings
+    )
+    const turnOn = Array.from(container.querySelectorAll('button')).find(
+      (button) => button.textContent === 'Turn on plugins'
+    )
+    if (!turnOn) {
+      throw new Error('missing turn-on action')
+    }
+
+    await act(async () => click(turnOn))
+
+    expect(turnOn.disabled).toBe(false)
+    expect(window.api.plugins.refresh).not.toHaveBeenCalled()
+    expect(container.textContent).toContain('Could not save plugin settings.')
   })
 
   it('reports a failed save of the file-suggestion setting', async () => {

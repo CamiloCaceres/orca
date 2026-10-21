@@ -64,8 +64,8 @@ type PluginManagerProps = {
   page: PluginPageNavigation
   sourcesOpen: boolean
   setSourcesOpen: (open: boolean) => void
-  /** Removes a plugin installed moments ago, keeping its page open. */
-  onUndoInstall: (pluginKey: string) => Promise<void>
+  /** Removes a plugin at once from its catalog card; rejects so the card can say why. */
+  onRemoveNow: (pluginKey: string) => Promise<void>
   onConsent: (
     pluginKey: string,
     reviewedFingerprint: string,
@@ -87,7 +87,7 @@ export function PluginManager({
   page,
   sourcesOpen,
   setSourcesOpen,
-  onUndoInstall,
+  onRemoveNow,
   onConsent
 }: PluginManagerProps): React.JSX.Element {
   const [search, setSearch] = useState('')
@@ -106,8 +106,7 @@ export function PluginManager({
   })
   const install = usePluginInstallAction({
     fetchPreview: catalog.fetchPreview,
-    onInstalled,
-    onUndo: onUndoInstall
+    onInstalled
   })
   const prefetch = usePluginHoverPrefetch(catalog.fetchPreview)
   const orcaVersion = useOrcaVersion()
@@ -175,6 +174,8 @@ export function PluginManager({
     openEntry,
     orcaVersion,
     refreshing: catalog.refreshBusy,
+    onRemove: onRemoveNow,
+    onToggleEnabled: handlers.onToggleEnabled,
     onUpdate: (entry: PluginListEntry) => {
       if (entry.listing) {
         void catalog.openPreview(entry.listing, true)

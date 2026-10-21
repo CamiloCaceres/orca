@@ -242,7 +242,7 @@ export function PluginDetailPage({
           {action.header}
           {controls && controls.kind !== 'review' ? (
             <>
-              {action.headerExtra ?? controls.action}
+              {controls.action}
               {controls.toggle}
             </>
           ) : null}

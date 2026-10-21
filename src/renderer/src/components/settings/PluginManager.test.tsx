@@ -143,7 +143,7 @@ function Harness({ plugins }: { plugins: PluginHostListEntry[] }): React.JSX.Ele
       page={page}
       sourcesOpen={false}
       setSourcesOpen={vi.fn()}
-      onUndoInstall={vi.fn().mockResolvedValue(undefined)}
+      onRemoveNow={vi.fn().mockResolvedValue(undefined)}
       onConsent={vi.fn().mockResolvedValue(undefined)}
     />
   )

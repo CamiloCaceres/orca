@@ -8,26 +8,49 @@ const saveFailed = (): string =>
     'Could not save plugin settings.'
   )
 
-/** Plugin settings writes: development folders re-discover; all report a failed save instead
- *  of dropping it. */
+/** Plugin settings writes: the system switch and development folders re-discover; all report
+ *  a failed save instead of dropping it. */
 export function usePluginSettingsWrites({
   settings,
   updateSettings,
   mountedRef,
-  rediscover
+  rediscover,
+  onStart
 }: {
   settings: GlobalSettings
   updateSettings: (updates: Partial<GlobalSettings>) => Promise<void>
   mountedRef: MutableRefObject<boolean>
   rediscover: () => Promise<unknown>
+  /** Clears list errors a new write supersedes. */
+  onStart: () => void
 }) {
+  const [featureBusy, setFeatureBusy] = useState(false)
   const [devPathsBusy, setDevPathsBusy] = useState(false)
   const [settingsError, setSettingsError] = useState<string | null>(null)
 
   const reset = useCallback(() => {
+    setFeatureBusy(false)
     setDevPathsBusy(false)
     setSettingsError(null)
   }, [])
+
+  const toggleFeature = async (): Promise<void> => {
+    setFeatureBusy(true)
+    setSettingsError(null)
+    onStart()
+    try {
+      await updateSettings({ pluginSystemEnabled: !settings.pluginSystemEnabled })
+      await rediscover()
+    } catch {
+      if (mountedRef.current) {
+        setSettingsError(saveFailed())
+      }
+    } finally {
+      if (mountedRef.current) {
+        setFeatureBusy(false)
+      }
+    }
+  }
 
   const updateDevPaths = async (paths: string[]): Promise<void> => {
     setDevPathsBusy(true)
@@ -62,9 +85,11 @@ export function usePluginSettingsWrites({
   }
 
   return {
+    featureBusy,
     devPathsBusy,
     settingsError,
     reset,
+    toggleFeature,
     toggleSuggestions,
     updateDevPaths
   }

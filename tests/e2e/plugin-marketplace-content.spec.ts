@@ -153,7 +153,7 @@ async function installMarketplacePluginThroughUi(
   } else {
     await page.getByRole('button', { name: new RegExp(`^Install .*${pluginName}$`) }).click()
     await expect(
-      page.getByRole('button', { name: new RegExp(`^Undo installing .*${pluginName}$`) })
+      page.getByRole('button', { name: new RegExp(`^More actions for .*${pluginName}$`) })
     ).toBeVisible()
   }
   await expect(page.getByRole('dialog')).toHaveCount(0)
@@ -204,13 +204,9 @@ async function applyInstalledLanguage(page: Page): Promise<void> {
 async function runMarketplaceJourney(page: Page): Promise<void> {
   const startedAt = Date.now()
   await openPluginSettings(page)
-  // Why the setting: the page has no plugin on/off switch; a fresh profile is turned on directly.
-  await page.evaluate(async () => {
-    const settings = await window.api.settings.set({ pluginSystemEnabled: true })
-    window.__store?.setState({ settings })
-    await window.api.plugins.refresh()
-  })
-  await expect(page.getByText('Plugins are off')).toBeHidden()
+  // Why a button: with plugins off the page offers one action, and the switch appears once on.
+  await page.getByRole('button', { name: 'Turn on plugins' }).click()
+  await expect(page.getByRole('button', { name: 'Turn on plugins' })).toBeHidden()
   await expect
     .poll(
       () =>

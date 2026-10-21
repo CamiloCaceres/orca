@@ -49,8 +49,6 @@ export function PluginsSettingsSection({
   const review = usePluginReviewQueue()
   const clearReviews = review.clear
   const installedKeysRef = useRef<ReadonlySet<string>>(new Set())
-  // Why: undoing an install from its page keeps the page, now showing the catalog listing.
-  const keepPageForRef = useRef<string | null>(null)
   const openPage = page.open
   // Why: review happens on the plugin's own page, where the consent sits above its one button.
   useEffect(() => {
@@ -63,7 +61,7 @@ export function PluginsSettingsSection({
     const installedPluginKeys = new Set(nextPlugins.map((plugin) => plugin.pluginKey))
     // Why: a plugin removed while its page is open closes the page, so a reinstall starts fresh.
     for (const pluginKey of installedKeysRef.current) {
-      if (!installedPluginKeys.has(pluginKey) && keepPageForRef.current !== pluginKey) {
+      if (!installedPluginKeys.has(pluginKey)) {
         page.leave(pluginKey)
       }
     }
@@ -126,16 +124,19 @@ export function PluginsSettingsSection({
   }
 
   const {
+    featureBusy,
     devPathsBusy,
     settingsError,
     reset: resetSettingsWrites,
+    toggleFeature,
     toggleSuggestions,
     updateDevPaths
   } = usePluginSettingsWrites({
     settings,
     updateSettings,
     mountedRef,
-    rediscover: () => loadPluginList(window.api.plugins.refresh())
+    rediscover: () => loadPluginList(window.api.plugins.refresh()),
+    onStart: () => setError(null)
   })
 
   useEffect(() => {
@@ -309,15 +310,13 @@ export function PluginsSettingsSection({
     }
   }
 
-  const undoInstall = async (pluginKey: string): Promise<void> => {
-    keepPageForRef.current = pluginKey
-    // Why not on the list: the card or page that offered Undo shows the failure and a retry.
+  // Why it throws: a card's ⋯ Remove runs at once and shows its own failure, not the list's.
+  const removeNow = async (pluginKey: string): Promise<void> => {
     const removed = await mutateList(pluginKey, () => window.api.plugins.remove({ pluginKey }), {
       reportFailure: false
     })
-    keepPageForRef.current = null
     if (!removed) {
-      throw new Error('undo install failed')
+      throw new Error('remove failed')
     }
   }
 
@@ -345,6 +344,7 @@ export function PluginsSettingsSection({
     >
       <PluginSettingsOverview
         featureEnabled={featureEnabled}
+        featureBusy={featureBusy}
         settingsError={settingsError}
         loading={loading}
         error={error}
@@ -369,9 +369,10 @@ export function PluginsSettingsSection({
           onRollbackRequest: marketplaceLifecycle.requestRollback,
           onRemoveRequest: setRemovePluginId
         }}
+        onToggleFeature={() => void toggleFeature()}
         onRefresh={refresh}
         onMarketplaceInstalled={marketplaceLifecycle.reloadAfterMutation}
-        onUndoInstall={undoInstall}
+        onRemoveNow={removeNow}
         logsByPlugin={pluginLogs.logsByPlugin}
         onShowLogs={pluginLogs.showLogs}
         sourcesOpen={sourcesOpen}

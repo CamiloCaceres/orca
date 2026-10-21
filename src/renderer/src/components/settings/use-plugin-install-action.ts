@@ -9,16 +9,7 @@ import { pluginInstallErrorMessage } from './plugin-error-presentation'
 import type { PluginPagePreview } from './use-plugin-catalog'
 import { previewMatchesListing } from './use-plugin-page-model'
 
-/** How long a content-only install offers Undo in place. */
-export const PLUGIN_INSTALL_UNDO_MS = 10_000
-
-export type PluginInstallPhase =
-  | { kind: 'installing' }
-  | { kind: 'error'; message: string }
-  /** Installed and turned on by main as content only; Undo removes it. */
-  | { kind: 'undoable' }
-  /** Undo couldn't remove it; it stays installed and Undo can be tried again. */
-  | { kind: 'undo-failed'; message: string }
+export type PluginInstallPhase = { kind: 'installing' } | { kind: 'error'; message: string }
 
 // Why the `plugin` key prefix: install errors are security copy language packs may not rewrite.
 function catalogInstallErrorMessage(cause: unknown): string {
@@ -57,13 +48,11 @@ const downloadFailed = (): string =>
  */
 export function usePluginInstallAction({
   fetchPreview,
-  onInstalled,
-  onUndo
+  onInstalled
 }: {
   fetchPreview: (listing: PluginMarketplaceHostListing) => Promise<PluginPagePreview>
   /** Reloads the list; opens review on the page for any plugin still waiting for it. */
   onInstalled: (pluginKey: string) => Promise<void>
-  onUndo: (pluginKey: string) => Promise<void>
 }): {
   phaseOf: (pluginKey: string) => PluginInstallPhase | null
   install: (
@@ -71,20 +60,15 @@ export function usePluginInstallAction({
     /** The page's consent: approve this fingerprint after install. Absent for content only. */
     approve?: { preview: PluginMarketplaceHostInstallPreview }
   ) => Promise<void>
-  undo: (pluginKey: string) => Promise<void>
   dismiss: (pluginKey: string) => void
 } {
   const [phases, setPhases] = useState<Readonly<Record<string, PluginInstallPhase>>>({})
   const mountedRef = useRef(true)
-  const timersRef = useRef(new Map<string, ReturnType<typeof setTimeout>>())
 
   useEffect(() => {
     mountedRef.current = true
-    const timers = timersRef.current
     return () => {
       mountedRef.current = false
-      timers.forEach((timer) => clearTimeout(timer))
-      timers.clear()
     }
   }, [])
 
@@ -103,14 +87,7 @@ export function usePluginInstallAction({
     })
   }, [])
 
-  const dismiss = useCallback(
-    (pluginKey: string) => {
-      clearTimeout(timersRef.current.get(pluginKey))
-      timersRef.current.delete(pluginKey)
-      setPhase(pluginKey, null)
-    },
-    [setPhase]
-  )
+  const dismiss = useCallback((pluginKey: string) => setPhase(pluginKey, null), [setPhase])
 
   const install = useCallback(
     async (
@@ -170,16 +147,7 @@ export function usePluginInstallAction({
             })
         }
         await onInstalled(pluginKey)
-        // Why strict false: a missing field is an older host that left it pending.
-        if (result.needsReview === false) {
-          setPhase(pluginKey, { kind: 'undoable' })
-          timersRef.current.set(
-            pluginKey,
-            setTimeout(() => dismiss(pluginKey), PLUGIN_INSTALL_UNDO_MS)
-          )
-        } else {
-          setPhase(pluginKey, null)
-        }
+        setPhase(pluginKey, null)
       } catch (cause) {
         console.warn('[plugins] catalog install failed:', cause)
         setPhase(pluginKey, { kind: 'error', message: catalogInstallErrorMessage(cause) })
@@ -188,27 +156,6 @@ export function usePluginInstallAction({
     [dismiss, fetchPreview, onInstalled, setPhase]
   )
 
-  const undo = useCallback(
-    async (pluginKey: string): Promise<void> => {
-      clearTimeout(timersRef.current.get(pluginKey))
-      timersRef.current.delete(pluginKey)
-      try {
-        await onUndo(pluginKey)
-        setPhase(pluginKey, null)
-      } catch (cause) {
-        console.warn('[plugins] undo install failed:', cause)
-        setPhase(pluginKey, {
-          kind: 'undo-failed',
-          message: translate(
-            'auto.components.settings.pluginInstallAction.undoFailed',
-            'Couldn’t remove it. It’s still installed; try Undo again.'
-          )
-        })
-      }
-    },
-    [onUndo, setPhase]
-  )
-
   const phaseOf = useCallback((pluginKey: string) => phases[pluginKey] ?? null, [phases])
-  return { phaseOf, install, undo, dismiss }
+  return { phaseOf, install, dismiss }
 }

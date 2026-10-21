@@ -99,7 +99,6 @@ let root: Root | null = null
 const install = {
   phaseOf: () => null,
   install: vi.fn().mockResolvedValue(undefined),
-  undo: vi.fn().mockResolvedValue(undefined),
   dismiss: vi.fn()
 }
 

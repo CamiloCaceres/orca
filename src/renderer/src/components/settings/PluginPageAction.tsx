@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Loader2, ShieldCheck, Undo2 } from 'lucide-react'
+import { Loader2, ShieldCheck } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
 import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
@@ -32,8 +32,6 @@ type PluginPageActionProps = {
 export type PluginPageActionParts = {
   /** Top-right, beside the title; null leaves the slot to the installed controls. */
   header: React.ReactNode
-  /** Shown before an installed plugin's switch (Undo right after a one-click install). */
-  headerExtra: React.ReactNode
   /** The line under the publisher, reserved on every page. */
   status: React.ReactNode
   body: React.ReactNode
@@ -86,7 +84,7 @@ export function usePluginPageAction({
   const { plugin, listing, execution, preview, trust } = model
   const phase = install.phaseOf(entry.pluginKey)
   const themed = entry.types.includes('app-theme')
-  const none: PluginPageActionParts = { header: null, headerExtra: null, status: null, body: null }
+  const none: PluginPageActionParts = { header: null, status: null, body: null }
 
   if (plugin && pluginNeedsReview(plugin) && plugin.consentFingerprint) {
     const fingerprint = plugin.consentFingerprint
@@ -142,41 +140,10 @@ export function usePluginPageAction({
     if (plugin.execution !== 'data') {
       return none
     }
-    const undoable = phase?.kind === 'undoable' || phase?.kind === 'undo-failed'
     return {
       ...none,
-      headerExtra: undoable ? (
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={busy}
-          aria-label={translate(
-            'auto.components.settings.PluginCardAction.undoLabel',
-            'Undo installing {{value0}}',
-            { value0: name }
-          )}
-          onClick={() => void install.undo(entry.pluginKey)}
-        >
-          <Undo2 />
-          {translate('auto.components.settings.PluginCardAction.undo', 'Undo')}
-        </Button>
-      ) : null,
       status: <ContentOnlyNote />,
-      body: (
-        <>
-          <UseNowLine pluginKey={plugin.pluginKey} reserved={themed} />
-          {phase?.kind === 'undo-failed' ? (
-            <PluginDetailAlert
-              tone="destructive"
-              title={translate(
-                'auto.components.settings.PluginPageAction.undoFailedTitle',
-                'Couldn’t undo the install'
-              )}
-              body={phase.message}
-            />
-          ) : null}
-        </>
-      )
+      body: <UseNowLine pluginKey={plugin.pluginKey} reserved={themed} />
     }
   }
 

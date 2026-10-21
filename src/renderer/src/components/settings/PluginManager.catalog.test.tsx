@@ -164,10 +164,12 @@ let root: Root | null = null
 
 function Harness({
   plugins,
-  onInstalled
+  onInstalled,
+  onRemoveNow
 }: {
   plugins: PluginHostListEntry[]
   onInstalled: (keys: string | readonly string[]) => Promise<void>
+  onRemoveNow: (pluginKey: string) => Promise<void>
 }): React.JSX.Element {
   const page = usePluginPageNavigation()
   return (
@@ -193,7 +195,7 @@ function Harness({
       page={page}
       sourcesOpen={false}
       setSourcesOpen={vi.fn()}
-      onUndoInstall={vi.fn().mockResolvedValue(undefined)}
+      onRemoveNow={onRemoveNow}
       onConsent={vi.fn().mockResolvedValue(undefined)}
     />
   )
@@ -201,13 +203,14 @@ function Harness({
 
 async function render(
   plugins: PluginHostListEntry[] = [],
-  onInstalled = vi.fn().mockResolvedValue(undefined)
+  onInstalled = vi.fn().mockResolvedValue(undefined),
+  onRemoveNow: (pluginKey: string) => Promise<void> = vi.fn().mockResolvedValue(undefined)
 ): Promise<{ container: HTMLDivElement; onInstalled: typeof onInstalled }> {
   const container = document.createElement('div')
   document.body.appendChild(container)
   root = createRoot(container)
   await act(async () => {
-    root?.render(<Harness plugins={plugins} onInstalled={onInstalled} />)
+    root?.render(<Harness plugins={plugins} onInstalled={onInstalled} onRemoveNow={onRemoveNow} />)
   })
   return { container, onInstalled }
 }
@@ -316,6 +319,37 @@ describe('PluginManager catalog', () => {
     expect(buttons('Install')).toHaveLength(0)
     expect(buttons('Review & install')).toHaveLength(0)
     expect(window.api.plugins.previewMarketplacePlugin).not.toHaveBeenCalled()
+  })
+
+  it('removes an installed plugin from its card menu at once, with no dialog', async () => {
+    const onRemoveNow = vi.fn().mockResolvedValue(undefined)
+    const { container } = await render(
+      [installedPlugin(preview.contentHash)],
+      undefined,
+      onRemoveNow
+    )
+    const more = container.querySelector<HTMLButtonElement>(
+      'button[aria-label="More actions for Worktree Notes"]'
+    )
+    expect(more).toBeTruthy()
+    // Why a sibling: the card's own open button can't nest another tab stop.
+    expect(more?.closest('[data-plugin-row-name]')).toBeNull()
+    await act(async () => button('Remove').click())
+
+    expect(onRemoveNow).toHaveBeenCalledWith(listing.pluginKey)
+    expect(document.querySelector('[role="dialog"]')).toBeNull()
+  })
+
+  it('says on the card when removing from its menu fails', async () => {
+    const onRemoveNow = vi.fn().mockRejectedValue(new Error('locked'))
+    const { container } = await render(
+      [installedPlugin(preview.contentHash)],
+      undefined,
+      onRemoveNow
+    )
+    await act(async () => button('Remove').click())
+
+    expect(container.textContent).toContain('Couldn’t remove it. Try again.')
   })
 
   it('says when an update preview matches the installed bytes', async () => {

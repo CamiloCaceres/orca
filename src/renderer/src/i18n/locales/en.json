@@ -13447,12 +13447,15 @@
         },
         "PluginCardAction": {
           "installed": "Installed",
-          "undoLabel": "Undo installing {{value0}}",
-          "undo": "Undo",
           "installing": "Installing…",
           "reviewLabel": "Review and install {{value0}}",
           "review": "Review & install",
-          "retry": "Try again"
+          "retry": "Try again",
+          "moreLabel": "More actions for {{value0}}",
+          "turnOff": "Turn off",
+          "turnOn": "Turn on",
+          "remove": "Remove",
+          "removeFailed": "Couldn’t remove it. Try again."
         },
         "PluginInstallConsent": {
           "install": "Install & enable",
@@ -13465,24 +13468,14 @@
         },
         "PluginPageAction": {
           "failedTitle": "Couldn’t install {{value0}}",
-          "contentOnly": "Can’t reach anything outside its own files",
-          "undoFailedTitle": "Couldn’t undo the install"
+          "contentOnly": "Can’t reach anything outside its own files"
         },
         "PluginSettingsMenu": {
           "label": "Plugin settings",
-          "development": "Development folders…",
-          "turnOff": "Turn off plugins",
-          "turnOffDetail": "Nothing from any plugin runs until you turn them back on."
+          "development": "Development folders…"
         },
         "PluginThemeUseNow": {
           "label": "Use now:"
-        },
-        "usePluginInstallAction": {
-          "mismatch": "The download didn’t match what the catalog published, so nothing was installed.",
-          "catalogChanged": "The catalog changed since this page opened. Refresh it, then try again.",
-          "blocked": "Orca’s safety list blocks this plugin.",
-          "downloadFailed": "Couldn’t download this plugin. Check your connection, then try again. Nothing was installed.",
-          "undoFailed": "Couldn’t remove it. It’s still installed; try Undo again."
         },
         "PluginPageHero": {
           "screenshots": "Screenshots",
@@ -13501,8 +13494,7 @@
           "mismatch": "The download didn’t match what the catalog published, so nothing was installed.",
           "catalogChanged": "The catalog changed since this page opened. Refresh it, then try again.",
           "blocked": "Orca’s safety list blocks this plugin.",
-          "downloadFailed": "Couldn’t download this plugin. Check your connection, then try again. Nothing was installed.",
-          "undoFailed": "Couldn’t remove it. It’s still installed; try Undo again."
+          "downloadFailed": "Couldn’t download this plugin. Check your connection, then try again. Nothing was installed."
         }
       },
       "right": {
