@@ -1,11 +1,10 @@
 import { separateImagePasteFromFollowingText } from '../../../src/shared/image-paste-following-text'
-import { wrapTerminalBracketedPasteText } from '../../../src/shared/terminal-bracketed-paste-text'
-import { isTuiAgent, TUI_AGENT_CONFIG } from '../../../src/shared/tui-agent-config'
 import { reportWorkerTerminalUserInput } from '../terminal/worker-terminal-takeover-report'
 import { useCallback, type RefObject } from 'react'
 import { terminalInputSend } from '../terminal/mobile-terminal-operations'
 import { useClipboardReader } from '../platform/clipboard'
 import type { TerminalModes } from '../terminal/terminal-webview-contract'
+import { buildMobileTerminalPasteText } from '../terminal/mobile-terminal-paste-text'
 import type { RpcClient } from '../transport/rpc-client'
 import type { ConnectionState } from '../transport/types'
 import {
@@ -14,25 +13,6 @@ import {
   saveMobileClipboardImageAsTempFile
 } from './mobile-clipboard-image'
 import { resizeMobileClipboardImage } from './mobile-clipboard-image-resize'
-
-function buildMobileTerminalClipboardTextPayload(
-  text: string,
-  modes: TerminalModes | undefined,
-  agent: string | null | undefined
-): string {
-  if (modes?.bracketedPasteMode !== true) {
-    return text
-  }
-  // Windows Codex reads paste markers as keys; mobile lacks the pane host platform.
-  if (
-    modes.altScreen &&
-    isTuiAgent(agent) &&
-    TUI_AGENT_CONFIG[agent].windowsInputRecordPasteNewline
-  ) {
-    return text
-  }
-  return wrapTerminalBracketedPasteText(text)
-}
 
 type UseMobileTerminalPasteOptions = {
   readonly agent?: string | null
@@ -86,11 +66,7 @@ export function useMobileTerminalPaste({
       const text = await clipboard.readText()
       let payload: string | null = null
       if (text.length > 0) {
-        payload = buildMobileTerminalClipboardTextPayload(
-          text,
-          ptyModesRef.current.get(targetHandle),
-          agent
-        )
+        payload = buildMobileTerminalPasteText(text, ptyModesRef.current.get(targetHandle), agent)
       } else {
         const image = await clipboard.readImage()
         if (!image) {
