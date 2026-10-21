@@ -11,6 +11,7 @@ const mocks = vi.hoisted(() => {
     authorize: vi.fn(),
     open: vi.fn(() => 'owner-file-id'),
     source: vi.fn(),
+    preview: vi.fn(),
     reveal: vi.fn(),
     assertCurrent: vi.fn(),
     rpc: vi.fn(),
@@ -26,6 +27,7 @@ vi.mock('@/store', () => ({
     })
   }
 }))
+vi.mock('@/lib/file-preview', () => ({ openFilePreviewByDefault: mocks.preview }))
 vi.mock('@/runtime/runtime-file-metadata-client', () => ({
   statRuntimePath: mocks.stat,
   isMissingRuntimePathError: (error: Error) => error.message.includes('ENOENT')
@@ -52,7 +54,34 @@ beforeEach(() => {
   mocks.route.current = { target: { kind: 'local' }, connectionId: undefined }
   mocks.stat.mockResolvedValue({ isDirectory: false })
   mocks.assertCurrent.mockReset()
+  mocks.preview.mockReturnValue(false)
   vi.stubGlobal('window', { api: { fs: { authorizeExternalPath: mocks.authorize } } })
+})
+
+it('previews an HTML file selected without a line destination', async () => {
+  mocks.preview.mockReturnValue(true)
+  await openQuickOpenFile('report.html', 'wt', '/repo', { pathQuery: 'report.html' })
+  expect(mocks.preview).toHaveBeenCalledWith({ filePath: '/repo/report.html', worktreeId: 'wt' })
+  expect(mocks.open).not.toHaveBeenCalled()
+  expect(mocks.reveal).not.toHaveBeenCalled()
+})
+
+it('opens HTML at the requested source line even when a preview is available', async () => {
+  mocks.preview.mockReturnValue(true)
+  await openQuickOpenFile('report.html', 'wt', '/repo', {
+    pathQuery: 'report.html',
+    line: 12,
+    column: 3
+  })
+  expect(mocks.preview).not.toHaveBeenCalled()
+  expect(mocks.open).toHaveBeenCalledWith(expect.objectContaining({ language: 'html' }))
+  expect(mocks.reveal).toHaveBeenCalledWith(
+    expect.any(Function),
+    '/repo/report.html',
+    12,
+    3,
+    'owner-file-id'
+  )
 })
 
 it('validates pasted local paths with user-named access and uses the owner-qualified reveal', async () => {

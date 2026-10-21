@@ -1,5 +1,7 @@
 import { useCallback, useMemo } from 'react'
 import { detectLanguage } from '@/lib/language-detect'
+import { openFilePreviewByDefault } from '@/lib/file-preview'
+import { joinPath } from '@/lib/path'
 import { openUncommittedEntry } from './open-uncommitted-entry'
 import { useAppStore } from '@/store'
 import type {
@@ -87,6 +89,18 @@ export function useSourceControlRowOpening({
         return
       }
       const targetGroupId = resolveSplitTargetGroupId(event)
+      if (
+        entry.status !== 'deleted' &&
+        !entry.conflictStatus &&
+        !entry.submodule &&
+        openFilePreviewByDefault({
+          filePath: joinPath(worktreePath, entry.path),
+          worktreeId: activeWorktreeId,
+          targetGroupId
+        })
+      ) {
+        return
+      }
       const openAsPreview = shouldOpenSourceControlRowAsPreview(event, targetGroupId)
       openUncommittedEntry(
         { trackConflictPath, openConflictFile, openFile, openDiff },

@@ -9,6 +9,7 @@ import type {
 } from '../../../../../../shared/git-diff-compare-types'
 import type { DiffComment } from '../../../../../../shared/diff-comment-types'
 import type { GitStatusEntry } from '../../../../../../shared/git-status-types'
+import { openUncommittedEntry } from '../listing/open-uncommitted-entry'
 import {
   cancelSourceControlEditorRevealFrames,
   requestSourceControlEditorRevealFrame
@@ -25,7 +26,6 @@ export function useSourceControlNoteOpening({
   entries,
   branchEntries,
   branchSummary,
-  handleOpenDiff,
   openCommittedDiff,
   sourceControlRef
 }: {
@@ -34,7 +34,6 @@ export function useSourceControlNoteOpening({
   entries: GitStatusEntry[]
   branchEntries: GitBranchChangeEntry[]
   branchSummary: GitBranchCompareSummary | null
-  handleOpenDiff: (entry: GitStatusEntry) => void
   openCommittedDiff: (entry: GitBranchChangeEntry) => void
   sourceControlRef: RefObject<HTMLDivElement | null>
 }): SourceControlNoteOpening {
@@ -98,7 +97,9 @@ export function useSourceControlNoteOpening({
         matches.find((e) => e.area === 'untracked') ??
         matches[0]
       if (uncommitted) {
-        handleOpenDiff(uncommitted)
+        openUncommittedEntry(useAppStore.getState(), activeWorktreeId, worktreePath, uncommitted, {
+          preview: true
+        })
         if (commentId) {
           setScrollToDiffCommentId(commentId)
         }
@@ -132,7 +133,6 @@ export function useSourceControlNoteOpening({
       branchEntries,
       branchSummary,
       entries,
-      handleOpenDiff,
       openCommittedDiff,
       openFile,
       setEditorViewMode,

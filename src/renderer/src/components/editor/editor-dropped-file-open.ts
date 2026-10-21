@@ -15,6 +15,7 @@ import { statUserOpenedPath } from '@/lib/user-opened-local-path'
 import { FLOATING_TERMINAL_WORKTREE_ID } from '../../../../shared/constants'
 import { openDocumentInFloatingWorkspace } from '@/lib/open-document-in-floating-workspace'
 import { requireRuntimeTargetForFileOwner } from '@/lib/file-owner-runtime-target'
+import { openFilePreviewByDefault } from '@/lib/file-preview'
 
 export function shouldUploadRemoteEditorFileDrop(
   target: RuntimeClientTarget,
@@ -166,6 +167,15 @@ async function openEditorFileDropPaths(
           continue
         }
         const maybeRelative = toWorktreeRelativePath(result.destPath, worktreePath)
+        if (
+          openFilePreviewByDefault({
+            filePath: result.destPath,
+            worktreeId,
+            ...groupOptions
+          })
+        ) {
+          continue
+        }
         store.setActiveTabType('editor', worktreeId)
         store.openFile(
           {
@@ -213,6 +223,9 @@ async function openEditorFileDropPaths(
         if (maybeRelative !== null && maybeRelative.length > 0) {
           relativePath = maybeRelative
         }
+      }
+      if (openFilePreviewByDefault({ filePath, worktreeId, ...groupOptions })) {
+        continue
       }
       store.setActiveTabType('editor', worktreeId)
       if (worktreeId === FLOATING_TERMINAL_WORKTREE_ID) {

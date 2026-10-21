@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { expect, test } from './helpers/orca-app'
@@ -9,24 +9,35 @@ import {
 import { readDocPreviewRenderedText } from './helpers/paired-html-preview-inventory'
 import { waitForActiveWorktree, waitForSessionReady } from './helpers/store'
 
-test('opens a local HTML file URL with encoded characters from the new-tab menu', async ({
+test('opens HTML from Explorer as a preview and lets the user edit its source', async ({
   electronApp,
-  orcaPage,
-  testRepoPath
+  orcaPage
 }, testInfo) => {
-  const filePath = path.join(testRepoPath, 'report 中%20.html')
-  writeFileSync(filePath, '<title>Local file URL</title><h1>Local HTML rendered</h1>')
-  const url = pathToFileURL(filePath).href
+  const name = 'default-preview.html'
   await waitForSessionReady(orcaPage)
   const worktreeId = await waitForActiveWorktree(orcaPage)
-  await orcaPage.getByRole('button', { name: 'New tab', exact: true }).first().click()
-  const input = orcaPage.getByRole('combobox', {
-    name: 'Search open tabs, history, files, URLs, agents…',
-    exact: true
+  const root = await orcaPage.evaluate(
+    (id) => window.__store?.getState().getKnownWorktreeById(id)?.path,
+    worktreeId
+  )
+  if (!root) {
+    throw new Error('Active workspace missing')
+  }
+  const filePath = path.join(root, name)
+  const url = pathToFileURL(filePath).href
+  writeFileSync(filePath, '<title>HTML default</title><h1>Rendered by default</h1>')
+  await orcaPage.evaluate(() => {
+    window.localStorage.setItem('orca.browser.markup-draw-hint-seen', 'true')
+    const state = window.__store?.getState()
+    state?.setRightSidebarOpen(true)
+    state?.setRightSidebarTab('explorer')
   })
-  await input.fill(url)
-  await expect(orcaPage.getByRole('option', { name: /Open file/ })).toBeVisible()
-  await input.press('Enter')
+  await orcaPage.getByRole('button', { name: 'Refresh Explorer', exact: true }).click()
+  const row = orcaPage.locator('[data-file-explorer-row]').filter({
+    has: orcaPage.locator('[data-file-explorer-row-name]').getByText(name, { exact: true })
+  })
+  await expect(row).toBeVisible()
+  await row.click()
   await expect
     .poll(() =>
       electronApp.evaluate(async ({ webContents }, fileUrl) => {
@@ -36,18 +47,74 @@ test('opens a local HTML file URL with encoded characters from the new-tab menu'
         return guest?.executeJavaScript('document.querySelector("h1")?.textContent ?? null')
       }, url)
     )
-    .toBe('Local HTML rendered')
+    .toBe('Rendered by default')
+  await orcaPage.screenshot({ path: testInfo.outputPath('html-default-preview.png') })
+  await orcaPage.getByRole('button', { name: 'Open source file', exact: true }).click()
+  await expect(orcaPage.locator('.editor-header-path')).toContainText(name)
+  await expect(orcaPage.locator('.monaco-editor').first()).toBeVisible()
+  await expect(orcaPage.locator('.monaco-editor').first()).toContainText('Rendered by default')
+  await orcaPage.locator('.monaco-editor').first().click()
+  await orcaPage.keyboard.press('ControlOrMeta+End')
+  await orcaPage.keyboard.press('Enter')
+  await orcaPage.keyboard.type('<p>Source updated</p>')
+  await orcaPage.keyboard.press('ControlOrMeta+S')
+  await expect.poll(() => readFileSync(filePath, 'utf8')).toContain('<p>Source updated</p>')
+  await row.click()
+  await expect(
+    orcaPage.getByRole('button', { name: 'Open source file', exact: true })
+  ).toBeVisible()
   expect(
     await orcaPage.evaluate(
-      ({ worktreeId, url }) =>
-        window.__store
-          ?.getState()
-          .browserTabsByWorktree[worktreeId]?.some((tab) => tab.url === url && !tab.docLocation),
-      { worktreeId, url }
+      (fileUrl) =>
+        Object.values(window.__store?.getState().browserPagesByWorkspace ?? {})
+          .flat()
+          .filter((page) => page.url === fileUrl).length,
+      url
     )
-  ).toBe(true)
-  await orcaPage.screenshot({ path: testInfo.outputPath('local-html-file-url.png') })
+  ).toBe(1)
 })
+
+for (const inputKind of ['file URL', 'absolute path'] as const) {
+  test(`opens a local HTML ${inputKind} with encoded characters from the new-tab menu`, async ({
+    electronApp,
+    orcaPage,
+    testRepoPath
+  }, testInfo) => {
+    const filePath = path.join(testRepoPath, 'report 中%20.html')
+    writeFileSync(filePath, '<title>Local file URL</title><h1>Local HTML rendered</h1>')
+    const url = pathToFileURL(filePath).href
+    await waitForSessionReady(orcaPage)
+    const worktreeId = await waitForActiveWorktree(orcaPage)
+    await orcaPage.getByRole('button', { name: 'New tab', exact: true }).first().click()
+    const input = orcaPage.getByRole('combobox', {
+      name: 'Search open tabs, history, files, URLs, agents…',
+      exact: true
+    })
+    await input.fill(inputKind === 'file URL' ? url : filePath)
+    await expect(orcaPage.getByRole('option', { name: /Open file/ })).toBeVisible()
+    await input.press('Enter')
+    await expect
+      .poll(() =>
+        electronApp.evaluate(async ({ webContents }, fileUrl) => {
+          const guest = webContents
+            .getAllWebContents()
+            .find((contents) => contents.getURL() === fileUrl)
+          return guest?.executeJavaScript('document.querySelector("h1")?.textContent ?? null')
+        }, url)
+      )
+      .toBe('Local HTML rendered')
+    expect(
+      await orcaPage.evaluate(
+        ({ worktreeId, url }) =>
+          window.__store
+            ?.getState()
+            .browserTabsByWorktree[worktreeId]?.some((tab) => tab.url === url && !tab.docLocation),
+        { worktreeId, url }
+      )
+    ).toBe(true)
+    await orcaPage.screenshot({ path: testInfo.outputPath('local-html-file-url.png') })
+  })
+}
 
 test('opens a pasted HTML file URL from a paired host and reloads its assets', async ({
   orcaPage,

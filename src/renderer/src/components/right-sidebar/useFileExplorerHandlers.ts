@@ -12,6 +12,7 @@ import {
   requireMatchingFileExplorerOperationRoute
 } from './file-explorer-operation-owner'
 import { runtimeTargetEnvironmentId } from '@/runtime/runtime-client-target'
+import { openFilePreviewByDefault } from '@/lib/file-preview'
 
 type UseFileExplorerHandlersParams = {
   activeWorktreeId: string | null
@@ -137,6 +138,9 @@ export async function activateFileExplorerNode(args: {
     fileRuntimeEnvironmentId = runtimeTargetEnvironmentId(route.target)
   } catch {
     toast.error(getFileExplorerOwnerUnresolvedMessage())
+    return
+  }
+  if (openFilePreviewByDefault({ filePath: node.path, worktreeId: activeWorktreeId })) {
     return
   }
   openFile(

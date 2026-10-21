@@ -1,6 +1,7 @@
 import { prepareQuickOpenFiles, rankQuickOpenFiles } from '../../../shared/quick-open-path-search'
 import { statUserOpenedPath } from '@/lib/user-opened-local-path'
 import { detectLanguage } from '@/lib/language-detect'
+import { openFilePreviewByDefault } from '@/lib/file-preview'
 import { joinPath, getRelativePathInsideRoot } from '@/lib/path'
 import { useAppStore } from '@/store'
 import { isMissingRuntimePathError } from '@/runtime/runtime-file-metadata-client'
@@ -120,6 +121,10 @@ export async function openQuickOpenFile(
     }
   }
   assertCurrent()
+  const revealLine = !literalSelected && navigation.line !== undefined
+  if (!revealLine && openFilePreviewByDefault({ filePath, worktreeId })) {
+    return
+  }
   const store = useAppStore.getState()
   const fileId = store.openFile({
     filePath,

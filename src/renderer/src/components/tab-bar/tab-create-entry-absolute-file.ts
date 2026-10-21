@@ -7,6 +7,7 @@ import {
   type TabEntryLocalPlatform
 } from './tab-create-entry-path-validation'
 import type { statUserOpenedPath, UserOpenedPathStat } from '@/lib/user-opened-local-path'
+import type { openFilePreviewByDefault } from '@/lib/file-preview'
 
 type AbsoluteFileOperations = {
   assertAbsolutePathAllowed: () => void
@@ -15,6 +16,7 @@ type AbsoluteFileOperations = {
     options?: { preview?: boolean; targetGroupId?: string }
   ) => void
   statUserOpenedPath: typeof statUserOpenedPath
+  openFilePreviewByDefault: typeof openFilePreviewByDefault
 }
 
 export async function openAbsoluteTabEntryFile(args: {
@@ -39,6 +41,15 @@ export async function openAbsoluteTabEntryFile(args: {
   }
   args.operations.assertAbsolutePathAllowed()
 
+  if (
+    args.operations.openFilePreviewByDefault({
+      filePath,
+      worktreeId: args.worktreeId,
+      targetGroupId: args.groupId
+    })
+  ) {
+    return
+  }
   args.operations.openFile(
     {
       filePath,

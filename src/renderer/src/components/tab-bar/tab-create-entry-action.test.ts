@@ -28,6 +28,7 @@ describe('openTabEntryWithOperations', () => {
       createRuntimePath: vi.fn().mockResolvedValue(undefined),
       openWorkspaceBrowserTab: vi.fn().mockResolvedValue(undefined),
       openHtmlFilePreview: vi.fn(),
+      openFilePreviewByDefault: vi.fn().mockReturnValue(false),
       openFile: vi.fn(),
       statRuntimePath: vi.fn().mockResolvedValue({ size: 1, isDirectory: false, mtime: 1 }),
       statUserOpenedPath: vi.fn().mockResolvedValue({ isDirectory: false, escapesWorktree: false }),
@@ -50,6 +51,36 @@ describe('openTabEntryWithOperations', () => {
     localPlatform: 'posix' as const,
     searchEngine: 'google' as const
   }
+
+  it.each(['report.html', '/repo/report.html'])(
+    'previews an existing HTML file in the requested group: %s',
+    async (query) => {
+      const operations = makeOperations({ openFilePreviewByDefault: vi.fn().mockReturnValue(true) })
+      await openTabEntryWithOperations({
+        ...baseArgs,
+        fileList: readyFiles(['report.html']),
+        query,
+        operations
+      })
+      expect(operations.openFilePreviewByDefault).toHaveBeenCalledWith({
+        filePath: '/repo/report.html',
+        worktreeId: 'wt-1',
+        targetGroupId: 'group-1'
+      })
+      expect(operations.openFile).not.toHaveBeenCalled()
+      expect(operations.createRuntimePath).not.toHaveBeenCalled()
+    }
+  )
+
+  it('opens newly created HTML in source so it can be edited', async () => {
+    const operations = makeOperations({ openFilePreviewByDefault: vi.fn().mockReturnValue(true) })
+    await openTabEntryWithOperations({ ...baseArgs, query: 'new.html', operations })
+    expect(operations.openFilePreviewByDefault).not.toHaveBeenCalled()
+    expect(operations.openFile).toHaveBeenCalledWith(
+      expect.objectContaining({ filePath: '/repo/new.html', language: 'html' }),
+      { preview: false, targetGroupId: 'group-1' }
+    )
+  })
 
   it.each([true, false])(
     'previews HTML file URLs without creating files (local paths: %s)',

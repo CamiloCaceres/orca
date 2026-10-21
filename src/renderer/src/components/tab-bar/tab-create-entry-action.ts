@@ -48,6 +48,7 @@ export {
 } from './tab-create-entry-local-path'
 import { statUserOpenedPath } from '@/lib/user-opened-local-path'
 import { openHtmlFilePreview } from '@/lib/open-html-file-preview'
+import { openFilePreviewByDefault } from '@/lib/file-preview'
 
 export type TabCreateEntryArgs = {
   classification?: TabEntryActionClassification
@@ -61,6 +62,7 @@ export type TabEntryOperations = {
   createRuntimePath: typeof createRuntimePath
   openWorkspaceBrowserTab: typeof openWorkspaceBrowserTab
   openHtmlFilePreview: typeof openHtmlFilePreview
+  openFilePreviewByDefault: typeof openFilePreviewByDefault
   openFile: (
     file: Omit<OpenFile, 'id' | 'isDirty'>,
     options?: { preview?: boolean; targetGroupId?: string }
@@ -123,6 +125,7 @@ async function openExistingFile(args: {
   relativePath: string
   worktreeId: string
   worktreePath: string
+  previewHtml?: boolean
 }): Promise<void> {
   const filePath = joinPath(args.worktreePath, args.relativePath)
   let stat: Awaited<ReturnType<typeof statRuntimePath>>
@@ -133,6 +136,16 @@ async function openExistingFile(args: {
   }
   if (stat.isDirectory) {
     throw new Error(`Cannot open a directory: ${args.relativePath}`)
+  }
+  if (
+    args.previewHtml !== false &&
+    args.operations.openFilePreviewByDefault({
+      filePath,
+      worktreeId: args.worktreeId,
+      targetGroupId: args.groupId
+    })
+  ) {
+    return
   }
   args.operations.openFile(
     {
@@ -152,13 +165,9 @@ type NetworkTabEntryClassification = Extract<
 >
 
 function isNetworkTabEntry(
-  classification: TabEntryActionClassification
-): classification is NetworkTabEntryClassification {
-  return (
-    classification.kind === 'explicit-url' ||
-    classification.kind === 'host-url' ||
-    classification.kind === 'search'
-  )
+  entry: TabEntryActionClassification
+): entry is NetworkTabEntryClassification {
+  return entry.kind === 'explicit-url' || entry.kind === 'host-url' || entry.kind === 'search'
 }
 
 function getNetworkTabRequest(
@@ -263,7 +272,8 @@ export async function openTabEntryWithOperations({
     operations,
     relativePath: classification.relativePath,
     worktreeId,
-    worktreePath
+    worktreePath,
+    previewHtml: false
   })
 }
 
@@ -296,6 +306,7 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
       createRuntimePath,
       openWorkspaceBrowserTab,
       openHtmlFilePreview,
+      openFilePreviewByDefault,
       openFile: state.openFile,
       statRuntimePath,
       statUserOpenedPath,

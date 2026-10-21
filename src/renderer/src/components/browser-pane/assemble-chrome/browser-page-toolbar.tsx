@@ -220,13 +220,24 @@ export function BrowserPageToolbar({
             }
           : undefined
       }
-      viewSource={{
-        onSelect: () => void window.api.browser.openDevTools({ browserPageId }),
-        label: translate(
-          'auto.components.browser.pane.BrowserPane.ec75d0c412',
-          'Open browser devtools'
-        )
-      }}
+      viewSource={
+        openSourceFile
+          ? {
+              onSelect: openSourceFile,
+              label: translate(
+                'auto.components.editor.HtmlDocPreview.openSourceControl',
+                'Open source file'
+              ),
+              alreadyInOverflowMenu: true
+            }
+          : {
+              onSelect: () => void window.api.browser.openDevTools({ browserPageId }),
+              label: translate(
+                'auto.components.browser.pane.BrowserPane.ec75d0c412',
+                'Open browser devtools'
+              )
+            }
+      }
       openExternal={{
         onSelect: () => {
           if (!externalUrl) {

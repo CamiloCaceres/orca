@@ -40,7 +40,6 @@ export function useSourceControlPanelModel() {
     entries,
     fetchUpstreamStatus,
     grouped,
-    handleOpenDiff,
     handleStageAllPrimary,
     hostedReview,
     hostedReviewCreateCopy,
@@ -155,7 +154,6 @@ export function useSourceControlPanelModel() {
     entries,
     branchEntries,
     branchSummary,
-    handleOpenDiff,
     openCommittedDiff,
     sourceControlRef
   })

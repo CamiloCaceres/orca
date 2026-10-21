@@ -26,6 +26,7 @@ import type { BrowserPageConversionLeg } from '@/store/slices/browser-page-conve
 import { ORCA_BROWSER_BLANK_URL } from '../../../shared/constants'
 import { chatScratchFileAddress } from '@/runtime/runtime-chat-scratch-file-address'
 import { selectFolderWorkspaces, selectWorktreesByRepo } from '@/store/workspace-record-selectors'
+import { isHtmlFilePath } from '../../../shared/html-file-url'
 
 export type PreviewableLanguage = 'html'
 
@@ -199,12 +200,40 @@ export function openFileInBrowserTab(params: {
     return plan
   }
 
+  for (const workspace of state.browserTabsByWorktree[params.worktreeId] ?? []) {
+    const page = (state.browserPagesByWorkspace[workspace.id] ?? []).find(
+      (candidate) => !candidate.docLocation && candidate.url === plan.url
+    )
+    if (!page) {
+      continue
+    }
+    if (
+      !activateBrowserWorkspaceTab({
+        worktreeId: params.worktreeId,
+        workspaceId: workspace.id,
+        pageId: page.id
+      })
+    ) {
+      state.setActiveBrowserTab(workspace.id)
+      state.setActiveBrowserPage(workspace.id, page.id)
+    }
+    return plan
+  }
+
   state.createBrowserTab(params.worktreeId, plan.url, {
     title: plan.title,
     ...(params.targetGroupId ? { targetGroupId: params.targetGroupId } : {}),
     activate: true
   })
   return plan
+}
+
+export function openFilePreviewByDefault(params: {
+  filePath: string
+  worktreeId: string
+  targetGroupId?: string
+}): boolean {
+  return isHtmlFilePath(params.filePath) && openFileInBrowserTab(params).status !== 'unsupported'
 }
 
 /** The tab a document is already open in, found by every PAGE's docLocation and not just the

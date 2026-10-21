@@ -4,6 +4,7 @@ import {
   convertBrowserPageToWorkspaceDoc,
   getWorkspaceFilePreviewPlan,
   openFileInBrowserTab,
+  openFilePreviewByDefault,
   openFilePreviewToSide
 } from './file-preview'
 import { TWIN_FILE_BROWSER_UNSUPPORTED_MESSAGE } from './workspace-file-browser-open-target'
@@ -124,6 +125,20 @@ function mockOpenDocument(filePath: string): void {
 }
 
 describe('openFileInBrowserTab', () => {
+  it('reuses a local file on an inactive page when it is opened again', () => {
+    mocks.browserTabsByWorktree = { 'wt-1': [{ id: 'browser-9' }] }
+    mocks.browserPagesByWorkspace = {
+      'browser-9': [
+        { id: 'page-web', url: 'https://example.com' },
+        { id: 'page-html', url: 'file:///repo/report%20one.html' }
+      ]
+    }
+
+    openFileInBrowserTab({ filePath: '/repo/report one.html', worktreeId: 'wt-1' })
+
+    expect(mocks.setActiveBrowserPage).toHaveBeenCalledWith('browser-9', 'page-html')
+    expect(mocks.createBrowserTab).not.toHaveBeenCalled()
+  })
   it('reuses a document on an inactive page instead of creating a duplicate preview', () => {
     mocks.connectionId = 'ssh-1'
     mocks.browserTabsByWorktree = { 'wt-1': [{ id: 'browser-9', docLocation: null }] }
@@ -402,6 +417,46 @@ describe('openFileInBrowserTab', () => {
     })
 
     expect(mocks.createEmptySplitGroup).not.toHaveBeenCalled()
+    expect(mocks.createBrowserTab).not.toHaveBeenCalled()
+  })
+})
+
+describe('openFilePreviewByDefault', () => {
+  it.each(['/repo/report.html', '/repo/report.HTM', 'C:\\repo\\report.HTML'])(
+    'renders HTML by default: %s',
+    (filePath) => {
+      expect(openFilePreviewByDefault({ filePath, worktreeId: 'wt-1' })).toBe(true)
+      expect(mocks.createBrowserTab).toHaveBeenCalledOnce()
+    }
+  )
+
+  it.each(['/repo/index.ts', '/repo/page.jsp', '/repo/page.html.liquid'])(
+    'leaves source files and templates in the editor: %s',
+    (filePath) => {
+      expect(openFilePreviewByDefault({ filePath, worktreeId: 'wt-1' })).toBe(false)
+      expect(mocks.createBrowserTab).not.toHaveBeenCalled()
+    }
+  )
+
+  it('uses the owning remote workspace and requested group for HTML', () => {
+    mocks.environmentId = 'runtime-1'
+    expect(
+      openFilePreviewByDefault({
+        filePath: '/srv/repo/report.html',
+        worktreeId: 'wt-1',
+        targetGroupId: 'group-2'
+      })
+    ).toBe(true)
+    expect(mocks.createBrowserTab).toHaveBeenCalledWith(
+      ...docPreviewCall('/srv/repo/report.html', { activate: true, targetGroupId: 'group-2' })
+    )
+  })
+
+  it('falls back to source when a preview is unavailable', () => {
+    mocks.browserAvailability = { state: 'hidden', reason: 'Browser unavailable' }
+    expect(openFilePreviewByDefault({ filePath: '/repo/report.html', worktreeId: 'wt-1' })).toBe(
+      false
+    )
     expect(mocks.createBrowserTab).not.toHaveBeenCalled()
   })
 })

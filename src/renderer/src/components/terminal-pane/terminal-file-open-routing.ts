@@ -1,4 +1,5 @@
 import { absolutePathToFileUri } from '@/components/editor/markdown-internal-links'
+import { isHtmlFilePath } from '../../../../shared/html-file-url'
 import { getWorkspaceFilePreviewPlan, openFileInBrowserTab } from '@/lib/file-preview'
 import { downloadAndOpenRemoteTerminalFile } from './terminal-remote-file-download-open'
 import { findWorkspaceFileRoute } from '@/lib/runtime-workspace-file-route'
@@ -62,9 +63,7 @@ type TerminalFileOpenDeps = {
   openInSourceGroup?: boolean
 }
 
-export function isHtmlFilePath(filePath: string): boolean {
-  return /\.html?$/i.test(filePath)
-}
+export { isHtmlFilePath } from '../../../../shared/html-file-url'
 
 function openHtmlFileInBrowser(filePath: string, worktreeId: string, clientLocal: boolean): void {
   const store = useAppStore.getState()
