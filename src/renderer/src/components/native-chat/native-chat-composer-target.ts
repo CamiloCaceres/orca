@@ -42,7 +42,7 @@ export function nativeChatComposerPlaceholder(
   }
   return translate(
     'components.native-chat.composer.placeholder',
-    'Ask anything, @ to mention files, / for commands'
+    NATIVE_CHAT_TURN_STATUS_COPY.composerPlaceholder
   )
 }
 

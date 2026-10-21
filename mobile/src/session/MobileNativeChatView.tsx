@@ -424,11 +424,7 @@ export function MobileNativeChatView({
         onMicPressOut={onMicPressOut}
         disabled={lockReason !== null}
         sendDisabled={expandedPromptOwnsSend}
-        placeholder={mobileNativeChatComposerPlaceholder(
-          lockReason,
-          turnIndicator?.afterStop,
-          agent
-        )}
+        placeholder={mobileNativeChatComposerPlaceholder(lockReason, turnIndicator?.afterStop)}
         filePaths={filePaths}
         onNeedFiles={onNeedFiles}
         stop={

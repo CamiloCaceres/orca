@@ -10,6 +10,8 @@ export const NATIVE_CHAT_TURN_STATUS_COPY = {
   thinking: 'Thinking',
   working: 'Working…',
   stopping: 'Stopping…',
+  /** The composer's placeholder while the chat takes a message as usual. */
+  composerPlaceholder: 'Ask anything, @ to mention files, / for commands',
   /** The composer's placeholder while the chat reads Stopping, where the host queues sends. */
   queueAfterStop: 'Queue a message to run after the stop',
   /** The same where it does not: the host holds the send until the stop lands. */

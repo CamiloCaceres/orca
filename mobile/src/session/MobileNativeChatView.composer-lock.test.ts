@@ -82,7 +82,7 @@ describe('MobileNativeChatView: composer lock and prompt cards', () => {
       })
 
       expect(composer().props.disabled).toBe(false)
-      expect(composer().props.placeholder).toBe('Message, @files, /commands')
+      expect(composer().props.placeholder).toBe('Ask anything, @ to mention files, / for commands')
     } finally {
       vi.useRealTimers()
     }
@@ -96,7 +96,7 @@ describe('MobileNativeChatView: composer lock and prompt cards', () => {
       await render({ permission })
       expect(composer().props.sendDisabled).toBe(true)
       expect(composer().props.disabled).toBe(false)
-      expect(composer().props.placeholder).toBe('Message, @files, /commands')
+      expect(composer().props.placeholder).toBe('Ask anything, @ to mention files, / for commands')
 
       await update({ permission: null })
       expect(composer().props.sendDisabled).toBe(false)
