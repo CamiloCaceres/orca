@@ -303,8 +303,8 @@ export function MobileSessionCommandDock({ controller }: { controller: MobileSes
               placeholder=""
               showSoftInputOnFocus
               autoCapitalize="none"
-              autoCorrect={false}
-              spellCheck={false}
+              autoCorrect={hostOs() === 'ios' && autocompleteEnabled}
+              spellCheck={hostOs() === 'ios' && autocompleteEnabled}
               smartInsertDelete={false}
               // Why: iOS textContentType overrides autoComplete and can narrow the keyboard; keep IME switching available.
               autoComplete="off"
