@@ -22,6 +22,7 @@ import {
   reportedCodexSessionOptions
 } from './codex-structured-session-options'
 import { startBackgroundCodexCatalogRefresh } from './codex-structured-background-catalog'
+import { CodexSkillReport } from './codex-structured-skill-report'
 import { codexAcquireCatalogAccess } from './codex-structured-acquire-catalog'
 import { reportedCodexThreadOptions } from './codex-structured-service-tier'
 import {
@@ -137,6 +138,7 @@ export async function openCodexStructuredSession(
   }
   const catalogAccess = codexAcquireCatalogAccess(deps, launch)
   const session: CodexSession = {
+    events: input.events,
     account: start.account,
     connection,
     ...codexSessionLifecycle(input.fence, generation),
@@ -169,6 +171,16 @@ export async function openCodexStructuredSession(
   }
   current()
   acquisitions.deleteIfCurrent(sessionId, attempt)
+  session.skillReport = new CodexSkillReport({
+    connection,
+    cwd: launch.cwd,
+    sessionId,
+    isCurrent: () => sessions.get(sessionId) === session && !session.ended,
+    publish: () => input.events?.publish(),
+    ...(deps.requestTimeoutMs !== undefined ? { timeoutMs: deps.requestTimeoutMs } : {}),
+    ...(deps.logger ? { logger: deps.logger } : {})
+  })
+  session.skillReport.refresh()
   startBackgroundCodexCatalogRefresh({
     session,
     sessionId,
