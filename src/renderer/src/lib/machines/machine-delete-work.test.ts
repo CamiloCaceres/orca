@@ -31,6 +31,12 @@ describe('describeWorktreeWork', () => {
     expect(toUnpushed({ hasUpstream: true, ahead: 3, behind: 0 })).toBe(3)
   })
 
+  it('never says No changes for a stopped machine whose total has a never-pushed branch', () => {
+    expect(
+      getWorktreeWorkCheck(false, { uncommitted: 0, unpushed: 0, neverPushed: 1 }, null, null)
+    ).toBeNull()
+  })
+
   it("gives a stopped machine's rows its server-read total", () => {
     const upstream = { hasUpstream: true, ahead: 1, behind: 0 }
     expect(getWorktreeWorkCheck(true, null, [{}], upstream)).toEqual({

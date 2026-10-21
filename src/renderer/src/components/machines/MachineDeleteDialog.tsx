@@ -13,7 +13,7 @@ import {
 import { useAppStore } from '@/store'
 import { useMachineSources } from '@/store/machines'
 import { translate } from '@/i18n/i18n'
-import type { MachineTarget } from '../../../../shared/machine-inventory'
+import { formatMachineWorkAtRisk, type MachineTarget } from '../../../../shared/machine-inventory'
 import type { GitUpstreamStatus } from '../../../../shared/git-status-types'
 import type { Worktree } from '../../../../shared/worktree/types'
 import { getWorktreeHostIdentity } from '../../../../shared/worktree/host-qualified-identity'
@@ -139,12 +139,10 @@ function MachineDeleteBody({
     { providerKey: match.snapshot.providerKey, machineId: match.machine.id },
     !running && worktrees.length > 0
   )
+  // One formatter with main's expiry warning, so never-pushed branches are named here too.
   const stoppedTotal =
-    !running &&
-    stoppedWork !== null &&
-    stoppedWork !== 'checking' &&
-    (stoppedWork.uncommitted > 0 || stoppedWork.unpushed > 0)
-      ? describeWorktreeWork(stoppedWork).text
+    !running && stoppedWork !== null && stoppedWork !== 'checking'
+      ? formatMachineWorkAtRisk(stoppedWork, translate)
       : null
   const canArchive = getMachineMenuActions(match).includes('archive')
   const name = match.machine.name

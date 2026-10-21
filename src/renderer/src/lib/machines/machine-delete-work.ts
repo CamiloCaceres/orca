@@ -1,4 +1,8 @@
 import type { GitUpstreamStatus } from '../../../../shared/git-status-types'
+import {
+  formatMachineWorkAtRisk,
+  type MachineWorkAtRisk
+} from '../../../../shared/machine-inventory'
 import { translate } from '@/i18n/i18n'
 
 /** What Orca could learn about one worktree's unsaved work before its machine is deleted. */
@@ -9,8 +13,8 @@ export type WorktreeWorkCheck = {
   unpushed: number | 'checking' | 'unknown' | 'none'
 }
 
-/** A stopped machine's total from its Orca server: `null` when it couldn't be read. */
-export type MachineWorkRead = { uncommitted: number; unpushed: number } | null | 'checking'
+/** A stopped machine's total from its Orca server: `null` when it couldn't be read (or fully). */
+export type MachineWorkRead = MachineWorkAtRisk | null | 'checking'
 
 /** Each row's line; a stopped machine's work is only known in total, so its rows share it. */
 export function getWorktreeWorkCheck(
@@ -37,7 +41,7 @@ export function getWorktreeWorkCheck(
     return { uncommitted: 'unknown', unpushed: 'unknown' }
   }
   // Why: a nonzero total can't be split by worktree, so the dialog states it once above the rows.
-  return stoppedWork.uncommitted === 0 && stoppedWork.unpushed === 0
+  return formatMachineWorkAtRisk(stoppedWork, translate) === null
     ? { uncommitted: 0, unpushed: 0 }
     : null
 }
