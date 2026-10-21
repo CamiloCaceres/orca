@@ -64,6 +64,20 @@ function hasWorkingTreeFile(
   return entry.status !== 'deleted' && !entry.conflictStatus && !entry.submodule
 }
 
+function hasCurrentWorkingTreeFile(path: string, changes: GitStatusEntry[]): boolean {
+  const workingTreeChange = changes.find(
+    (change) => change.path === path && change.area !== 'staged'
+  )
+  if (workingTreeChange) {
+    return hasWorkingTreeFile(workingTreeChange)
+  }
+  return !changes.some(
+    (change) =>
+      (change.path === path && !hasWorkingTreeFile(change)) ||
+      (change.status === 'renamed' && change.oldPath === path)
+  )
+}
+
 function openRequestedPreview(
   request: Extract<WorkspaceFileOpenRequest, { kind: 'preview' }>
 ): WorkspaceFileOpenResult {
@@ -121,8 +135,9 @@ function defaultPreviewTarget(
     case 'branch':
       if (
         !hasWorkingTreeFile(request.entry) ||
-        (state.gitStatusByWorktree[request.worktreeId] ?? []).some(
-          (change) => change.path === request.entry.path && !hasWorkingTreeFile(change)
+        !hasCurrentWorkingTreeFile(
+          request.entry.path,
+          state.gitStatusByWorktree[request.worktreeId] ?? []
         )
       ) {
         return null

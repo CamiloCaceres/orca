@@ -1,16 +1,23 @@
 import { beforeEach, expect, it, vi } from 'vitest'
 import { openWorkspaceFile } from './workspace-file-open'
+import type { GitStatusEntry } from '../../../shared/git-status-types'
 
-const mocks = vi.hoisted(() => ({
-  resolve: vi.fn(),
-  plan: vi.fn(),
-  open: vi.fn(),
-  select: vi.fn(),
-  state: {
-    activeWorktreeId: 'current',
-    openFile: vi.fn((file: { filePath: string }) => file.filePath)
+const mocks = vi.hoisted(() => {
+  const gitStatusByWorktree: Record<string, GitStatusEntry[]> = {}
+  return {
+    resolve: vi.fn(),
+    plan: vi.fn(),
+    open: vi.fn(),
+    select: vi.fn(),
+    state: {
+      activeWorktreeId: 'current',
+      gitStatusByWorktree,
+      openBranchDiff: vi.fn(),
+      openDiff: vi.fn(),
+      openFile: vi.fn((file: { filePath: string }) => file.filePath)
+    }
   }
-}))
+})
 vi.mock('@/store', () => ({ useAppStore: { getState: () => mocks.state } }))
 vi.mock('./workspace-doc-address-input', () => ({
   resolveWorkspaceDocAddressTarget: mocks.resolve
@@ -23,6 +30,7 @@ vi.mock('./workspace-surface-reveal', () => ({ selectWorkspaceSurface: mocks.sel
 
 beforeEach(() => {
   vi.clearAllMocks()
+  mocks.state.gitStatusByWorktree = {}
   mocks.resolve.mockReturnValue({ status: 'not-a-workspace-doc' })
   mocks.open.mockReturnValue({ status: 'browser-tab' })
   mocks.plan.mockReturnValue({ status: 'browser-tab' })
@@ -96,6 +104,88 @@ it('falls back to the editor when the owning host cannot preview HTML', () => {
   expect(mocks.state.openFile).toHaveBeenCalledWith(file, undefined)
   expect(mocks.open).not.toHaveBeenCalled()
 })
+
+const branchRequest = {
+  kind: 'branch',
+  worktreeId: 'current',
+  worktreePath: '/repo',
+  entry: { path: 'report.html', status: 'modified' },
+  compare: {
+    baseRef: 'main',
+    baseOid: 'base',
+    compareRef: 'HEAD',
+    headOid: 'head',
+    mergeBase: 'base'
+  }
+} as const
+
+it.each([
+  [{ path: 'report.html', status: 'deleted', area: 'staged' }],
+  [{ path: 'report.html', status: 'deleted', area: 'unstaged' }],
+  [{ path: 'renamed.html', oldPath: 'report.html', status: 'renamed', area: 'staged' }]
+] satisfies GitStatusEntry[][])(
+  'opens a committed diff when the working file is absent: %j',
+  (...changes) => {
+    mocks.state.gitStatusByWorktree.current = changes
+
+    expect(openWorkspaceFile(branchRequest)).toEqual({ surface: 'diff' })
+    expect(mocks.state.openBranchDiff).toHaveBeenCalledWith(
+      'current',
+      '/repo',
+      branchRequest.entry,
+      branchRequest.compare,
+      'html',
+      undefined
+    )
+    expect(mocks.open).not.toHaveBeenCalled()
+  }
+)
+
+it.each([
+  { path: 'report.html', status: 'deleted', area: 'staged' },
+  { path: 'renamed.html', oldPath: 'report.html', status: 'renamed', area: 'staged' }
+] satisfies GitStatusEntry[])(
+  'previews a recreated working file after a staged $status',
+  (stagedChange) => {
+    const entry: GitStatusEntry = { path: 'report.html', status: 'untracked', area: 'untracked' }
+    mocks.state.gitStatusByWorktree.current = [stagedChange, entry]
+
+    expect(openWorkspaceFile(branchRequest)).toEqual({ surface: 'preview' })
+    expect(
+      openWorkspaceFile({
+        kind: 'uncommitted',
+        worktreeId: 'current',
+        worktreePath: '/repo',
+        entry
+      })
+    ).toEqual({ surface: 'preview' })
+    expect(mocks.open).toHaveBeenCalledWith({
+      filePath: '/repo/report.html',
+      worktreeId: 'current',
+      targetGroupId: undefined
+    })
+    expect(mocks.state.openBranchDiff).not.toHaveBeenCalled()
+    expect(mocks.state.openDiff).not.toHaveBeenCalled()
+  }
+)
+
+it.each([
+  { path: 'report.html', oldPath: 'before.html', status: 'renamed', area: 'staged' },
+  { path: 'copy.html', oldPath: 'report.html', status: 'copied', area: 'staged' }
+] satisfies GitStatusEntry[])(
+  'previews the existing file after a staged $status to $path',
+  (change) => {
+    mocks.state.gitStatusByWorktree.current = [change]
+
+    expect(openWorkspaceFile(branchRequest)).toEqual({ surface: 'preview' })
+    expect(mocks.open).toHaveBeenCalledWith({
+      filePath: '/repo/report.html',
+      worktreeId: 'current',
+      targetGroupId: undefined
+    })
+    expect(mocks.state.openBranchDiff).not.toHaveBeenCalled()
+  }
+)
 
 it('keeps a local HTML preview in the requested group', () => {
   openWorkspaceFile(request)
