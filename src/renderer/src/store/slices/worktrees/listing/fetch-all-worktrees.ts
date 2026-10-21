@@ -71,7 +71,8 @@ export function createFetchAllWorktrees(
             ownerWasMissingAtStart: false,
             requestStartedWorktrees,
             setup,
-            refresh
+            refresh,
+            getState: get
           })
         } catch (err) {
           if (notifyRuntimeScopeForbiddenIfNeeded(err)) {
@@ -131,7 +132,8 @@ export function createFetchAllWorktrees(
             requestStartedWorktrees,
             setup,
             refresh,
-            purgeRemovedWorktrees: false
+            purgeRemovedWorktrees: false,
+            getState: get
           })
           // Why both refusals: rows from a listing that was not applied are no evidence for the purge.
           if (outcome !== 'applied') {

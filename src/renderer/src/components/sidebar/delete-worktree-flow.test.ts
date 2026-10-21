@@ -15,6 +15,13 @@ const mocks = vi.hoisted(() => {
   // Declared up here so the empty initialisers can be typed rather than asserted.
   const gitStatusByWorktree: Record<string, unknown[]> = {}
   const deleteStateByWorktreeId: Record<string, MockWorktreeDeleteState> = {}
+  const openFiles: {
+    id: string
+    filePath: string
+    worktreeId: string
+    isDirty: boolean
+    mode: 'edit'
+  }[] = []
   const state = {
     settings: { skipDeleteWorktreeConfirm: false },
     worktreeMap: new Map<
@@ -50,7 +57,11 @@ const mocks = vi.hoisted(() => {
     setRightSidebarOpen: vi.fn(),
     removeWorktree: vi.fn().mockResolvedValue({ ok: true }),
     gitStatusByWorktree,
-    deleteStateByWorktreeId
+    deleteStateByWorktreeId,
+    openFiles,
+    editorDrafts: {},
+    editorBufferIdOf: {},
+    editorBufferViews: {}
   }
   return { state }
 })
@@ -70,6 +81,11 @@ vi.mock('@/store/selectors', () => ({
     const row = mocks.state.worktreeMap.get(worktreeId)
     return row && (!hostId || row.hostId === hostId) ? row : undefined
   }
+}))
+
+vi.mock('@/components/editor/editor-model-owner', () => ({
+  resolveEditorModelOwner: () => ({ environmentId: null, hostId: 'local' }),
+  getEditorModelOwnerKey: () => ''
 }))
 
 vi.mock('@/lib/worktree-activation', () => ({
@@ -136,6 +152,7 @@ describe('delete worktree flow', () => {
     mocks.state.gitStatusByWorktree = {}
     mocks.state.worktreeLineageById = {}
     mocks.state.repos = []
+    mocks.state.openFiles = []
     vi.mocked(toast.error).mockClear()
     vi.mocked(toast.info).mockClear()
     vi.mocked(showDeleteWorktreeFailureToast).mockClear()
@@ -526,6 +543,30 @@ describe('delete worktree flow', () => {
       ],
       allowSkipConfirm: false
     })
+  })
+
+  it('keeps the confirm when skip-confirm is on but unsaved editor files would close', () => {
+    mocks.state.settings = { skipDeleteWorktreeConfirm: true }
+    setWorktrees([{ id: 'wt-1', path: '/workspaces/wt-1' }])
+    mocks.state.openFiles = [
+      {
+        id: 'f1',
+        filePath: '/workspaces/wt-1/a.ts',
+        worktreeId: 'wt-1',
+        isDirty: true,
+        mode: 'edit'
+      }
+    ]
+
+    runWorktreeDelete('wt-1')
+    expect(runWorktreeBatchDelete(['wt-1'])).toBe(true)
+
+    expect(mocks.state.removeWorktree).not.toHaveBeenCalled()
+    expect(mocks.state.openModal).toHaveBeenCalledTimes(2)
+    expect(mocks.state.openModal).toHaveBeenCalledWith(
+      'delete-worktree',
+      expect.objectContaining({ worktreeId: 'wt-1' })
+    )
   })
 
   it('reports a stale list instead of silently dropping a delete whose row vanished', () => {

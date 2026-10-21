@@ -19689,6 +19689,26 @@
           "checking": "Checking for changes…",
           "checkingDetails": "Checking…",
           "unavailableDetails": "Details unavailable"
+        },
+        "unsavedEdits": {
+          "discarded_one": "Deleting discards unsaved edits in {{count}} file:",
+          "discarded_other": "Deleting discards unsaved edits in {{count}} files:",
+          "surviving_one": "Unsaved edits in {{count}} file are discarded unless you save it first:",
+          "surviving_other": "Unsaved edits in {{count}} files are discarded unless you save them first:",
+          "saveFiles_one": "Save {{count}} File",
+          "saveFiles_other": "Save {{count}} Files",
+          "moreFiles": "and {{value}} more",
+          "cancel": "Cancel",
+          "folderTitle": "Delete Workspace",
+          "folderDescription": "Delete {{name}} from Orca. The folder on disk will not be deleted.",
+          "folderConfirm": "Delete Workspace",
+          "forceTitle": "Force Delete Workspace",
+          "forceDescription": "Force delete {{name}} and its workspace folder.",
+          "forceConfirm": "Force Delete",
+          "closedToast_one": "Closed {{count}} file with unsaved edits from {{workspace}}",
+          "closedToast_other": "Closed {{count}} files with unsaved edits from {{workspace}}",
+          "reopen": "Reopen",
+          "reopenFailed": "Some files couldn't be reopened because no workspace on their host is open."
         }
       }
     },

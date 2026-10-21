@@ -11,6 +11,7 @@ import type { Worktree } from '../../../../shared/worktree/types'
 import { parseWorkspaceKey } from '../../../../shared/workspace-scope'
 import type { ExecutionHostId } from '../../../../shared/execution-host'
 import { runWorktreeDelete } from './delete-worktree-flow'
+import { runFolderWorkspaceDeleteAfterUnsavedConfirm } from './folder-workspace-delete-confirm'
 import { getDeleteStateForWorktreeHost } from './worktree-delete-state-host-match'
 
 const pendingFolderDeletes = new Set<string>()
@@ -31,6 +32,7 @@ type CurrentWorkspaceState = Pick<
 type HoveredWorkspaceDeleteDependencies = {
   deleteWorktree: DeleteWorktree
   getCurrentState: () => CurrentWorkspaceState
+  confirmFolderDelete?: typeof runFolderWorkspaceDeleteAfterUnsavedConfirm
 }
 type HoveredWorkspaceDocument = Pick<Document, 'activeElement' | 'querySelectorAll'>
 
@@ -107,22 +109,14 @@ export function deleteHoveredWorkspaceImmediately(
     if (pendingFolderDeletes.has(pendingIdentity)) {
       return false
     }
-    pendingFolderDeletes.add(pendingIdentity)
-    void state
-      .deleteFolderWorkspace(target.folderWorkspaceId, {
-        executionHostId: target.executionHostId
-      })
-      .then((deleted) => {
-        const current = dependencies.getCurrentState()
-        if (
-          deleted &&
-          current.activeWorktreeId === target.workspaceKey &&
-          current.activeWorkspaceExecutionHostId === target.executionHostId
-        ) {
-          current.setActiveWorktree(null)
-        }
-      })
-      .finally(() => pendingFolderDeletes.delete(pendingIdentity))
+    const confirmFolderDelete =
+      dependencies.confirmFolderDelete ?? runFolderWorkspaceDeleteAfterUnsavedConfirm
+    confirmFolderDelete(
+      target.folderWorkspaceId,
+      target.executionHostId,
+      ({ unsavedEditsConfirmed }) =>
+        runHoveredFolderDelete(state, target, pendingIdentity, dependencies, unsavedEditsConfirmed)
+    )
     return true
   }
   dependencies.deleteWorktree(target.worktree.id, {
@@ -130,4 +124,33 @@ export function deleteHoveredWorkspaceImmediately(
     ...(target.worktree.hostId ? { expectedHostId: target.worktree.hostId } : {})
   })
   return true
+}
+
+function runHoveredFolderDelete(
+  state: HoveredWorkspaceDeleteState,
+  target: Extract<HoveredWorkspaceDeleteTarget, { kind: 'folder' }>,
+  pendingIdentity: string,
+  dependencies: HoveredWorkspaceDeleteDependencies,
+  unsavedEditsConfirmed: boolean
+): void {
+  if (pendingFolderDeletes.has(pendingIdentity)) {
+    return
+  }
+  pendingFolderDeletes.add(pendingIdentity)
+  void state
+    .deleteFolderWorkspace(target.folderWorkspaceId, {
+      executionHostId: target.executionHostId,
+      unsavedEditsConfirmed
+    })
+    .then((deleted) => {
+      const current = dependencies.getCurrentState()
+      if (
+        deleted &&
+        current.activeWorktreeId === target.workspaceKey &&
+        current.activeWorkspaceExecutionHostId === target.executionHostId
+      ) {
+        current.setActiveWorktree(null)
+      }
+    })
+    .finally(() => pendingFolderDeletes.delete(pendingIdentity))
 }

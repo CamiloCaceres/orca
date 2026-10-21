@@ -3347,6 +3347,18 @@
           "readyOneMany": "1 workspace found, with {{value0}} cleanup suggestions.",
           "readyOneOne": "1 workspace found, with 1 cleanup suggestion."
         }
+      },
+      "delete": {
+        "unsavedEdits": {
+          "closedToast_one": "Closed {{count}} file with unsaved edits from {{workspace}}",
+          "closedToast_other": "Closed {{count}} files with unsaved edits from {{workspace}}",
+          "discarded_one": "Deleting discards unsaved edits in {{count}} file:",
+          "discarded_other": "Deleting discards unsaved edits in {{count}} files:",
+          "saveFiles_one": "Save {{count}} File",
+          "saveFiles_other": "Save {{count}} Files",
+          "surviving_one": "Unsaved edits in {{count}} file are discarded unless you save it first:",
+          "surviving_other": "Unsaved edits in {{count}} files are discarded unless you save them first:"
+        }
       }
     }
   },

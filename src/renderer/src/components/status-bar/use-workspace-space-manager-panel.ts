@@ -19,6 +19,8 @@ import { useWorkspaceSpaceDecisionProjection } from './use-workspace-space-decis
 import { useWorkspaceSpaceGitRefreshAction } from './use-workspace-space-git-refresh-action'
 import { useWorkspaceSpaceManagerProjection } from './use-workspace-space-manager-projection'
 import { getWorkspaceSpaceWorktreeIdentity } from './workspace-space-delete-selection'
+import { runAfterUnsavedRemovalConfirm } from '../sidebar/unsaved-removal-confirm'
+import { toWorktreeEditorRemovalTargets } from '../sidebar/use-removal-unsaved-files'
 
 export function useWorkspaceSpaceManagerPanel() {
   const bindings = useWorkspaceSpaceManagerBindings()
@@ -189,20 +191,17 @@ export function useWorkspaceSpaceManagerPanel() {
     [handleDeletedWorktrees]
   )
 
-  const forceDeleteWorktree = useCallback(
-    (worktree: WorkspaceSpaceWorktree): void => {
-      // Bulk deletion stays non-force; failed rows retain an explicit recovery path.
-      // The failure toast is keyed by the store row's host, which a host-less saved Space row lacks.
-      const storeRow = getWorktreeOnHostFromState(
-        useAppStore.getState(),
-        worktree.worktreeId,
-        worktree.executionHostId ?? undefined
-      )
+  const runForceDelete = useCallback(
+    (
+      worktree: WorkspaceSpaceWorktree,
+      storeRow: ReturnType<typeof getWorktreeOnHostFromState>,
+      unsavedEditsConfirmed: boolean
+    ): void => {
       // Why (#11960): explicit force recovery, so it may also waive PTY-stop proof.
       void removeWorktree(
         { id: worktree.worktreeId, executionHostId: worktree.executionHostId ?? null },
         true,
-        { allowUnverifiedPtyStop: true }
+        { allowUnverifiedPtyStop: true, unsavedEditsConfirmed }
       )
         .then((result) => {
           if (!result.ok) {
@@ -233,6 +232,42 @@ export function useWorkspaceSpaceManagerPanel() {
         })
     },
     [handleDeletedWorktrees, removeWorktree]
+  )
+
+  const forceDeleteWorktree = useCallback(
+    (worktree: WorkspaceSpaceWorktree): void => {
+      // Bulk deletion stays non-force; failed rows retain an explicit recovery path.
+      // The failure toast is keyed by the store row's host, which a host-less saved Space row lacks.
+      const storeRow = getWorktreeOnHostFromState(
+        useAppStore.getState(),
+        worktree.worktreeId,
+        worktree.executionHostId ?? undefined
+      )
+      const state = useAppStore.getState()
+      const repoMap = new Map(state.repos.map((repo) => [repo.id, repo]))
+      runAfterUnsavedRemovalConfirm(
+        {
+          targets: storeRow
+            ? toWorktreeEditorRemovalTargets([storeRow], repoMap)
+            : [{ worktreeId: worktree.worktreeId, hostId: worktree.executionHostId }],
+          title: translate(
+            'components.workspace.delete.unsavedEdits.forceTitle',
+            'Force Delete Workspace'
+          ),
+          description: translate(
+            'components.workspace.delete.unsavedEdits.forceDescription',
+            'Force delete {{name}} and its workspace folder.',
+            { name: worktree.displayName }
+          ),
+          confirmLabel: translate(
+            'components.workspace.delete.unsavedEdits.forceConfirm',
+            'Force Delete'
+          )
+        },
+        ({ unsavedEditsConfirmed }) => runForceDelete(worktree, storeRow, unsavedEditsConfirmed)
+      )
+    },
+    [runForceDelete]
   )
 
   const deleteSelected = (): void => {

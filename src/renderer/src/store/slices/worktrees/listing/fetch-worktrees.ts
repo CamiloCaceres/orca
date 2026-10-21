@@ -108,7 +108,8 @@ export function createFetchWorktrees(
             : undefined,
         requestStartedWorktrees,
         setup,
-        refresh
+        refresh,
+        getState: get
       })
       switch (outcome) {
         case 'applied':

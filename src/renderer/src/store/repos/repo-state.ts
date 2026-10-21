@@ -245,7 +245,7 @@ export type RepoSlice = {
   ) => Promise<boolean>
   deleteFolderWorkspace: (
     folderWorkspaceId: string,
-    options?: { executionHostId?: ExecutionHostId }
+    options?: { executionHostId?: ExecutionHostId; unsavedEditsConfirmed?: boolean }
   ) => Promise<boolean>
   // options.hostId targets a specific host's row + RPC target when the id exists on multiple hosts; else the group's own host owns the call.
   updateProjectGroup: (
@@ -272,6 +272,8 @@ export type RepoSlice = {
       hostId: ExecutionHostId
       errorFeedback?: 'toast' | 'silent'
       automaticCleanup?: boolean
+      /** The user confirmed a dialog listing the unsaved editor files this closes. */
+      unsavedEditsConfirmed?: boolean
     }
   ) => Promise<void>
   updateProject: (

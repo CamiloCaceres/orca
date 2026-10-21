@@ -32,7 +32,8 @@ export function runLineageDeleteAll(args: {
   }
   const deletePromise = runWorktreeDeletesInParallel(currentTargets, {
     force: args.forceOnConfirm,
-    onForceDeleted: args.onForceDeleted
+    onForceDeleted: args.onForceDeleted,
+    unsavedEditsConfirmed: true
   })
   args.closeModal()
   void deletePromise.then((deletedTargets) => {

@@ -27,6 +27,10 @@ import {
   retirePurgedTabLaunches
 } from './purged-structured-launch-retirement'
 import { buildWorktreePurgeSurfacePatch } from './worktree-purge-surface-patch'
+import {
+  noticeRemovedUnsavedFiles,
+  type RemovalUnsavedEditsOptions
+} from './removed-workspace-unsaved-files'
 
 type PublisherRow = {
   id: string
@@ -137,7 +141,8 @@ export function collectHostTwinPurgeScopes(
 export function buildHostTwinPurgeState(
   s: AppState,
   hostId: ExecutionHostId,
-  twinHostIds: ReadonlyMap<string, readonly ExecutionHostId[]>
+  twinHostIds: ReadonlyMap<string, readonly ExecutionHostId[]>,
+  options?: RemovalUnsavedEditsOptions
 ): Partial<AppState> {
   const twinIds = new Set(twinHostIds.keys())
   const removed = collectRemovedHostTwinState(s, twinIds, hostId, twinHostIds)
@@ -195,6 +200,7 @@ export function buildHostTwinPurgeState(
       }
     }
   }
+  noticeRemovedUnsavedFiles(s, doomed.removedFileIds, options)
   const omitters = createWorktreePurgeOmitters(s, new Set(), doomed)
   const tabPrefixedSleeping = {
     sleepingAgentSessionsByPaneKey: omitters.omitByPaneKeyTabPrefix(

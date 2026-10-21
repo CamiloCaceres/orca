@@ -18,6 +18,10 @@ import {
   retirePurgedTabLaunches
 } from './purged-structured-launch-retirement'
 import { buildWorktreePurgeSurfacePatch } from './worktree-purge-surface-patch'
+import {
+  noticeRemovedUnsavedFiles,
+  type RemovalUnsavedEditsOptions
+} from './removed-workspace-unsaved-files'
 import { buildHostTwinPurgeState, collectHostTwinPurgeScopes } from './host-twin-worktree-purge'
 import { composeWorktreeHostIdentity } from '../../../../../../shared/worktree/host-qualified-identity'
 
@@ -28,20 +32,24 @@ import { composeWorktreeHostIdentity } from '../../../../../../shared/worktree/h
  */
 export function buildWorktreePurgeState(
   s: AppState,
-  worktreeTargets: WorktreePurgeTargets
+  worktreeTargets: WorktreePurgeTargets,
+  options?: RemovalUnsavedEditsOptions
 ): Partial<AppState> {
   const targets: WorktreePurgeTarget[] = worktreeTargets.map((target) =>
     typeof target === 'string' ? { id: target } : target
   )
   const twinScopes = collectHostTwinPurgeScopes(s, targets)
   if (twinScopes.size === 0) {
-    return buildFullWorktreePurgeState(s, targets)
+    return buildFullWorktreePurgeState(s, targets, options)
   }
   const twinIds = new Set([...twinScopes.values()].flatMap((twins) => [...twins.keys()]))
   const fullTargets = targets.filter((target) => !target.hostId || !twinIds.has(target.id))
-  let patch = fullTargets.length > 0 ? buildFullWorktreePurgeState(s, fullTargets) : {}
+  let patch = fullTargets.length > 0 ? buildFullWorktreePurgeState(s, fullTargets, options) : {}
   for (const [hostId, twinHostIds] of twinScopes) {
-    patch = { ...patch, ...buildHostTwinPurgeState({ ...s, ...patch }, hostId, twinHostIds) }
+    patch = {
+      ...patch,
+      ...buildHostTwinPurgeState({ ...s, ...patch }, hostId, twinHostIds, options)
+    }
   }
   // Why both hosts: a paired runtime's copy writes recency and delete state under either identity.
   const hostKeys = [
@@ -67,7 +75,8 @@ export function buildWorktreePurgeState(
 /** Drops every bucket under the targets' ids; visit recency alone stays host-scoped. */
 export function buildFullWorktreePurgeState(
   s: AppState,
-  normalizedTargets: readonly WorktreePurgeTarget[]
+  normalizedTargets: readonly WorktreePurgeTarget[],
+  options?: RemovalUnsavedEditsOptions
 ): Partial<AppState> {
   const worktreeIdSet = new Set(normalizedTargets.map((target) => target.id))
   forgetCombinedDiffViewsForWorktrees(worktreeIdSet)
@@ -92,6 +101,7 @@ export function buildFullWorktreePurgeState(
   forgetAmbiguousOwnerWarnings(worktreeIdSet)
 
   const doomed = collectWorktreePurgeDoomedIds(s, worktreeIdSet)
+  noticeRemovedUnsavedFiles(s, doomed.removedFileIds, options)
   const omitters = createWorktreePurgeOmitters(s, worktreeIdSet, doomed)
   const {
     omitByWorktree,

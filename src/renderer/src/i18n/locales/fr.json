@@ -19470,6 +19470,26 @@
           "checking": "Recherche de modifications…",
           "checkingDetails": "Vérification…",
           "unavailableDetails": "Détails indisponibles"
+        },
+        "unsavedEdits": {
+          "discarded_one": "La suppression ignore les modifications non enregistrées de {{count}} fichier :",
+          "discarded_other": "La suppression ignore les modifications non enregistrées de {{count}} fichiers :",
+          "surviving_one": "Les modifications non enregistrées de {{count}} fichier sont ignorées si vous ne l'enregistrez pas avant :",
+          "surviving_other": "Les modifications non enregistrées de {{count}} fichiers sont ignorées si vous ne les enregistrez pas avant :",
+          "saveFiles_one": "Enregistrer {{count}} fichier",
+          "saveFiles_other": "Enregistrer {{count}} fichiers",
+          "moreFiles": "et {{value}} de plus",
+          "cancel": "Annuler",
+          "folderTitle": "Supprimer l'espace de travail",
+          "folderDescription": "Supprimer {{name}} d'Orca. Le dossier sur le disque ne sera pas supprimé.",
+          "folderConfirm": "Supprimer l'espace de travail",
+          "forceTitle": "Forcer la suppression de l'espace de travail",
+          "forceDescription": "Forcer la suppression de {{name}} et de son dossier d'espace de travail.",
+          "forceConfirm": "Forcer la suppression",
+          "closedToast_one": "{{count}} fichier avec des modifications non enregistrées de {{workspace}} a été fermé",
+          "closedToast_other": "{{count}} fichiers avec des modifications non enregistrées de {{workspace}} ont été fermés",
+          "reopen": "Rouvrir",
+          "reopenFailed": "Certains fichiers n'ont pas pu être rouverts, car aucun espace de travail n'est ouvert sur leur hôte."
         }
       }
     },

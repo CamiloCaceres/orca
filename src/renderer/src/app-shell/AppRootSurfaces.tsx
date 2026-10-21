@@ -26,6 +26,7 @@ import {
 } from './app-root-surface-settings'
 import type { FloatingWorkspacePanelState } from './use-floating-workspace-panel'
 import type { OnboardingGate } from './use-onboarding-and-feature-tips'
+import ConfirmUnsavedRemovalDialog from '../components/sidebar/ConfirmUnsavedRemovalDialog'
 
 const QuickOpen = lazy(() => import('../components/QuickOpen'))
 const WorkspaceCleanupDialog = lazy(
@@ -341,6 +342,7 @@ export function AppRootSurfaces(props: {
             <DeleteWorktreeDialog />
           </ModalBoundary>
         ) : null}
+        {activeModal === 'confirm-unsaved-removal' ? <ConfirmUnsavedRemovalDialog /> : null}
         {activeModal === 'preserved-branch-review' ? (
           <ModalBoundary boundaryId="modal.preserved-branch-review" resetKey>
             <PreservedBranchBatchReviewModal />

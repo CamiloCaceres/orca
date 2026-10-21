@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { LoaderCircle } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,9 @@ import { translate } from '@/i18n/i18n'
 import { getRepoIdFromWorktreeId } from '../../../../shared/worktree/id'
 import type { GitWorktreeInfo } from '../../../../shared/worktree/types'
 import type { WorktreeRemovalTarget } from '../../../../shared/worktree/removal'
+import type { EditorRemovalTarget } from '@/components/editor/removal-unsaved-editor-files'
+import { useRemovalUnsavedFiles } from './use-removal-unsaved-files'
+import { RemovalUnsavedFilesNotice } from './RemovalUnsavedFilesNotice'
 
 export function DeleteNestedWorktreesDialog({
   target,
@@ -34,6 +37,16 @@ export function DeleteNestedWorktreesDialog({
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
   const request = useRef(0)
+  const unsavedTargets = useMemo((): EditorRemovalTarget[] => {
+    const repoId = getRepoIdFromWorktreeId(target.id)
+    // The plan lists the parent too, so every deleted folder is covered.
+    return (plan ?? []).map((item) => ({
+      worktreeId: `${repoId}::${item.path}`,
+      hostId: target.executionHostId,
+      deletedFolderPath: item.path
+    }))
+  }, [plan, target])
+  const unsavedEdits = useRemovalUnsavedFiles(unsavedTargets, open && plan !== null)
 
   const review = async (): Promise<void> => {
     const generation = ++request.current
@@ -78,7 +91,10 @@ export function DeleteNestedWorktreesDialog({
     })
     state.markWorktreesDeleting(nestedRows)
     try {
-      const result = await state.removeWorktree(target, true, { approvedNestedWorktrees: plan })
+      const result = await state.removeWorktree(target, true, {
+        approvedNestedWorktrees: plan,
+        unsavedEditsConfirmed: true
+      })
       if (!result.ok) {
         setPlan(null)
         toast.error(
@@ -140,14 +156,14 @@ export function DeleteNestedWorktreesDialog({
       <Dialog
         open={open}
         onOpenChange={(next) => {
-          if (deleting) {
+          if (deleting || unsavedEdits.isSaving) {
             return
           }
           ++request.current
           setOpen(next)
         }}
       >
-        <DialogContent showCloseButton={!deleting}>
+        <DialogContent showCloseButton={!deleting && !unsavedEdits.isSaving}>
           <DialogHeader>
             <DialogTitle>
               {translate('worktree.nestedRemoval.title', 'Delete workspace and nested worktrees?')}
@@ -186,6 +202,11 @@ export function DeleteNestedWorktreesDialog({
               {translate('worktree.nestedRemoval.loading', 'Checking nested worktrees…')}
             </p>
           ) : null}
+          <RemovalUnsavedFilesNotice
+            files={unsavedEdits.files}
+            isSaving={unsavedEdits.isSaving}
+            onSave={unsavedEdits.saveSurviving}
+          />
           <p className="text-sm text-muted-foreground">
             {translate(
               'worktree.nestedRemoval.order',
@@ -200,7 +221,7 @@ export function DeleteNestedWorktreesDialog({
           <DialogFooter>
             <Button
               variant="outline"
-              disabled={deleting}
+              disabled={deleting || unsavedEdits.isSaving}
               onClick={() => {
                 ++request.current
                 setOpen(false)
@@ -215,7 +236,7 @@ export function DeleteNestedWorktreesDialog({
             ) : (
               <Button
                 variant="destructive"
-                disabled={!plan || deleting}
+                disabled={!plan || deleting || unsavedEdits.isSaving}
                 onClick={() => void remove()}
               >
                 {deleting ? <LoaderCircle className="size-4 animate-spin" /> : null}

@@ -46,7 +46,8 @@ export function runDialogForceDelete(args: {
   // Why (#11960): this IS the explicit Force Delete, so it may also waive
   // the PTY-stop proof — unlike the confirmed delete in the branch below.
   const deletePromise = removeWorktree(toWorktreeRemovalTarget(forceTarget), true, {
-    allowUnverifiedPtyStop: true
+    allowUnverifiedPtyStop: true,
+    unsavedEditsConfirmed: true
   })
   closeModal()
   deletePromise

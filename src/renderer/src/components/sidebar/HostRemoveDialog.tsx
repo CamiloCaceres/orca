@@ -16,7 +16,10 @@ import { useMountedRef } from '@/hooks/useMountedRef'
 import { useAppStore } from '@/store'
 import { getAllWorktreesFromState } from '@/store/selectors'
 import { translate } from '@/i18n/i18n'
-import type { ExecutionHostId } from '../../../../shared/execution-host'
+import { toSshExecutionHostId, type ExecutionHostId } from '../../../../shared/execution-host'
+import type { EditorRemovalTarget } from '@/components/editor/removal-unsaved-editor-files'
+import { useRemovalUnsavedFiles } from './use-removal-unsaved-files'
+import { RemovalUnsavedFilesNotice } from './RemovalUnsavedFilesNotice'
 import { clearHostRename } from './host-rename-remove'
 import type { HostRemovalTarget } from './host-rename-remove'
 import { resolveSshHostRemoval } from './ssh-host-remove-resolution'
@@ -65,6 +68,26 @@ export function HostRemoveDialog({
     })
   }, [target, repos, worktreesByRepo, sshConnectionStates])
 
+  const unsavedTargets = useMemo((): EditorRemovalTarget[] => {
+    if (!sshResolution || !deleteWorkspaces) {
+      return []
+    }
+    const sshHostId = toSshExecutionHostId(sshResolution.targetId)
+    const removedIds = new Set(sshResolution.workspaceWorktreeIds)
+    const projectIds = new Set(sshResolution.hostRepoIds)
+    return getAllWorktreesFromState({ worktreesByRepo })
+      .filter((row) => removedIds.has(row.id) || (row.isMainWorktree && projectIds.has(row.repoId)))
+      .map((row) => ({
+        worktreeId: row.id,
+        hostId: sshHostId,
+        // Why: only a connected delete removes worktree folders; project roots always stay.
+        deletedFolderPath: sshResolution.isConnected && removedIds.has(row.id) ? row.path : null,
+        unsavable: !sshResolution.isConnected
+      }))
+  }, [deleteWorkspaces, sshResolution, worktreesByRepo])
+  const unsavedEdits = useRemovalUnsavedFiles(unsavedTargets, open)
+  const isBusy = busy || unsavedEdits.isSaving
+
   const workspaceCount = sshResolution?.workspaceCount ?? 0
   const hasWorkspaces = workspaceCount > 0
   const isConnected = sshResolution?.isConnected ?? false
@@ -107,7 +130,8 @@ export function HostRemoveDialog({
         // Connected → real remote removal; offline/ghost → local forget.
         const { failedIds } = await clearSshHostWorkspaces(
           sshResolution,
-          isConnected ? 'delete-remote' : 'forget-local'
+          isConnected ? 'delete-remote' : 'forget-local',
+          true
         )
         // Why: don't remove the SSH target (and report success) while some of its
         // workspaces failed to clear — that would strand ghost rows behind a
@@ -206,7 +230,15 @@ export function HostRemoveDialog({
       )
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        // Why: closing mid-save would leave a save writing to a host about to go.
+        if (next || !unsavedEdits.isSaving) {
+          onOpenChange(next)
+        }
+      }}
+    >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
@@ -277,11 +309,17 @@ export function HostRemoveDialog({
           </div>
         ) : null}
 
+        <RemovalUnsavedFilesNotice
+          files={unsavedEdits.files}
+          isSaving={unsavedEdits.isSaving}
+          onSave={unsavedEdits.saveSurviving}
+        />
+
         <DialogFooter className="gap-2 sm:gap-2">
           <Button
             type="button"
             variant="outline"
-            disabled={busy}
+            disabled={isBusy}
             onClick={() => onOpenChange(false)}
           >
             {translate('auto.components.sidebar.HostRemoveDialog.6f7a8b9c0d', 'Cancel')}
@@ -298,7 +336,7 @@ export function HostRemoveDialog({
             <Button
               type="button"
               variant="destructive"
-              disabled={busy}
+              disabled={isBusy}
               onClick={() => void runSshRemoval()}
             >
               {busy ? <Loader2 className="size-3.5 animate-spin" /> : null}

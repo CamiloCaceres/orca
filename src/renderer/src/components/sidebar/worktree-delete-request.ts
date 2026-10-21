@@ -26,6 +26,8 @@ export type WorktreeDeleteWithToastOptions = {
   onPreservedBranch?: (branch: PreservedBranchCleanup) => void
   suppressPreservedBranchToast?: boolean
   snapshotPruneBatchId?: string
+  /** The user confirmed a dialog listing the unsaved editor files this closes. */
+  unsavedEditsConfirmed?: boolean
 }
 
 export function toWorktreeDeleteIdentities(

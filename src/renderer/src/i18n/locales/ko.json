@@ -19401,6 +19401,26 @@
           "checking": "변경 사항 확인 중…",
           "checkingDetails": "확인 중…",
           "unavailableDetails": "세부 정보를 사용할 수 없음"
+        },
+        "unsavedEdits": {
+          "discarded_one": "삭제하면 파일 {{count}}개의 저장되지 않은 편집 내용이 버려집니다:",
+          "discarded_other": "삭제하면 파일 {{count}}개의 저장되지 않은 편집 내용이 버려집니다:",
+          "surviving_one": "파일 {{count}}개의 저장되지 않은 편집 내용은 먼저 저장하지 않으면 버려집니다:",
+          "surviving_other": "파일 {{count}}개의 저장되지 않은 편집 내용은 먼저 저장하지 않으면 버려집니다:",
+          "saveFiles_one": "파일 {{count}}개 저장",
+          "saveFiles_other": "파일 {{count}}개 저장",
+          "moreFiles": "외 {{value}}개",
+          "cancel": "취소",
+          "folderTitle": "워크스페이스 삭제",
+          "folderDescription": "Orca에서 {{name}}을(를) 삭제합니다. 디스크의 폴더는 삭제되지 않습니다.",
+          "folderConfirm": "워크스페이스 삭제",
+          "forceTitle": "워크스페이스 강제 삭제",
+          "forceDescription": "{{name}}과(와) 해당 워크스페이스 폴더를 강제 삭제합니다.",
+          "forceConfirm": "강제 삭제",
+          "closedToast_one": "{{workspace}}에서 저장되지 않은 편집 내용이 있는 파일 {{count}}개를 닫았습니다",
+          "closedToast_other": "{{workspace}}에서 저장되지 않은 편집 내용이 있는 파일 {{count}}개를 닫았습니다",
+          "reopen": "다시 열기",
+          "reopenFailed": "호스트에 열린 워크스페이스가 없어 일부 파일을 다시 열지 못했습니다."
         }
       }
     },

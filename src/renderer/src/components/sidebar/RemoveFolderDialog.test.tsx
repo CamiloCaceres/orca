@@ -11,6 +11,14 @@ const mocks = vi.hoisted(() => {
   const tabsByWorktree: Record<string, { id: string }[]> = {}
   const ptyIdsByTabId: Record<string, string[]> = {}
   const runtimeEnvironments: { id: string; orcadDeployment?: { sshTargetId: string } }[] = []
+  const openFiles: {
+    id: string
+    filePath: string
+    relativePath: string
+    worktreeId: string
+    isDirty: boolean
+    mode: 'edit'
+  }[] = []
   return {
     state: {
       activeModal: 'confirm-remove-folder' as string | null,
@@ -28,13 +36,20 @@ const mocks = vi.hoisted(() => {
       tabsByWorktree,
       ptyIdsByTabId,
       closeModal: vi.fn(),
-      removeProject: vi.fn()
+      removeProject: vi.fn(),
+      openFiles,
+      editorDrafts: {},
+      editorBufferIdOf: {},
+      editorBufferViews: {}
     }
   }
 })
 
 vi.mock('@/store', () => ({
-  useAppStore: (selector: (state: typeof mocks.state) => unknown) => selector(mocks.state)
+  useAppStore: Object.assign(
+    (selector: (state: typeof mocks.state) => unknown) => selector(mocks.state),
+    { getState: () => mocks.state }
+  )
 }))
 
 vi.mock('@/components/ui/dialog', () => ({
@@ -57,6 +72,11 @@ vi.mock('@/i18n/i18n', () => ({
       (text, [key, value]) => text.replace(`{{${key}}}`, value),
       fallback
     )
+}))
+
+vi.mock('@/components/editor/editor-model-owner', () => ({
+  resolveEditorModelOwner: () => ({ environmentId: null, hostId: 'ssh:target-1' }),
+  getEditorModelOwnerKey: () => ''
 }))
 
 import RemoveFolderDialog from './RemoveFolderDialog'
@@ -88,6 +108,30 @@ describe('RemoveFolderDialog', () => {
     mocks.state.tabsByWorktree = {}
     mocks.state.ptyIdsByTabId = {}
     mocks.state.runtimeEnvironments = []
+    mocks.state.openFiles = []
+  })
+
+  it('lists unsaved editor files the removal closes, offering Save since files stay on disk', () => {
+    mocks.state.repos = [repo('target-1', 'ssh:target-1')]
+    mocks.state.worktreesByRepo = {
+      'repo-1': [{ id: 'repo-1::/workspace/example', hostId: 'ssh:target-1' }]
+    }
+    mocks.state.openFiles = [
+      {
+        id: 'f1',
+        filePath: '/workspace/example/notes.md',
+        relativePath: 'notes.md',
+        worktreeId: 'repo-1::/workspace/example',
+        isDirty: true,
+        mode: 'edit'
+      }
+    ]
+
+    const html = renderToStaticMarkup(<RemoveFolderDialog />)
+
+    expect(html).toContain('Unsaved edits in 1 file are discarded unless you save it first:')
+    expect(html).toContain('notes.md')
+    expect(html).toContain('Save 1 File')
   })
 
   it("warns about VM recipe cleanup for a project on a recipe VM's managed server", () => {

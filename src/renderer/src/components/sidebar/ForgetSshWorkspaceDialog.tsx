@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { Loader2, Server, ServerOff } from 'lucide-react'
 import {
@@ -17,6 +17,9 @@ import { runWorktreeDeleteWithToast } from './delete-worktree-flow'
 import { toSshExecutionHostId } from '../../../../shared/execution-host'
 import type { WorktreeRemovalTarget } from '../../../../shared/worktree/removal'
 import type { SshWorkspaceForgetResolution } from './ssh-workspace-forget-resolution'
+import { useRemovalUnsavedFiles } from './use-removal-unsaved-files'
+import { RemovalUnsavedFilesNotice } from './RemovalUnsavedFilesNotice'
+import type { EditorRemovalTarget } from '@/components/editor/removal-unsaved-editor-files'
 
 type ForgetSshWorkspaceModalData = {
   worktreeId: string
@@ -47,6 +50,21 @@ export function ForgetSshWorkspaceDialog(): React.JSX.Element | null {
   })
   const [busy, setBusy] = useState<null | 'reconnect' | 'forget'>(null)
   const mountedRef = useMountedRef()
+  const unsavedTargets = useMemo((): EditorRemovalTarget[] => {
+    if (!isForgetModalData(modalData)) {
+      return []
+    }
+    const { resolution } = modalData
+    // Why unsavable: this host is disconnected or gone, so nothing can be saved to it first.
+    return [
+      {
+        worktreeId: modalData.worktreeId,
+        hostId: resolution.kind === 'not-ssh' ? null : toSshExecutionHostId(resolution.targetId),
+        unsavable: true
+      }
+    ]
+  }, [modalData])
+  const unsavedEdits = useRemovalUnsavedFiles(unsavedTargets, isForgetModalData(modalData))
 
   if (!isForgetModalData(modalData)) {
     return null
@@ -92,7 +110,7 @@ export function ForgetSshWorkspaceDialog(): React.JSX.Element | null {
     }
     // Close before the delete toast fires so the two don't overlap.
     closeModal()
-    void runWorktreeDeleteWithToast(removalTarget, displayName)
+    void runWorktreeDeleteWithToast(removalTarget, displayName, { unsavedEditsConfirmed: true })
     if (mountedRef.current) {
       setBusy(null)
     }
@@ -104,7 +122,7 @@ export function ForgetSshWorkspaceDialog(): React.JSX.Element | null {
     try {
       const result = await useAppStore
         .getState()
-        .removeWorktree(removalTarget, false, { mode: 'forget-local' })
+        .removeWorktree(removalTarget, false, { mode: 'forget-local', unsavedEditsConfirmed: true })
       if (!result.ok) {
         toast.error(result.error)
         if (mountedRef.current) {
@@ -159,6 +177,12 @@ export function ForgetSshWorkspaceDialog(): React.JSX.Element | null {
           <Server className="size-3.5 shrink-0 text-muted-foreground" />
           <span className="min-w-0 flex-1 truncate text-xs font-medium">{hostLabel}</span>
         </div>
+
+        <RemovalUnsavedFilesNotice
+          files={unsavedEdits.files}
+          isSaving={unsavedEdits.isSaving}
+          onSave={unsavedEdits.saveSurviving}
+        />
 
         {/* Why: the ghost-host description already states files are untouched, so
             only repeat the reassurance on the reconnect (disconnected) path. */}

@@ -19401,6 +19401,26 @@
           "checking": "変更を確認中…",
           "checkingDetails": "確認中…",
           "unavailableDetails": "詳細を利用できません"
+        },
+        "unsavedEdits": {
+          "discarded_one": "削除すると {{count}} 個のファイルの未保存の編集が破棄されます：",
+          "discarded_other": "削除すると {{count}} 個のファイルの未保存の編集が破棄されます：",
+          "surviving_one": "{{count}} 個のファイルの未保存の編集は、先に保存しないと破棄されます：",
+          "surviving_other": "{{count}} 個のファイルの未保存の編集は、先に保存しないと破棄されます：",
+          "saveFiles_one": "{{count}} 個のファイルを保存",
+          "saveFiles_other": "{{count}} 個のファイルを保存",
+          "moreFiles": "ほか {{value}} 件",
+          "cancel": "キャンセル",
+          "folderTitle": "ワークスペースを削除",
+          "folderDescription": "{{name}} を Orca から削除します。ディスク上のフォルダーは削除されません。",
+          "folderConfirm": "ワークスペースを削除",
+          "forceTitle": "ワークスペースを強制削除",
+          "forceDescription": "{{name}} とそのワークスペースフォルダーを強制削除します。",
+          "forceConfirm": "強制削除",
+          "closedToast_one": "{{workspace}} の未保存の編集がある {{count}} 個のファイルを閉じました",
+          "closedToast_other": "{{workspace}} の未保存の編集がある {{count}} 個のファイルを閉じました",
+          "reopen": "再度開く",
+          "reopenFailed": "ホスト上で開いているワークスペースがないため、一部のファイルを再度開けませんでした。"
         }
       }
     },

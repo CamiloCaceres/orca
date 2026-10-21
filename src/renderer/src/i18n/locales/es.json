@@ -19354,6 +19354,26 @@
           "checking": "Comprobando si hay cambios…",
           "checkingDetails": "Comprobando…",
           "unavailableDetails": "Detalles no disponibles"
+        },
+        "unsavedEdits": {
+          "discarded_one": "Al eliminar se descartan las ediciones sin guardar de {{count}} archivo:",
+          "discarded_other": "Al eliminar se descartan las ediciones sin guardar de {{count}} archivos:",
+          "surviving_one": "Las ediciones sin guardar de {{count}} archivo se descartan si no lo guardas antes:",
+          "surviving_other": "Las ediciones sin guardar de {{count}} archivos se descartan si no los guardas antes:",
+          "saveFiles_one": "Guardar {{count}} archivo",
+          "saveFiles_other": "Guardar {{count}} archivos",
+          "moreFiles": "y {{value}} más",
+          "cancel": "Cancelar",
+          "folderTitle": "Eliminar espacio de trabajo",
+          "folderDescription": "Eliminar {{name}} de Orca. La carpeta del disco no se eliminará.",
+          "folderConfirm": "Eliminar espacio de trabajo",
+          "forceTitle": "Forzar eliminación del espacio de trabajo",
+          "forceDescription": "Forzar la eliminación de {{name}} y de su carpeta del espacio de trabajo.",
+          "forceConfirm": "Forzar eliminación",
+          "closedToast_one": "Se cerró {{count}} archivo con ediciones sin guardar de {{workspace}}",
+          "closedToast_other": "Se cerraron {{count}} archivos con ediciones sin guardar de {{workspace}}",
+          "reopen": "Reabrir",
+          "reopenFailed": "Algunos archivos no se pudieron reabrir porque no hay ningún espacio de trabajo abierto en su host."
         }
       }
     },

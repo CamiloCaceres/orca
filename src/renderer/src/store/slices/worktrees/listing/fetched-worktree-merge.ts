@@ -26,6 +26,7 @@ import {
   type WorktreeListingMergeOutcome
 } from './detected-worktree-refresh-admission'
 import { buildWorktreePurgeState } from '../teardown/worktree-purge-state'
+import { flushRemovalPendingEdits } from '@/components/editor/removal-unsaved-editor-files'
 import { hostWorktreeTarget } from '../../../../../../shared/worktree/host-qualified-identity'
 import { isDisplayNamePersistencePending } from '../metadata/worktree-meta-persist'
 import { branchName } from '@/lib/git-utils'
@@ -139,6 +140,19 @@ export function mergeFetchedWorktrees(
   set: Parameters<StateCreator<AppState, [], [], WorktreeSlice>>[0],
   args: FencedWorktreeMergeArgs
 ): WorktreeListingMergeOutcome {
+  if (args.getState && args.purgeRemovedWorktrees !== false) {
+    // Why before the purge: delayed editor views must commit text the purge may need to offer back.
+    const state = args.getState()
+    flushRemovalPendingEdits(
+      state,
+      getRemovedWorktreeIdsAfterAuthoritativeScan(
+        state,
+        args.repoId,
+        args.refresh.result,
+        args.hostId
+      )
+    )
+  }
   // Why a holder: the updater decides the outcome, and a narrowed `let` would hide that assignment.
   const decision: { outcome: WorktreeListingMergeOutcome } = { outcome: 'not-current' }
   let authoritativelyRemovedIds: readonly string[] = []

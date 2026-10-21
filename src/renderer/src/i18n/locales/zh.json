@@ -19366,6 +19366,26 @@
           "checking": "正在检查更改…",
           "checkingDetails": "检查…",
           "unavailableDetails": "详细信息不可用"
+        },
+        "unsavedEdits": {
+          "discarded_one": "删除将放弃 {{count}} 个文件中未保存的编辑：",
+          "discarded_other": "删除将放弃 {{count}} 个文件中未保存的编辑：",
+          "surviving_one": "{{count}} 个文件中未保存的编辑，若不先保存将被放弃：",
+          "surviving_other": "{{count}} 个文件中未保存的编辑，若不先保存将被放弃：",
+          "saveFiles_one": "保存 {{count}} 个文件",
+          "saveFiles_other": "保存 {{count}} 个文件",
+          "moreFiles": "及另外 {{value}} 个",
+          "cancel": "取消",
+          "folderTitle": "删除工作区",
+          "folderDescription": "从 Orca 中删除 {{name}}。磁盘上的文件夹不会被删除。",
+          "folderConfirm": "删除工作区",
+          "forceTitle": "强制删除工作区",
+          "forceDescription": "强制删除 {{name}} 及其工作区文件夹。",
+          "forceConfirm": "强制删除",
+          "closedToast_one": "已关闭 {{workspace}} 中 {{count}} 个有未保存编辑的文件",
+          "closedToast_other": "已关闭 {{workspace}} 中 {{count}} 个有未保存编辑的文件",
+          "reopen": "重新打开",
+          "reopenFailed": "由于其主机上没有打开的工作区，部分文件无法重新打开。"
         }
       }
     },

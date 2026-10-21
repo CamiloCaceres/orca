@@ -7,6 +7,12 @@ import {
   resolveHoveredWorkspaceDeleteTarget
 } from './hovered-workspace-delete'
 
+const runAtOnce = (
+  _folderWorkspaceId: string,
+  _executionHostId: unknown,
+  run: (options: { unsavedEditsConfirmed: boolean }) => void
+): void => run({ unsavedEditsConfirmed: false })
+
 function worktree(overrides: Partial<Worktree> = {}): Worktree {
   return {
     id: 'repo::/feature',
@@ -187,13 +193,43 @@ describe('hovered workspace delete', () => {
           folderWorkspaceId: 'folder-1',
           workspaceKey: 'folder:folder-1'
         },
-        { deleteWorktree: vi.fn(), getCurrentState: () => current }
+        { deleteWorktree: vi.fn(), getCurrentState: () => current, confirmFolderDelete: runAtOnce }
       )
     ).toBe(true)
     await vi.waitFor(() => expect(current.setActiveWorktree).toHaveBeenCalledWith(null))
     expect(current.deleteFolderWorkspace).toHaveBeenCalledWith('folder-1', {
-      executionHostId: 'runtime:remote-1'
+      executionHostId: 'runtime:remote-1',
+      unsavedEditsConfirmed: false
     })
+  })
+
+  it('waits for the unsaved-edits confirm before deleting a hovered folder workspace', async () => {
+    const current = state()
+    current.deleteFolderWorkspace = vi.fn().mockResolvedValue(true)
+    let confirm: ((options: { unsavedEditsConfirmed: boolean }) => void) | undefined
+    const target = {
+      kind: 'folder' as const,
+      executionHostId: 'runtime:remote-3' as const,
+      folderWorkspaceId: 'folder-3',
+      workspaceKey: 'folder:folder-3'
+    }
+
+    deleteHoveredWorkspaceImmediately(current, target, {
+      deleteWorktree: vi.fn(),
+      getCurrentState: () => current,
+      confirmFolderDelete: (_id, _host, run) => {
+        confirm = run
+      }
+    })
+    expect(current.deleteFolderWorkspace).not.toHaveBeenCalled()
+
+    confirm?.({ unsavedEditsConfirmed: true })
+    await vi.waitFor(() =>
+      expect(current.deleteFolderWorkspace).toHaveBeenCalledWith('folder-3', {
+        executionHostId: 'runtime:remote-3',
+        unsavedEditsConfirmed: true
+      })
+    )
   })
 
   it('rejects a duplicate folder delete while the first request is pending', async () => {
@@ -208,7 +244,11 @@ describe('hovered workspace delete', () => {
       folderWorkspaceId: 'folder-2',
       workspaceKey: 'folder:folder-2'
     }
-    const dependencies = { deleteWorktree: vi.fn(), getCurrentState: () => current }
+    const dependencies = {
+      deleteWorktree: vi.fn(),
+      getCurrentState: () => current,
+      confirmFolderDelete: runAtOnce
+    }
 
     expect(deleteHoveredWorkspaceImmediately(current, target, dependencies)).toBe(true)
     expect(deleteHoveredWorkspaceImmediately(current, target, dependencies)).toBe(false)

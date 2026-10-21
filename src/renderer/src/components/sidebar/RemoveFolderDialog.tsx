@@ -1,4 +1,4 @@
-import React, { useCallback } from 'react'
+import React, { useCallback, useMemo } from 'react'
 import {
   Dialog,
   DialogContent,
@@ -17,6 +17,10 @@ import {
 } from '../../../../shared/execution-host'
 import { countOpenRepoTerminalTabs } from '@/store/repos/repo-removal'
 import { getRecipeVmSshTargetForHost } from '@/lib/recipe-vm-managed-host'
+import { toWorktreeEditorRemovalTargets, useRemovalUnsavedFiles } from './use-removal-unsaved-files'
+import { RemovalUnsavedFilesNotice } from './RemovalUnsavedFilesNotice'
+
+const NO_WORKTREES: [] = []
 
 // Why: interpolated into the sentence so locales control where the name sits;
 // U+0000 cannot appear in a real project name, so the split is unambiguous.
@@ -64,6 +68,18 @@ const RemoveFolderDialog = React.memo(function RemoveFolderDialog() {
       )
   )
 
+  const repoWorktrees = useAppStore((s) => s.worktreesByRepo[repoId] ?? NO_WORKTREES)
+  // Why null repo map: removing a project keeps every folder on disk, so all files can be saved.
+  const unsavedTargets = useMemo(
+    () =>
+      toWorktreeEditorRemovalTargets(
+        repoWorktrees.filter((worktree) => !hostId || (worktree.hostId ?? hostId) === hostId),
+        null
+      ),
+    [hostId, repoWorktrees]
+  )
+  const unsavedEdits = useRemovalUnsavedFiles(unsavedTargets, isOpen)
+
   const openTerminalCount = useAppStore((s) =>
     repoId && hostId ? countOpenRepoTerminalTabs(s, repoId, hostId) : 0
   )
@@ -107,18 +123,20 @@ const RemoveFolderDialog = React.memo(function RemoveFolderDialog() {
   const handleConfirm = useCallback(() => {
     // Why: without the opener's host a bare id could remove another host's row (#13071).
     if (repoId && hostId) {
-      void removeProject(repoId, { hostId, errorFeedback: 'toast' })
+      void removeProject(repoId, { hostId, errorFeedback: 'toast', unsavedEditsConfirmed: true })
     }
     closeModal()
   }, [closeModal, hostId, removeProject, repoId])
 
+  const isSaving = unsavedEdits.isSaving
   const handleOpenChange = useCallback(
     (open: boolean) => {
-      if (!open) {
+      // Why: closing mid-save would leave a save writing while the project goes.
+      if (!open && !isSaving) {
         closeModal()
       }
     },
-    [closeModal]
+    [closeModal, isSaving]
   )
 
   return (
@@ -137,11 +155,16 @@ const RemoveFolderDialog = React.memo(function RemoveFolderDialog() {
             <p className="text-xs font-medium text-foreground">{openTerminalWarning}</p>
           ) : null}
         </DialogHeader>
+        <RemovalUnsavedFilesNotice
+          files={unsavedEdits.files}
+          isSaving={isSaving}
+          onSave={unsavedEdits.saveSurviving}
+        />
         <DialogFooter>
-          <Button variant="outline" onClick={() => handleOpenChange(false)}>
+          <Button variant="outline" onClick={() => handleOpenChange(false)} disabled={isSaving}>
             {translate('auto.components.sidebar.RemoveFolderDialog.d36883e046', 'Cancel')}
           </Button>
-          <Button variant="destructive" onClick={handleConfirm}>
+          <Button variant="destructive" onClick={handleConfirm} disabled={isSaving}>
             {translate('auto.components.sidebar.RemoveFolderDialog.4dc5b5065b', 'Remove')}
           </Button>
         </DialogFooter>

@@ -5,6 +5,7 @@ import { Toaster } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
 import { ConfirmationDialogProvider } from './components/confirmation-dialog'
 import DeleteWorktreeDialog from './components/sidebar/DeleteWorktreeDialog'
+import ConfirmUnsavedRemovalDialog from './components/sidebar/ConfirmUnsavedRemovalDialog'
 import PreservedBranchBatchReviewModal from './components/sidebar/PreservedBranchBatchReviewModal'
 import WorkspaceSpacePage from './components/workspace-space/WorkspaceSpacePage'
 import {
@@ -81,6 +82,7 @@ function SpaceWindowRoot(): React.JSX.Element {
         <ConfirmationDialogProvider>
           <WorkspaceSpacePage />
           {activeModal === 'delete-worktree' ? <DeleteWorktreeDialog /> : null}
+          {activeModal === 'confirm-unsaved-removal' ? <ConfirmUnsavedRemovalDialog /> : null}
           {activeModal === 'preserved-branch-review' ? <PreservedBranchBatchReviewModal /> : null}
         </ConfirmationDialogProvider>
         <Toaster closeButton toastOptions={{ className: 'font-sans text-sm' }} />

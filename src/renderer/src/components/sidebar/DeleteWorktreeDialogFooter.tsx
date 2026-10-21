@@ -17,7 +17,8 @@ export function DeleteWorktreeDialogFooter({
   onForceDelete,
   onSavingChange,
   onDelete,
-  confirmButtonRef
+  confirmButtonRef,
+  isSavingFiles = false
 }: {
   isMainWorktree: boolean
   isDeleting: boolean
@@ -31,7 +32,10 @@ export function DeleteWorktreeDialogFooter({
   onSavingChange: (saving: boolean) => void
   onDelete: () => void
   confirmButtonRef: Ref<HTMLButtonElement>
+  /** Unsaved files are being saved; every action waits, without claiming a delete is running. */
+  isSavingFiles?: boolean
 }): JSX.Element {
+  const disabled = isDeleting || isSavingFiles
   const label = isDeleting
     ? canForceDelete
       ? 'Force Deleting...'
@@ -46,7 +50,7 @@ export function DeleteWorktreeDialogFooter({
 
   return (
     <>
-      <Button variant="outline" onClick={onCancel} disabled={isDeleting}>
+      <Button variant="outline" onClick={onCancel} disabled={disabled}>
         {isMainWorktree
           ? translate('auto.components.sidebar.DeleteWorktreeDialogFooter.cf95e3b5bb', 'Close')
           : translate('auto.components.sidebar.DeleteWorktreeDialogFooter.c0e972d726', 'Cancel')}
@@ -55,7 +59,7 @@ export function DeleteWorktreeDialogFooter({
         <WorktreeForceDeleteButton
           buttonRef={confirmButtonRef}
           size="default"
-          disabled={isDeleting}
+          disabled={disabled}
           onForceDelete={onForceDelete}
           onSavingChange={onSavingChange}
           onAlwaysForceDelete={() =>
@@ -66,12 +70,7 @@ export function DeleteWorktreeDialogFooter({
           {label}
         </WorktreeForceDeleteButton>
       ) : !isMainWorktree ? (
-        <Button
-          ref={confirmButtonRef}
-          variant="destructive"
-          onClick={onDelete}
-          disabled={isDeleting}
-        >
+        <Button ref={confirmButtonRef} variant="destructive" onClick={onDelete} disabled={disabled}>
           {isDeleting ? <LoaderCircle className="size-4 animate-spin" /> : <Trash2 />}
           {label}
         </Button>
