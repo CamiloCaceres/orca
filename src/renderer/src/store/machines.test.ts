@@ -213,3 +213,38 @@ describe('expiry warnings', () => {
     expect(useAppStore.getState().machineExpiryWarnings[WARNING_KEY]).toBeUndefined()
   })
 })
+
+describe('paired-server reads overtaken by an action', () => {
+  it('drops a list that began before a wake landed and reads the server again', async () => {
+    useAppStore
+      .getState()
+      .setMachineEnvironmentSnapshots('env-1', [
+        { ...snapshot(1), machines: [{ ...ROW, state: 'sleeping' }] }
+      ])
+    let answerStaleList: (value: unknown) => void = () => {}
+    mocks.callRuntimeRpc
+      .mockReturnValueOnce(new Promise((resolve) => (answerStaleList = resolve)))
+      .mockResolvedValueOnce({ ok: true, value: [{ ...snapshot(3), machines: [ROW] }] })
+
+    const reading = loadEnvironmentMachines('env-1')
+    applyEnvironmentMachineResult('env-1', { ok: true, value: ROW })
+    answerStaleList({
+      ok: true,
+      value: [{ ...snapshot(2), machines: [{ ...ROW, state: 'sleeping' }] }]
+    })
+    await reading
+    await vi.waitFor(() => expect(mocks.callRuntimeRpc).toHaveBeenCalledTimes(2))
+
+    await vi.waitFor(() =>
+      expect(
+        useAppStore.getState().machineEnvironmentProviders['env-1']?.[0]?.machines[0]?.state
+      ).toBe('running')
+    )
+    expect(mocks.callRuntimeRpc).toHaveBeenLastCalledWith(
+      expect.anything(),
+      'machines.list',
+      { refresh: true },
+      expect.anything()
+    )
+  })
+})

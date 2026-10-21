@@ -95,11 +95,19 @@ export function refreshMachineProviders(maxAgeMs: number): void {
  * asks the server to re-list rather than answer from its cache, which may be stale while its own
  * window is hidden.
  */
+/**
+ * Per paired server, how many action results (wake, sleep) have landed. A list that began before
+ * one landed may carry the machine's earlier state, so it is dropped for a fresh read instead.
+ * Purely client-side, so any server version works.
+ */
+const environmentActionResults = new Map<string, number>()
+
 export async function loadEnvironmentMachines(
   environmentId: string,
   { refresh = false }: { refresh?: boolean } = {}
 ): Promise<void> {
   const store = useAppStore.getState()
+  const startedAfter = environmentActionResults.get(environmentId) ?? 0
   try {
     const result = await callRuntimeRpc<MachineActionResult<unknown>>(
       { kind: 'environment', environmentId },
@@ -107,6 +115,11 @@ export async function loadEnvironmentMachines(
       refresh ? { refresh: true } : {},
       { suppressFeatureInteraction: true }
     )
+    if ((environmentActionResults.get(environmentId) ?? 0) !== startedAfter) {
+      // Why: an action finished while this read was out; a read started now includes it.
+      void loadEnvironmentMachines(environmentId, { refresh: true })
+      return
+    }
     if (result.ok) {
       const snapshots = parseRemoteMachineSnapshots(result.value)
       if (snapshots) {
@@ -133,6 +146,10 @@ export function applyEnvironmentMachineResult(
   environmentId: string,
   result: MachineActionResult<unknown>
 ): void {
+  environmentActionResults.set(
+    environmentId,
+    (environmentActionResults.get(environmentId) ?? 0) + 1
+  )
   const machine = result.ok ? parseRemoteMachineRecord(result.value) : null
   if (machine) {
     useAppStore.getState().applyEnvironmentMachine(environmentId, machine)
