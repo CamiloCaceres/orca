@@ -1,4 +1,4 @@
-import { scrollWritesStopMomentum } from './mobile-native-chat-page-motion'
+import { scrollWritesStopMomentum } from './mobile-native-chat-scroll-motion'
 
 type Styled = {
   style?: { overflowAnchor: string }
@@ -6,11 +6,10 @@ type Styled = {
   getBoundingClientRect: () => unknown
 }
 
-/** Who keeps a parked reader's place where the browser has scroll anchoring (not WebKit): the
- *  browser, which sees every change inside the rows on screen, except while the page owns the
- *  scroll: following (its end pin) or a place-hold's own correction. Two owners would each put the
- *  same move back. */
-export class MobileNativeChatPageAnchoring {
+/** Who keeps a parked reader's place in an inner scroll box where the browser has scroll anchoring
+ *  (not WebKit): the browser, which sees every change inside the box, except while the box owns its
+ *  scroll: following its end or its own restore. Two owners would each put the same move back. */
+export class MobileNativeChatScrollAnchoring {
   private holds = 0
   private readonly none = scrollWritesStopMomentum()
 
@@ -19,7 +18,7 @@ export class MobileNativeChatPageAnchoring {
     private readonly following: () => boolean
   ) {}
 
-  /** The page takes the scroll for one correction, or gives it back. */
+  /** The box takes its scroll for one correction, or gives it back. */
   hold(on: boolean): void {
     this.holds = Math.max(0, this.holds + (on ? 1 : -1))
     this.sync()

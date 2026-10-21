@@ -29,6 +29,7 @@ export type Overrides = {
   sendSurfaceId?: string
   keyboardInset?: number
   hasMore?: boolean
+  olderPages?: Parameters<typeof MobileNativeChatView>[0]['olderPages']
   onLoadEarlier?: () => void
   status?: Parameters<typeof MobileNativeChatView>[0]['status']
   error?: string
@@ -76,7 +77,6 @@ export function installChatViewHooks(): void {
     scrollToEnd.mockReset()
     scrollToOffset.mockReset()
     Object.assign(pageScroller, { scrollTop: 0, scrollHeight: 0, clientHeight: 500 })
-    pageScroller.style.overflowAnchor = ''
     vi.unstubAllGlobals()
   })
 }

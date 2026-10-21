@@ -1,116 +1,340 @@
 import {
   Fragment,
   useCallback,
+  useEffect,
   useImperativeHandle,
   useLayoutEffect,
+  useMemo,
   useRef,
+  useState,
   type ReactElement,
   type Ref
 } from 'react'
-import {
-  View,
-  type NativeScrollEvent,
-  type NativeSyntheticEvent,
-  type ScrollView,
-  type StyleProp,
-  type ViewStyle
+import type {
+  NativeScrollEvent,
+  NativeSyntheticEvent,
+  ScrollView,
+  StyleProp,
+  ViewStyle
 } from 'react-native'
 import type { NativeChatMessage } from '../../../src/shared/native-chat-types'
 import type { MobileNativeChatRowKeys } from './mobile-native-chat-row-keys'
-import { MobileNativeChatPageScroll, outOfAnchoring } from './MobileNativeChatPageScroll'
+import { MobileNativeChatPageScroll } from './MobileNativeChatPageScroll'
+import {
+  mobileNativeChatReadingDrift,
+  mobileNativeChatReadingPlace,
+  type MobileNativeChatReadingUnit,
+  type MobileNativeChatScrollNode
+} from './mobile-native-chat-reading-place'
 import type { MobileNativeChatListHandle } from './use-mobile-native-chat-tail-follow'
-import type { MobileNativeChatTurnRow } from './use-mobile-native-chat-turn-disclosure'
-import type { MobileNativeChatWindowScroller } from './mobile-native-chat-page-window-state'
-import { useMobileNativeChatPageWindow } from './use-mobile-native-chat-page-window'
 import type { MobileNativeChatScrollRoots } from './mobile-native-chat-scroll-roots'
 
+/** Rows a chat opens with; more are drawn as the reader nears the top of what is drawn. */
+const FIRST_ROWS = 24
+const DRAW_BATCH = 12
+/** Rows above are drawn while the top of what is drawn is within this many screens. */
+const DRAW_AHEAD_SCREENS = 3
+/** An older page is asked for once fewer loaded rows than this are left to draw above, and the
+ *  top of what is drawn is within reach: a phone flick crosses several screens. */
+const FETCH_AHEAD_ROWS = 40
+const FETCH_REACH_SCREENS = 10
+/** No scroll of the reader's and no touch for this long: a correction now moves nothing in motion. */
+const REST_MS = 300
+
 type Row = { item: NativeChatMessage; index: number }
+type Listen = (type: string, listener: () => void, options: AddEventListenerOptions) => void
+/** What the list reads of RN Web's scrollable node. */
+type Scroller = MobileNativeChatScrollNode & {
+  addEventListener: Listen
+  removeEventListener: Listen
+}
+/** What a scrolling reader sees below them, held until they rest. */
+type Held = { rows: readonly NativeChatMessage[]; footer: ReactElement | null }
 
 type Props = {
   roots?: MobileNativeChatScrollRoots
   ref: Ref<MobileNativeChatListHandle>
-  endAnchored: boolean
   isFollowing: () => boolean
-  pin: () => void
+  onEndDistance: (fromEnd: number, byReader: boolean) => void
   rows: readonly NativeChatMessage[]
-  rowKeys: Pick<MobileNativeChatRowKeys, 'scope' | 'sourceHead' | 'keyOf' | 'current'>
+  rowKeys: Pick<MobileNativeChatRowKeys, 'scope' | 'keyOf' | 'current' | 'placement'>
   renderItem: (row: Row) => ReactElement
-  /** What a row draws besides itself; a height measured for other state no longer holds. */
-  rowState: (index: number, row: NativeChatMessage) => MobileNativeChatTurnRow
+  /** How rows draw (Tools, text size): a change re-lays every row, so the place is kept mid-scroll. */
   layoutKey: string
   contentContainerStyle: StyleProp<ViewStyle>
-  /** `measuring`: rows above are not measured yet, so the Load earlier slot shows loading. */
-  header: (measuring: boolean) => ReactElement | null
+  header: ReactElement | null
   footer: ReactElement | null
   emptyStateView: ReactElement | null
   onScroll: (event: NativeSyntheticEvent<NativeScrollEvent>) => void
+  /** Asks for an older page; absent while none may load. */
+  onNearTop?: () => void
 }
 
-/** The page's transcript in one keyed flow: RN Web's list draws by index after paint, so opens climbed
- *  and older pages went in its header, where iOS stopped scrolling at the seam. */
+/** Where the drawn rows start: by key, so rows streaming in below don't move it. */
+type Drawn = { scope: string; firstKey: string | null; count: number }
+
+/** The page's transcript, anchored at its end. Rows added above never move the reader, so older
+ *  history lands and draws at any time, mid-fling included. What moves a parked reader is a change
+ *  below them (a reply streaming in, Tools, text size, an image loading): the line they read goes
+ *  back to where it was, once the scroll is at rest or at once for a regroup. */
 export function MobileNativeChatPageList({
   ref,
   roots,
-  endAnchored,
   isFollowing,
-  pin,
-  rows,
+  onEndDistance,
+  rows: liveRows,
   rowKeys,
   renderItem,
-  rowState,
   layoutKey,
   contentContainerStyle,
   header,
-  footer,
+  footer: liveFooter,
   emptyStateView,
-  onScroll
+  onScroll,
+  onNearTop
 }: Props): ReactElement {
   const scroll = useRef<ScrollView>(null)
-  const scroller = useCallback(
-    (): MobileNativeChatWindowScroller | null | undefined => scroll.current?.getScrollableNode(),
+  const scroller = useCallback((): Scroller | null => {
+    const node: Scroller | null | undefined = scroll.current?.getScrollableNode()
+    return node ?? null
+  }, [])
+
+  // A change below a scrolling reader would push the line they read, and putting it back mid-fling
+  // would stop the fling on iOS, or be lost. So what is below them holds until they rest; older rows
+  // still land above, where they move nothing.
+  // A ref, so holding costs no render: only letting the held changes in does.
+  const heldRef = useRef<Held | null>(null)
+  const [, release] = useState(0)
+  const held = heldRef.current
+  const rows = useMemo(() => {
+    const head = held?.rows[0]
+    if (!held || !head) {
+      return liveRows
+    }
+    const key = rowKeys.keyOf(head)
+    const at = liveRows.findIndex((row) => rowKeys.keyOf(row) === key)
+    return at === -1 ? liveRows : [...liveRows.slice(0, at), ...held.rows]
+  }, [held, liveRows, rowKeys])
+  const footer = held ? held.footer : liveFooter
+  const keys = useMemo(() => rows.map(rowKeys.keyOf), [rows, rowKeys.keyOf])
+  const indexOf = useMemo(() => new Map(keys.map((key, at) => [key, at])), [keys])
+  const n = keys.length
+  const [drawn, setDrawn] = useState<Drawn>({ scope: rowKeys.scope, firstKey: null, count: 0 })
+  const kept = drawn.scope === rowKeys.scope ? drawn : null
+  const opening = Math.max(0, n - FIRST_ROWS)
+  const firstKey = kept?.firstKey ?? null
+  const first =
+    firstKey === null
+      ? opening
+      : (indexOf.get(firstKey) ??
+        indexOf.get(rowKeys.current(firstKey) ?? '') ??
+        Math.max(0, n - (kept?.count ?? FIRST_ROWS)))
+
+  const own = useRef<number | null>(null)
+  const touching = useRef(false)
+  const readerScrolledAt = useRef(0)
+  const place = useRef<MobileNativeChatReadingUnit[] | null>(null)
+  const placedLayout = useRef(layoutKey)
+  const settleTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const live = useRef<Held>({ rows: liveRows, footer: liveFooter })
+  const ask = useRef(onNearTop)
+  // Read at event time, so a scroll or resize between commits acts on the latest render.
+  const latest = useRef({ first, n, keys, layoutKey, rowKeys })
+  useLayoutEffect(() => {
+    latest.current = { first, n, keys, layoutKey, rowKeys }
+    ask.current = onNearTop
+    live.current = { rows: liveRows, footer: liveFooter }
+  })
+
+  const write = useCallback((s: Scroller, to: number) => {
+    const top = Math.min(0, Math.max(to, s.clientHeight - s.scrollHeight))
+    if (Math.abs(top - s.scrollTop) >= 0.5) {
+      s.scrollTop = top
+      own.current = s.scrollTop
+    }
+  }, [])
+
+  const resting = useCallback(
+    () => !touching.current && Date.now() - readerScrolledAt.current >= REST_MS,
     []
   )
-  const { view, rowRef, list } = useMobileNativeChatPageWindow({
-    roots,
-    rows,
-    rowKeys,
-    rowState,
-    following: endAnchored,
-    isFollowing,
-    layoutKey,
-    scroller
+
+  // The line being read where the reader left it: every later correction is measured against it, so
+  // whole-pixel scroll writes can't add up to a drift.
+  const notePlace = useCallback(
+    (s: Scroller) => {
+      place.current = isFollowing() ? null : mobileNativeChatReadingPlace(s, latest.current.rowKeys)
+      placedLayout.current = latest.current.layoutKey
+    },
+    [isFollowing]
+  )
+
+  const keepPlace = useCallback(
+    (s: Scroller) => {
+      const held = place.current
+      const regrouped = placedLayout.current !== latest.current.layoutKey
+      if (!held || isFollowing() || !(regrouped || resting())) {
+        notePlace(s)
+        return
+      }
+      const drift = mobileNativeChatReadingDrift(held, s, latest.current.rowKeys, roots)
+      if (Math.abs(drift) >= 0.5) {
+        write(s, s.scrollTop + drift)
+      }
+      // A regroup draws other parts: the line is re-read from them.
+      if (regrouped) {
+        notePlace(s)
+      }
+    },
+    [isFollowing, notePlace, resting, roots, write]
+  )
+
+  // The reader moves while parked: hold what is below them, and let it in once they rest.
+  const settle = useRef(() => {})
+  const unhold = useCallback(() => {
+    if (heldRef.current) {
+      heldRef.current = null
+      release((n) => n + 1)
+    }
+  }, [])
+  const hold = useCallback(() => {
+    if (!isFollowing()) {
+      heldRef.current ??= live.current
+      clearTimeout(settleTimer.current)
+      settleTimer.current = setTimeout(() => settle.current(), REST_MS)
+    }
+  }, [isFollowing])
+  useLayoutEffect(() => {
+    settle.current = () => {
+      if (resting() || isFollowing()) {
+        unhold()
+      } else {
+        settleTimer.current = setTimeout(() => settle.current(), REST_MS)
+      }
+    }
   })
+  useEffect(() => () => clearTimeout(settleTimer.current), [])
+
+  const drawAndFetch = useCallback(
+    (s: Scroller) => {
+      const { first: at, keys: drawnKeys, n: total, rowKeys: current } = latest.current
+      const screens = (s.scrollHeight - s.clientHeight + s.scrollTop) / s.clientHeight
+      if (at > 0 && screens < DRAW_AHEAD_SCREENS) {
+        const next = Math.max(0, at - DRAW_BATCH)
+        setDrawn({ scope: current.scope, firstKey: drawnKeys[next]!, count: total - next })
+      } else if (isFollowing() && at < total - FIRST_ROWS && screens > 3 * DRAW_AHEAD_SCREENS) {
+        // Back at the end, rows far above go: taking them away moves nothing.
+        setDrawn({ scope: current.scope, firstKey: null, count: 0 })
+      }
+      if (at < FETCH_AHEAD_ROWS && screens < FETCH_REACH_SCREENS) {
+        ask.current?.()
+      }
+    },
+    [isFollowing]
+  )
+
   useImperativeHandle(
     ref,
     () => ({
-      getScrollableNode: () => scroll.current?.getScrollableNode(),
-      scrollToOffset: ({ offset, animated }) => {
-        list.wrote(offset)
-        scroll.current?.scrollTo({ y: offset, animated })
+      scrollToEnd: () => {
+        const s = scroller()
+        if (s) {
+          write(s, 0)
+        }
       },
-      scrollToEnd: (params) => scroll.current?.scrollToEnd(params),
-      ...list
+      // From the top, as a native list counts it.
+      scrollToOffset: ({ offset }) => {
+        const s = scroller()
+        if (s) {
+          write(s, offset - (s.scrollHeight - s.clientHeight))
+        }
+      }
     }),
-    [list]
+    [scroller, write]
   )
-  // After the handle attaches, so a chat's first paint is at its end; later growth the observer pins.
-  const opened = useRef('')
-  const shown = `${rowKeys.scope}:${rows.length > 0}`
-  useLayoutEffect(() => {
-    if (opened.current !== shown) {
-      opened.current = shown
-      pin()
-    }
-  }, [shown, pin])
 
-  const drawRow = (item: NativeChatMessage, index: number) => {
-    const key = rowKeys.keyOf(item)
-    return (
-      <View key={key} ref={rowRef(key)}>
-        {renderItem({ item, index })}
-      </View>
-    )
-  }
+  // Every commit: put the line back, then draw or ask for what the reader nears.
+  useLayoutEffect(() => {
+    const s = scroller()
+    if (s) {
+      keepPlace(s)
+      drawAndFetch(s)
+    }
+  })
+
+  // Changes no commit makes (an image loading, an inner box settling): the same rule, inner boxes first.
+  useEffect(() => {
+    const s = scroller()
+    const content: Element | null | undefined = scroll.current?.getInnerViewNode()
+    if (!s || !content || typeof ResizeObserver === 'undefined') {
+      return
+    }
+    const observer = new ResizeObserver(() => {
+      roots?.restoreAll()
+      keepPlace(s)
+      drawAndFetch(s)
+    })
+    observer.observe(content)
+    roots?.observeWith(observer)
+    return () => {
+      roots?.observeWith(null)
+      observer.disconnect()
+    }
+  }, [scroller, roots, keepPlace, drawAndFetch])
+
+  // A hand on the list is the reader's: nothing is put back under it.
+  useEffect(() => {
+    const s = scroller()
+    if (!s) {
+      return
+    }
+    // A release that hands over to a fling comes right after a scroll, which still counts.
+    const down = () => {
+      touching.current = true
+      hold()
+    }
+    const up = () => {
+      touching.current = false
+    }
+    const options = { capture: true, passive: true }
+    // Touch and pointer both: a finger fires either first, and one can go missing.
+    const downs = ['touchstart', 'pointerdown']
+    const ups = ['touchend', 'touchcancel', 'pointerup', 'pointercancel']
+    downs.forEach((type) => s.addEventListener(type, down, options))
+    ups.forEach((type) => s.addEventListener(type, up, options))
+    return () => {
+      downs.forEach((type) => s.removeEventListener(type, down, options))
+      ups.forEach((type) => s.removeEventListener(type, up, options))
+    }
+  }, [scroller, hold])
+
+  const scrolled = useCallback(
+    (event: NativeSyntheticEvent<NativeScrollEvent>) => {
+      onScroll(event)
+      const s = scroller()
+      if (!s) {
+        return
+      }
+      const byReader = own.current === null || Math.abs(s.scrollTop - own.current) >= 1
+      own.current = null
+      if (byReader) {
+        readerScrolledAt.current = Date.now()
+      }
+      onEndDistance(Math.max(0, -s.scrollTop), byReader)
+      if (isFollowing()) {
+        // At the end the newest text shows at once.
+        unhold()
+      } else if (byReader) {
+        hold()
+      }
+      if (byReader) {
+        notePlace(s)
+      }
+      drawAndFetch(s)
+    },
+    [onScroll, scroller, onEndDistance, isFollowing, hold, unhold, notePlace, drawAndFetch]
+  )
+
   return (
     <MobileNativeChatPageScroll
       ref={scroll}
@@ -118,22 +342,19 @@ export function MobileNativeChatPageList({
       // Let link/file taps land while the composer keyboard is up
       // instead of being swallowed by the dismiss gesture.
       keyboardShouldPersistTaps="handled"
-      onScroll={onScroll}
-      scrollEventThrottle={32}
+      onScroll={scrolled}
+      scrollEventThrottle={16}
     >
-      {/* Never what the browser's anchoring holds: rows land below it, and spacers stand in for rows. */}
-      <View style={outOfAnchoring}>{header(view.measuring)}</View>
+      {header}
       {rows.length === 0 ? (
         emptyStateView
       ) : (
-        // Keyed by the chat, so no row carries into another. Rows unmount once scrolled past; what
-        // the reader opened in them is kept in the chat's disclosure store, above the list.
+        // Keyed by the chat, so no row carries into another. Rows above the drawn ones aren't in the
+        // document; what the reader opened in them is kept in the chat's disclosure store.
         <Fragment key={rowKeys.scope}>
-          <View style={[outOfAnchoring, { height: view.above }]} />
-          {rows.slice(view.m0, view.m1).map((item, at) => drawRow(item, view.m0 + at))}
-          <View style={[outOfAnchoring, { height: view.mid }]} />
-          {rows.slice(view.start, view.end).map((item, at) => drawRow(item, view.start + at))}
-          <View style={[outOfAnchoring, { height: view.bottom }]} />
+          {rows.slice(first).map((item, at) => (
+            <Fragment key={keys[first + at]}>{renderItem({ item, index: first + at })}</Fragment>
+          ))}
         </Fragment>
       )}
       {footer}

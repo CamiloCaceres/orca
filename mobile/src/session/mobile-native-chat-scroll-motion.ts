@@ -4,7 +4,6 @@ const REST_MS = 150
 const INTENT_MS = 1_000
 const SCROLL_KEYS = new Set(['ArrowDown', 'ArrowUp', 'End', 'Home', 'PageDown', 'PageUp', ' '])
 type Moved = { by: 'own' | 'layout' | 'reader' | 'none'; moved: number }
-export type MobileNativeChatPageObservation = Moved & { fromEnd: number }
 
 /** WebKit (every iOS browser, and Safari) stops a fling on any scroll write and has no scroll
  *  anchoring; other engines keep momentum, and their anchoring keeps a parked reader's place. */
@@ -13,9 +12,9 @@ export function scrollWritesStopMomentum(): boolean {
   return /AppleWebKit/.test(agent) && !/Chrome|Chromium|Android/.test(agent)
 }
 
-/** Whether the page keeps a parked place itself: on WebKit, which has no scroll anchoring, and at the
+/** Whether a scroll box keeps a parked place itself: on WebKit, which has no scroll anchoring, and at the
  *  very top, where Chromium's anchoring never adjusts (rows measured above would push the reader). */
-export function pageKeepsPlace(scrollTop: number): boolean {
+export function scrollKeepsPlace(scrollTop: number): boolean {
   return scrollWritesStopMomentum() || scrollTop < 0.5
 }
 
@@ -54,9 +53,9 @@ function touchY(event: unknown): number | undefined {
   return typeof y === 'number' ? y : undefined
 }
 
-/** Whether the reader is moving the page, told apart from the page's own writes. Work that can move
- *  rows above the reader (a landing, a measured row, a correction) waits until it settles. */
-export class MobileNativeChatPageMotion {
+/** Whether the reader is moving an inner scroll box, told apart from its own writes: on WebKit a
+ *  correction waits until the box settles. */
+export class MobileNativeChatScrollMotion {
   private touching = false
   private pointing = false
   private lastInput = 0
@@ -75,18 +74,8 @@ export class MobileNativeChatPageMotion {
   private layouts = 0
   /** Where the page's own writes put the scroller, until their scroll event arrives. */
   private own: number[] = []
-  private timer: ReturnType<typeof setTimeout> | undefined
-  private later: ReturnType<typeof setTimeout> | undefined
-  /** Owed work doesn't run again before this, so other work gets frames between its rounds. */
-  private quietUntil = 0
-  /** Classified before the follower sees geometry, including layout and the page's writes. */
-  onMotion: ((observation: MobileNativeChatPageObservation) => void) | null = null
-  private waiters: (() => void)[] = []
 
-  constructor(
-    private readonly onSettled: () => void,
-    initialTop = 0
-  ) {
+  constructor(initialTop = 0) {
     this.seen = initialTop
   }
 
@@ -153,10 +142,6 @@ export class MobileNativeChatPageMotion {
     this.lastInput = Date.now()
     if (down) {
       this.own = []
-      clearTimeout(this.timer)
-      this.timer = undefined
-    } else {
-      this.poke()
     }
   }
 
@@ -192,10 +177,10 @@ export class MobileNativeChatPageMotion {
     if (at !== -1) {
       this.own.splice(0, at + 1)
       ;[this.seen, this.seenMax] = [scrollTop, max]
-      return this.observed('own', moved, max - scrollTop)
+      return { by: 'own', moved }
     }
     if (Math.abs(moved) >= 0.5 && !this.touching && (this.unreconciled || placeMoved())) {
-      return this.observed('layout', moved, max - scrollTop)
+      return { by: 'layout', moved }
     }
     return this.account(scrollTop, max)
   }
@@ -206,21 +191,15 @@ export class MobileNativeChatPageMotion {
     const [from, fromMax, moved] = [this.seen, this.seenMax, scrollTop - this.seen]
     ;[this.seen, this.seenMax] = [scrollTop, max]
     if (Math.abs(moved) < 0.5) {
-      return this.observed('none', moved, max - scrollTop)
+      return { by: 'none', moved }
     }
     // Pulled back onto a shorter end from where the old one allowed; iOS bouncing past an end is not.
     const clamped = Math.abs(scrollTop - max) < 0.5 && from > max + 0.5 && from <= fromMax + 0.5
     if ((clamped && !this.touching) || (this.browserMoves && !this.intended(moved))) {
-      return this.observed('layout', moved, max - scrollTop)
+      return { by: 'layout', moved }
     }
     this.lastReaderScroll = Date.now()
-    this.poke()
-    return this.observed('reader', moved, max - scrollTop)
-  }
-
-  private observed(by: Moved['by'], moved: number, fromEnd: number): Moved {
-    this.onMotion?.({ by, moved, fromEnd })
-    return { by, moved }
+    return { by: 'reader', moved }
   }
 
   /** Input is recent (a fling counts from the finger's release) and the move goes its way: the
@@ -243,53 +222,10 @@ export class MobileNativeChatPageMotion {
    *  list does), else only at rest. */
   readonly mayCorrect = scrollWritesStopMomentum() ? () => this.settled() : () => true
 
-  /** Resolves once settled, or when the window goes away (`release`), so a wait never strands. */
-  whenSettled(): Promise<void> {
-    if (this.settled()) {
-      return Promise.resolve()
-    }
-    return new Promise((resolve) => {
-      this.waiters.push(resolve)
-      this.poke()
-    })
-  }
-
-  poke(): void {
-    if (this.touching || this.timer !== undefined) {
-      return
-    }
-    const now = Date.now()
-    const wait = Math.max(0, REST_MS - (now - this.lastReaderScroll), this.quietUntil - now)
-    this.timer = setTimeout(() => {
-      this.timer = undefined
-      if (!this.settled() || Date.now() < this.quietUntil) {
-        this.poke()
-        return
-      }
-      this.waiters.splice(0).forEach((resolve) => resolve())
-      this.onSettled()
-    }, wait)
-  }
-
-  /** Owed work waits `ms` before its next round. */
-  quiet(ms: number): void {
-    this.quietUntil = Date.now() + ms
-  }
-
-  /** Checks for owed work again after `ms`, when nothing else will. */
-  pokeIn(ms: number): void {
-    clearTimeout(this.later)
-    this.later = setTimeout(() => this.poke(), ms)
-  }
-
   release(): void {
     this.touching = false
     this.pointing = false
     this.lastReaderScroll = 0
     this.own = []
-    clearTimeout(this.later)
-    clearTimeout(this.timer)
-    this.timer = undefined
-    this.waiters.splice(0).forEach((resolve) => resolve())
   }
 }
