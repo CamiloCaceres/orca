@@ -1,4 +1,6 @@
 import { separateImagePasteFromFollowingText } from '../../../src/shared/image-paste-following-text'
+import { wrapTerminalBracketedPasteText } from '../../../src/shared/terminal-bracketed-paste-text'
+import { isTuiAgent, TUI_AGENT_CONFIG } from '../../../src/shared/tui-agent-config'
 import { reportWorkerTerminalUserInput } from '../terminal/worker-terminal-takeover-report'
 import { useCallback, type RefObject } from 'react'
 import { terminalInputSend } from '../terminal/mobile-terminal-operations'
@@ -15,14 +17,21 @@ import { resizeMobileClipboardImage } from './mobile-clipboard-image-resize'
 
 function buildMobileTerminalClipboardTextPayload(
   text: string,
-  modes: TerminalModes | undefined
+  modes: TerminalModes | undefined,
+  agent: string | null | undefined
 ): string {
-  const wrap = modes?.bracketedPasteMode === true && !modes.altScreen
-  // Why: strip embedded bracketed-paste markers so copied text cannot terminate
-  // paste mode early and turn trailing bytes into shell commands.
-  // eslint-disable-next-line no-control-regex -- intentional bracketed-paste marker stripping
-  const sanitized = wrap ? text.replace(/\x1b\[20[01]~/g, '') : text
-  return wrap ? `\x1b[200~${sanitized}\x1b[201~` : sanitized
+  if (modes?.bracketedPasteMode !== true) {
+    return text
+  }
+  // Windows Codex reads paste markers as keys; mobile lacks the pane host platform.
+  if (
+    modes.altScreen &&
+    isTuiAgent(agent) &&
+    TUI_AGENT_CONFIG[agent].windowsInputRecordPasteNewline
+  ) {
+    return text
+  }
+  return wrapTerminalBracketedPasteText(text)
 }
 
 type UseMobileTerminalPasteOptions = {
@@ -79,7 +88,8 @@ export function useMobileTerminalPaste({
       if (text.length > 0) {
         payload = buildMobileTerminalClipboardTextPayload(
           text,
-          ptyModesRef.current.get(targetHandle)
+          ptyModesRef.current.get(targetHandle),
+          agent
         )
       } else {
         const image = await clipboard.readImage()
