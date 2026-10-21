@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest'
 import type { RuntimeMobileSessionTabsResult } from '../../shared/runtime-types'
 import type { PersistedMobileClientTabSelections } from '../../shared/persisted-state-types'
+import { ClientSessionTabSelectionStore } from './client-session-tab-selection'
 import {
   activateClientSessionTabSelection,
-  ClientSessionTabSelectionStore,
   deriveClientSessionTabSelection,
   projectClientSessionTabSelection
-} from './client-session-tab-selection'
+} from './client-session-tab-selection-projection'
 import { normalizePersistedMobileClientTabSelections } from './client-session-tab-selection-persistence'
 
 function snapshot(activeTabId = 'terminal-a::leaf-a'): RuntimeMobileSessionTabsResult {
@@ -56,6 +56,41 @@ function snapshot(activeTabId = 'terminal-a::leaf-a'): RuntimeMobileSessionTabsR
       { id: 'group-right', activeTabId: 'browser-unified', tabOrder: ['browser-unified'] }
     ],
     tabs
+  }
+}
+
+function browserStrip(
+  tabOrder: string[],
+  options: { hostActiveTabId?: string; hostRecentTabIds?: string[] } = {}
+): RuntimeMobileSessionTabsResult {
+  const hostActiveTabId = options.hostActiveTabId ?? tabOrder[0]!
+  return {
+    worktree: 'wt-1',
+    publicationEpoch: 'renderer:1',
+    snapshotVersion: 1,
+    activeGroupId: 'group',
+    activeTabId: hostActiveTabId,
+    activeTabType: 'browser',
+    tabGroups: [
+      {
+        id: 'group',
+        activeTabId: hostActiveTabId,
+        tabOrder,
+        ...(options.hostRecentTabIds ? { recentTabIds: options.hostRecentTabIds } : {})
+      }
+    ],
+    tabs: tabOrder.map((id) => ({
+      type: 'browser' as const,
+      id,
+      browserWorkspaceId: `workspace-${id}`,
+      browserPageId: `page-${id}`,
+      title: id,
+      url: 'about:blank',
+      loading: false,
+      canGoBack: false,
+      canGoForward: false,
+      isActive: id === hostActiveTabId
+    }))
   }
 }
 
@@ -208,7 +243,8 @@ describe('client session-tab selection', () => {
             activeTabIdByGroupId: {
               'group-left': 'terminal-a',
               'group-right': 'browser-unified'
-            }
+            },
+            recentTabIds: ['browser-unified']
           }
         }
       }
@@ -232,7 +268,8 @@ describe('client session-tab selection', () => {
           'wt-1': {
             activeTabId: 'browser-unified',
             activeGroupId: 'group-right',
-            activeTabIdByGroupId: { 'group-right': 'browser-unified' }
+            activeTabIdByGroupId: { 'group-right': 'browser-unified' },
+            recentTabIds: ['browser-unified']
           }
         }
       }
@@ -317,6 +354,56 @@ describe('client session-tab selection', () => {
 
     expect(reopened.activeTabId).toBe('browser-unified')
     expect(reopened.tabs.some((tab) => tab.id === 'browser-unified')).toBe(true)
+  })
+
+  it('returns a device to the tab it viewed before when its shown tab closes on the desktop', () => {
+    const store = new ClientSessionTabSelectionStore()
+    const full = browserStrip(['a', 'b', 'c', 'd'], { hostActiveTabId: 'd' })
+    for (const tabId of ['a', 'b', 'c']) {
+      store.activate(full, 'device-a', tabId)
+    }
+
+    const closed = browserStrip(['a', 'b', 'd'], { hostActiveTabId: 'd' })
+
+    expect(store.project(closed, 'device-a').activeTabId).toBe('b')
+    expect(store.project(closed, 'device-a').activeTabId).toBe('b')
+  })
+
+  it('returns a device to the tab it viewed before when it closes its shown tab', () => {
+    const store = new ClientSessionTabSelectionStore()
+    const full = browserStrip(['a', 'b', 'c', 'd'], { hostActiveTabId: 'd' })
+    for (const tabId of ['a', 'b', 'c']) {
+      store.activate(full, 'device-a', tabId)
+    }
+
+    store.forgetTabs('wt-1', ['c'])
+
+    expect(store.project(full, 'device-a').activeTabId).toBe('b')
+    expect(store.project(browserStrip(['a', 'b', 'd']), 'device-a').activeTabId).toBe('b')
+  })
+
+  it("falls back to the closed tab's right neighbour when the device viewed no other tab", () => {
+    const store = new ClientSessionTabSelectionStore()
+    const full = browserStrip(['a', 'b', 'c', 'd'])
+    store.project(full, 'device-a')
+    store.activate(full, 'device-a', 'c')
+
+    expect(store.project(browserStrip(['a', 'b', 'd']), 'device-a').activeTabId).toBe('d')
+  })
+
+  it('keeps the recency across a host restart', () => {
+    const persisted: PersistedMobileClientTabSelections[] = []
+    const store = new ClientSessionTabSelectionStore()
+    store.setPersistListener((state) => persisted.push(state))
+    const full = browserStrip(['a', 'b', 'c', 'd'], { hostActiveTabId: 'd' })
+    for (const tabId of ['a', 'b', 'c']) {
+      store.activate(full, 'device-a', tabId)
+    }
+
+    const restarted = new ClientSessionTabSelectionStore()
+    restarted.hydrate(persisted.at(-1)!)
+
+    expect(restarted.project(browserStrip(['a', 'b', 'd']), 'device-a').activeTabId).toBe('b')
   })
 
   it('drops malformed persisted payloads instead of hydrating them', () => {
