@@ -58,7 +58,6 @@ export function useSourceControlPanelModel() {
     isHostedReviewStateLoading,
     isRemoteOperationActive,
     openModal,
-    openCommittedDiff,
     refreshActiveGitStatusAfterMutation,
     remoteStatus,
     remoteStatusForActions,
@@ -154,7 +153,6 @@ export function useSourceControlPanelModel() {
     entries,
     branchEntries,
     branchSummary,
-    openCommittedDiff,
     sourceControlRef
   })
   const entryMutations = useSourceControlEntryMutations({

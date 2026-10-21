@@ -273,11 +273,10 @@ function doubleClickUncommitted(path: string): void {
   })
 }
 
-function clickBranchRow(init: MouseEventInit = {}): void {
-  const label = [...container.querySelectorAll('span')].find(
-    (candidate) => candidate.textContent === 'branch.ts'
+function clickBranchRow(path = 'src/branch.ts', init: MouseEventInit = {}): void {
+  const row = container.querySelector<HTMLDivElement>(
+    `[data-source-control-area="branch"][data-source-control-path="${path}"]`
   )
-  const row = label?.closest('div')
   expect(row).not.toBeNull()
   act(() => {
     row?.dispatchEvent(new MouseEvent('click', { bubbles: true, ...init }))
@@ -409,7 +408,7 @@ describe('SourceControl preview row opens', () => {
     )
   })
 
-  it('opens an HTML review note in the diff instead of the browser', () => {
+  it.each(['uncommitted', 'branch'] as const)('opens a %s HTML review note in the diff', (area) => {
     resetState({
       worktreesByRepo: {
         [mocks.activeRepo.id]: [
@@ -429,7 +428,13 @@ describe('SourceControl preview row opens', () => {
           }
         ]
       },
-      gitStatusByWorktree: { [mocks.activeWorktree.id]: [gitEntry({ path: 'test.html' })] }
+      gitStatusByWorktree: {
+        [mocks.activeWorktree.id]: area === 'uncommitted' ? [gitEntry({ path: 'test.html' })] : []
+      },
+      gitBranchChangesByWorktree: {
+        [mocks.activeWorktree.id]: area === 'branch' ? [branchEntry({ path: 'test.html' })] : []
+      },
+      gitBranchCompareSummaryByWorktree: { [mocks.activeWorktree.id]: branchSummary() }
     })
     renderSourceControl()
 
@@ -441,14 +446,25 @@ describe('SourceControl preview row opens', () => {
     act(() => note?.click())
 
     expect(mocks.calls.createBrowserTab).not.toHaveBeenCalled()
-    expect(mocks.calls.openDiff).toHaveBeenCalledWith(
-      mocks.activeWorktree.id,
-      '/repo/wt/test.html',
-      'test.html',
-      'html',
-      false,
-      { preview: true }
-    )
+    if (area === 'uncommitted') {
+      expect(mocks.calls.openDiff).toHaveBeenCalledWith(
+        mocks.activeWorktree.id,
+        '/repo/wt/test.html',
+        'test.html',
+        'html',
+        false,
+        { preview: true }
+      )
+    } else {
+      expect(mocks.calls.openBranchDiff).toHaveBeenCalledWith(
+        mocks.activeWorktree.id,
+        '/repo/wt',
+        expect.objectContaining({ path: 'test.html' }),
+        branchSummary(),
+        'html',
+        { preview: true }
+      )
+    }
     expect(mocks.state.setScrollToDiffCommentId).toHaveBeenLastCalledWith('html-note')
   })
 
@@ -703,6 +719,68 @@ describe('SourceControl preview row opens', () => {
       ['packages/nested']
     )
   })
+
+  it.each([false, true])('previews committed HTML from a branch row (split: %s)', (split) => {
+    resetState({
+      gitBranchChangesByWorktree: {
+        [mocks.activeWorktree.id]: [branchEntry({ path: 'test.html' })]
+      },
+      gitBranchCompareSummaryByWorktree: { [mocks.activeWorktree.id]: branchSummary() }
+    })
+    renderSourceControl()
+
+    clickBranchRow('test.html', { ctrlKey: split })
+
+    expect(mocks.calls.createBrowserTab).toHaveBeenCalledWith(
+      mocks.activeWorktree.id,
+      'file:///repo/wt/test.html',
+      { title: 'test.html', targetGroupId: split ? 'group-2' : undefined, activate: true }
+    )
+    expect(mocks.calls.openBranchDiff).not.toHaveBeenCalled()
+  })
+
+  it.each(['branch-deleted', 'worktree-deleted', 'worktree-conflict'] as const)(
+    'keeps a %s HTML branch row in the diff',
+    (kind) => {
+      resetState({
+        gitBranchChangesByWorktree: {
+          [mocks.activeWorktree.id]: [
+            branchEntry({
+              path: 'test.html',
+              status: kind === 'branch-deleted' ? 'deleted' : 'added'
+            })
+          ]
+        },
+        gitBranchCompareSummaryByWorktree: { [mocks.activeWorktree.id]: branchSummary() },
+        gitStatusByWorktree: {
+          [mocks.activeWorktree.id]:
+            kind === 'branch-deleted'
+              ? []
+              : [
+                  gitEntry({
+                    path: 'test.html',
+                    ...(kind === 'worktree-deleted'
+                      ? { status: 'deleted' }
+                      : { conflictKind: 'both_modified', conflictStatus: 'unresolved' })
+                  })
+                ]
+        }
+      })
+      renderSourceControl()
+
+      clickBranchRow('test.html')
+
+      expect(mocks.calls.createBrowserTab).not.toHaveBeenCalled()
+      expect(mocks.calls.openBranchDiff).toHaveBeenCalledWith(
+        mocks.activeWorktree.id,
+        '/repo/wt',
+        expect.objectContaining({ path: 'test.html' }),
+        branchSummary(),
+        'html',
+        { targetGroupId: undefined, preview: true }
+      )
+    }
+  )
 
   it('passes preview=true when a plain branch row click opens a branch diff tab', () => {
     resetState({

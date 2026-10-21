@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef } from 'react'
 import { useAppStore } from '@/store'
 import { runtimeEnvironmentIdWithLegacyFallbackUnlessTwin } from '@/lib/worktree-runtime-owner'
 import { useWorkspaceFileBrowserActionPredicate } from '@/lib/file-preview'
+import { openWorkspaceFile } from '@/lib/workspace-file-open'
 import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client-types'
 import type { OpenFile } from '@/store/slices/editor'
 import type { Repo } from '../../../../shared/repo-types'
@@ -132,7 +133,6 @@ export function useFileExplorerTreePaneState({
     runtimeEnvironmentIdWithLegacyFallbackUnlessTwin(s, activeWorktreeId)
   )
   const toggleDir = useAppStore((s) => s.toggleDir)
-  const openFile = useAppStore((s) => s.openFile)
   const makePreviewFilePermanent = useAppStore((s) => s.makePreviewFilePermanent)
   const gitStatusByWorktree = useAppStore((s) => s.gitStatusByWorktree)
   const closeFile = useAppStore((s) => s.closeFile)
@@ -251,7 +251,7 @@ export function useFileExplorerTreePaneState({
   const handlers = useFileExplorerHandlers({
     activeWorktreeId,
     runtimeEnvironmentId: ownerRuntimeEnvironmentId,
-    openFile,
+    openWorkspaceFile,
     makePreviewFilePermanent,
     toggleDir: hasNameFilter ? handleToggleNameFilterDir : toggleDir,
     loadDir,

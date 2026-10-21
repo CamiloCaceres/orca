@@ -5,7 +5,6 @@ import { createRuntimePath } from '@/runtime/runtime-file-mutation-client'
 import { statRuntimePath } from '@/runtime/runtime-file-metadata-client'
 import type { RuntimeFileOperationArgs } from '@/runtime/runtime-file-client-types'
 import { useAppStore } from '@/store'
-import type { OpenFile } from '@/store/slices/editor'
 import {
   buildSearchUrl,
   DEFAULT_SEARCH_ENGINE,
@@ -47,8 +46,11 @@ export {
   isTabEntryAbsolutePathAllowed
 } from './tab-create-entry-local-path'
 import { statUserOpenedPath } from '@/lib/user-opened-local-path'
-import { openHtmlFilePreview } from '@/lib/open-html-file-preview'
-import { openFilePreviewByDefault } from '@/lib/file-preview'
+import { openWorkspaceFile } from '@/lib/workspace-file-open'
+import {
+  assertEditorFileOperationCurrent,
+  captureEditorFileOperationProvenance
+} from '@/lib/editor-file-operation-owner'
 
 export type TabCreateEntryArgs = {
   classification?: TabEntryActionClassification
@@ -61,12 +63,7 @@ export type TabCreateEntryArgs = {
 export type TabEntryOperations = {
   createRuntimePath: typeof createRuntimePath
   openWorkspaceBrowserTab: typeof openWorkspaceBrowserTab
-  openHtmlFilePreview: typeof openHtmlFilePreview
-  openFilePreviewByDefault: typeof openFilePreviewByDefault
-  openFile: (
-    file: Omit<OpenFile, 'id' | 'isDirty'>,
-    options?: { preview?: boolean; targetGroupId?: string }
-  ) => void
+  openWorkspaceFile: typeof openWorkspaceFile
   statRuntimePath: typeof statRuntimePath
   statUserOpenedPath: typeof statUserOpenedPath
   assertAbsolutePathAllowed: () => void
@@ -77,7 +74,11 @@ type OpenTabEntryWithOperationsArgs = {
   fileList: RuntimeFileListState
   worktreeId: string
   groupId: string
-  getFileContext: () => { worktreePath: string; runtimeContext: RuntimeFileOperationArgs }
+  getFileContext: () => {
+    worktreePath: string
+    runtimeContext: RuntimeFileOperationArgs
+    assertCurrent: () => void
+  }
   allowAbsolutePaths: boolean
   localPlatform: TabEntryLocalPlatform
   searchEngine: SearchEngine
@@ -116,47 +117,6 @@ async function createParentDirectoriesForNewFile(args: {
       }
     }
   }
-}
-
-async function openExistingFile(args: {
-  context: RuntimeFileOperationArgs
-  groupId: string
-  operations: TabEntryOperations
-  relativePath: string
-  worktreeId: string
-  worktreePath: string
-  previewHtml?: boolean
-}): Promise<void> {
-  const filePath = joinPath(args.worktreePath, args.relativePath)
-  let stat: Awaited<ReturnType<typeof statRuntimePath>>
-  try {
-    stat = await args.operations.statRuntimePath(args.context, filePath)
-  } catch {
-    throw new Error(`File no longer exists: ${args.relativePath}`)
-  }
-  if (stat.isDirectory) {
-    throw new Error(`Cannot open a directory: ${args.relativePath}`)
-  }
-  if (
-    args.previewHtml !== false &&
-    args.operations.openFilePreviewByDefault({
-      filePath,
-      worktreeId: args.worktreeId,
-      targetGroupId: args.groupId
-    })
-  ) {
-    return
-  }
-  args.operations.openFile(
-    {
-      filePath,
-      relativePath: args.relativePath,
-      worktreeId: args.worktreeId,
-      language: detectLanguage(args.relativePath),
-      mode: 'edit'
-    },
-    { preview: false, targetGroupId: args.groupId }
-  )
 }
 
 type NetworkTabEntryClassification = Extract<
@@ -207,7 +167,8 @@ export async function openTabEntryWithOperations({
   }
 
   if (classification.kind === 'html-file-url') {
-    operations.openHtmlFilePreview({
+    operations.openWorkspaceFile({
+      kind: 'preview',
       filePath: classification.filePath,
       worktreeId,
       targetGroupId: groupId
@@ -222,7 +183,7 @@ export async function openTabEntryWithOperations({
     return
   }
 
-  const { worktreePath, runtimeContext } = getFileContext()
+  const { worktreePath, runtimeContext, assertCurrent } = getFileContext()
 
   if (classification.kind === 'absolute-file') {
     if (!allowAbsolutePaths) {
@@ -240,40 +201,43 @@ export async function openTabEntryWithOperations({
     return
   }
 
-  if (classification.kind === 'existing-file') {
-    await openExistingFile({
-      context: runtimeContext,
-      groupId,
-      operations,
-      relativePath: classification.relativePath,
-      worktreeId,
-      worktreePath
-    })
-    return
-  }
-
   const filePath = joinPath(worktreePath, classification.relativePath)
-  try {
-    await createParentDirectoriesForNewFile({
-      context: runtimeContext,
-      operations,
-      relativePath: classification.relativePath,
-      worktreePath
-    })
-    await operations.createRuntimePath(runtimeContext, filePath, 'file')
-  } catch (error) {
-    if (!isExistsError(error)) {
-      throw error
+  if (classification.kind === 'new-file') {
+    try {
+      await createParentDirectoriesForNewFile({
+        context: runtimeContext,
+        operations,
+        relativePath: classification.relativePath,
+        worktreePath
+      })
+      await operations.createRuntimePath(runtimeContext, filePath, 'file')
+    } catch (error) {
+      if (!isExistsError(error)) {
+        throw error
+      }
     }
   }
-  await openExistingFile({
-    context: runtimeContext,
-    groupId,
-    operations,
-    relativePath: classification.relativePath,
-    worktreeId,
-    worktreePath,
-    previewHtml: false
+  let stat: Awaited<ReturnType<typeof statRuntimePath>>
+  try {
+    stat = await operations.statRuntimePath(runtimeContext, filePath)
+  } catch {
+    throw new Error(`File no longer exists: ${classification.relativePath}`)
+  }
+  assertCurrent()
+  if (stat.isDirectory) {
+    throw new Error(`Cannot open a directory: ${classification.relativePath}`)
+  }
+  operations.openWorkspaceFile({
+    kind: 'file',
+    intent: classification.kind === 'new-file' ? 'source' : 'default',
+    file: {
+      filePath,
+      relativePath: classification.relativePath,
+      worktreeId,
+      language: detectLanguage(classification.relativePath),
+      mode: 'edit'
+    },
+    options: { preview: false, targetGroupId: groupId }
   })
 }
 
@@ -292,9 +256,18 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
       if (!worktree) {
         throw new Error('No active worktree.')
       }
+      const provenance = captureEditorFileOperationProvenance(
+        state,
+        args.worktreeId,
+        undefined,
+        false
+      )
       return {
         worktreePath: worktree.path,
-        runtimeContext: getTabEntryFileOperationContext(state, args.worktreeId, worktree.path)
+        runtimeContext: getTabEntryFileOperationContext(state, args.worktreeId, worktree.path),
+        assertCurrent: () => {
+          assertEditorFileOperationCurrent(useAppStore.getState(), args.worktreeId, provenance)
+        }
       }
     },
     allowAbsolutePaths,
@@ -305,9 +278,7 @@ export async function openTabBarEntry(args: TabCreateEntryArgs): Promise<void> {
     operations: {
       createRuntimePath,
       openWorkspaceBrowserTab,
-      openHtmlFilePreview,
-      openFilePreviewByDefault,
-      openFile: state.openFile,
+      openWorkspaceFile,
       statRuntimePath,
       statUserOpenedPath,
       assertAbsolutePathAllowed: () => {

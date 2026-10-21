@@ -47,7 +47,7 @@ vi.mock('./terminal-remote-file-download-open', () => ({
 
 vi.mock('@/lib/file-preview', () => ({
   getWorkspaceFilePreviewPlan: vi.fn(() => ({ status: 'doc-preview' })),
-  openFileInBrowserTab: vi.fn()
+  openFileInBrowserTab: vi.fn(() => ({ status: 'doc-preview' }))
 }))
 
 installTerminalLinkTestEnvironment(doubles)

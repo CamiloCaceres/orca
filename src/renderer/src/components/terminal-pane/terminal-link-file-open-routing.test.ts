@@ -88,6 +88,20 @@ describe('handleOscLink', () => {
     expect(openFilePathMock).not.toHaveBeenCalled()
   })
 
+  it('opens an HTML line link in source and reveals the requested line', async () => {
+    openDetectedFilePath('/tmp/report.html', 12, 3, deps)
+    await flushAsyncWork()
+    await flushDoubleRaf()
+    expect(createBrowserTabMock).not.toHaveBeenCalled()
+    expect(openFileMock).toHaveBeenCalledWith(
+      expect.objectContaining({ filePath: '/tmp/report.html', mode: 'edit' }),
+      { forceContentReload: true }
+    )
+    expect(setPendingEditorRevealMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({ line: 12, column: 3, filePath: '/tmp/report.html' })
+    )
+  })
+
   it('opens local file paths in Orca and reveals default column 1 with the platform modifier', async () => {
     setPlatform('Macintosh')
 

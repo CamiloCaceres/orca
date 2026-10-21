@@ -10,6 +10,7 @@ import {
   canClientOsOpenWorkspaceFile
 } from '@/lib/workspace-file-host-routing'
 import { useAppStore } from '@/store'
+import { openWorkspaceFile } from '@/lib/workspace-file-open'
 import { downloadAndOpenRemoteTerminalFile } from '@/components/terminal-pane/terminal-remote-file-download-open'
 
 export type DocPreviewDocument = {
@@ -30,16 +31,22 @@ export type DocPreviewDocument = {
  * preview keeps its own id, so the reader can leave the rendered page where it was.
  */
 export function openDocPreviewSource(document: DocPreviewDocument): void {
-  useAppStore.getState().openFile({
-    filePath: document.filePath,
-    relativePath: document.relativePath,
-    worktreeId: document.worktreeId,
-    // Why not the preview tab's language: it is pinned to 'html' for the preview itself, and the
-    // source tab needs the editor's own detection to pick a highlighter.
-    language: detectLanguage(document.filePath),
-    runtimeEnvironmentId: document.runtimeEnvironmentId,
-    ...(document.externalSshTargetId ? { externalSshTargetId: document.externalSshTargetId } : {}),
-    mode: 'edit'
+  openWorkspaceFile({
+    kind: 'file',
+    intent: 'source',
+    file: {
+      filePath: document.filePath,
+      relativePath: document.relativePath,
+      worktreeId: document.worktreeId,
+      // Why not the preview tab's language: it is pinned to 'html' for the preview itself, and the
+      // source tab needs the editor's own detection to pick a highlighter.
+      language: detectLanguage(document.filePath),
+      runtimeEnvironmentId: document.runtimeEnvironmentId,
+      ...(document.externalSshTargetId
+        ? { externalSshTargetId: document.externalSshTargetId }
+        : {}),
+      mode: 'edit'
+    }
   })
 }
 

@@ -1,4 +1,4 @@
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, symlinkSync, writeFileSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { expect, test } from './helpers/orca-app'
@@ -74,13 +74,20 @@ test('opens HTML from Explorer as a preview and lets the user edit its source', 
   ).toBe(1)
 })
 
-for (const inputKind of ['file URL', 'absolute path'] as const) {
+for (const inputKind of ['file URL', 'absolute path', 'linked path'] as const) {
   test(`opens a local HTML ${inputKind} with encoded characters from the new-tab menu`, async ({
     electronApp,
     orcaPage,
     testRepoPath
   }, testInfo) => {
-    const filePath = path.join(testRepoPath, 'report 中%20.html')
+    let directory = testRepoPath
+    if (inputKind === 'linked path') {
+      const target = testInfo.outputPath('external-source')
+      mkdirSync(target, { recursive: true })
+      directory = path.join(testRepoPath, 'linked-source')
+      symlinkSync(target, directory, process.platform === 'win32' ? 'junction' : 'dir')
+    }
+    const filePath = path.join(directory, 'report 中%20.html')
     writeFileSync(filePath, '<title>Local file URL</title><h1>Local HTML rendered</h1>')
     const url = pathToFileURL(filePath).href
     await waitForSessionReady(orcaPage)
@@ -113,6 +120,15 @@ for (const inputKind of ['file URL', 'absolute path'] as const) {
       )
     ).toBe(true)
     await orcaPage.screenshot({ path: testInfo.outputPath('local-html-file-url.png') })
+    await orcaPage.getByRole('button', { name: 'Open source file', exact: true }).click()
+    const editor = orcaPage.locator('.monaco-editor').first()
+    await expect(editor).toContainText('Local HTML rendered')
+    await editor.click()
+    await orcaPage.keyboard.press('ControlOrMeta+End')
+    await orcaPage.keyboard.press('Enter')
+    await orcaPage.keyboard.type('<p>Source saved</p>')
+    await orcaPage.keyboard.press('ControlOrMeta+S')
+    await expect.poll(() => readFileSync(filePath, 'utf8')).toContain('<p>Source saved</p>')
   })
 }
 

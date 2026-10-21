@@ -1,8 +1,5 @@
 import { useCallback, useMemo } from 'react'
-import { detectLanguage } from '@/lib/language-detect'
-import { openFilePreviewByDefault } from '@/lib/file-preview'
-import { joinPath } from '@/lib/path'
-import { openUncommittedEntry } from './open-uncommitted-entry'
+import { openWorkspaceFile } from '@/lib/workspace-file-open'
 import { useAppStore } from '@/store'
 import type {
   GitBranchChangeEntry,
@@ -33,11 +30,6 @@ export function useSourceControlRowOpening({
   const activeGroupIdByWorktree = useAppStore((s) => s.activeGroupIdByWorktree)
   const groupsByWorktree = useAppStore((s) => s.groupsByWorktree)
   const createEmptySplitGroup = useAppStore((s) => s.createEmptySplitGroup)
-  const trackConflictPath = useAppStore((s) => s.trackConflictPath)
-  const openConflictFile = useAppStore((s) => s.openConflictFile)
-  const openDiff = useAppStore((s) => s.openDiff)
-  const openFile = useAppStore((s) => s.openFile)
-  const openBranchDiff = useAppStore((s) => s.openBranchDiff)
 
   // Why: modifier-click keeps the current pane intact by opening the file in a fresh split to the right.
   const resolveSplitTargetGroupId = useCallback(
@@ -83,45 +75,27 @@ export function useSourceControlRowOpening({
     [activeOpenAvailableRowKeys, activeOpenFileSignature]
   )
 
-  const handleOpenDiff = useCallback(
+  const openUncommittedFile = useCallback(
     (entry: GitStatusEntry, event?: SourceControlRowOpenEvent) => {
       if (!activeWorktreeId || !worktreePath) {
         return
       }
       const targetGroupId = resolveSplitTargetGroupId(event)
-      if (
-        entry.status !== 'deleted' &&
-        !entry.conflictStatus &&
-        !entry.submodule &&
-        openFilePreviewByDefault({
-          filePath: joinPath(worktreePath, entry.path),
-          worktreeId: activeWorktreeId,
-          targetGroupId
-        })
-      ) {
-        return
-      }
-      const openAsPreview = shouldOpenSourceControlRowAsPreview(event, targetGroupId)
-      openUncommittedEntry(
-        { trackConflictPath, openConflictFile, openFile, openDiff },
-        activeWorktreeId,
+      openWorkspaceFile({
+        kind: 'uncommitted',
+        worktreeId: activeWorktreeId,
         worktreePath,
         entry,
-        { targetGroupId, preview: openAsPreview }
-      )
+        options: {
+          targetGroupId,
+          preview: shouldOpenSourceControlRowAsPreview(event, targetGroupId)
+        }
+      })
     },
-    [
-      activeWorktreeId,
-      worktreePath,
-      resolveSplitTargetGroupId,
-      trackConflictPath,
-      openConflictFile,
-      openDiff,
-      openFile
-    ]
+    [activeWorktreeId, worktreePath, resolveSplitTargetGroupId]
   )
 
-  const openCommittedDiff = useCallback(
+  const openBranchFile = useCallback(
     (entry: GitBranchChangeEntry, event?: SourceControlRowOpenEvent) => {
       if (
         !activeWorktreeId ||
@@ -132,17 +106,20 @@ export function useSourceControlRowOpening({
         return
       }
       const targetGroupId = resolveSplitTargetGroupId(event)
-      openBranchDiff(
-        activeWorktreeId,
+      openWorkspaceFile({
+        kind: 'branch',
+        worktreeId: activeWorktreeId,
         worktreePath,
         entry,
-        branchSummary,
-        detectLanguage(entry.path),
-        { targetGroupId, preview: shouldOpenSourceControlRowAsPreview(event, targetGroupId) }
-      )
+        compare: branchSummary,
+        options: {
+          targetGroupId,
+          preview: shouldOpenSourceControlRowAsPreview(event, targetGroupId)
+        }
+      })
     },
-    [activeWorktreeId, branchSummary, openBranchDiff, resolveSplitTargetGroupId, worktreePath]
+    [activeWorktreeId, branchSummary, resolveSplitTargetGroupId, worktreePath]
   )
 
-  return { resolveSplitTargetGroupId, activeOpenRowKeys, handleOpenDiff, openCommittedDiff }
+  return { resolveSplitTargetGroupId, activeOpenRowKeys, openUncommittedFile, openBranchFile }
 }
