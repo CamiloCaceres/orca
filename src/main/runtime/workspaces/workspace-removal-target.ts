@@ -232,10 +232,9 @@ export abstract class OrcaRuntimeWithResolveWorktreeRemovalTarget extends OrcaRu
   async renameTerminal(handle: string, title: string | null): Promise<RuntimeTerminalRename> {
     const pty = this.getLivePtyForHandle(handle)
     if (pty) {
-      pty.pty.title = title
-      // Why: a manual rename must outrank later agent OSC title updates (which
-      // win by timestamp), so stamp it as the freshest title.
-      pty.pty.titleUpdatedAt = Date.now()
+      // Why: not pty.title — that is the process's own title evidence, and a name there reads as
+      // the shell taking the pane back (#20626).
+      pty.pty.manualTitle = title?.trim() || null
       this.touchMobileSessionSnapshotsForPty(pty.pty.ptyId)
       // Why: without a renderer the rename only lived on the live pty and was
       // lost on restart. Persist customTitle so a headless rebuild keeps it.
