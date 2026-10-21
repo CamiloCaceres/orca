@@ -5,6 +5,7 @@ import { markQoderWorkspaceTrusted } from './qoder/workspace-trust'
 import {
   type AgentTrustPreset,
   markAntigravityWorkspaceTrusted,
+  markCodewhaleProjectTrusted,
   markCodexProjectTrusted,
   markCopilotFolderTrusted,
   markCursorWorkspaceTrusted
@@ -53,7 +54,9 @@ export const AGENT_TRUST_INHERITS_FROM_A_HOME: Record<AgentTrustPreset, boolean>
   copilot: true,
   qoder: true,
   'qoder-cn': true,
-  antigravity: false
+  antigravity: false,
+  // Why: Codewhale matches the exact workspace entry it canonicalizes, like Codex.
+  codewhale: false
 }
 
 /**
@@ -68,7 +71,8 @@ export const AGENT_TRUST_KEYED_BY_START_FOLDER: Record<AgentTrustPreset, boolean
   copilot: false,
   qoder: false,
   'qoder-cn': false,
-  antigravity: false
+  antigravity: false,
+  codewhale: false
 }
 
 // Why resolve() too: Claude stores it, and it collapses `..` even where realpath fails.
@@ -114,6 +118,8 @@ async function writePreset(
       return markQoderWorkspaceTrusted(storedPath, host.agentHome)
     case 'antigravity':
       return markAntigravityWorkspaceTrusted(storedPath, host.agentHome)
+    case 'codewhale':
+      return markCodewhaleProjectTrusted(storedPath, host.agentHome)
   }
 }
 

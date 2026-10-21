@@ -185,6 +185,21 @@ export function markCodexProjectTrusted(
   return write()
 }
 
+/**
+ * Codewhale stores workspace trust in ~/.codewhale/config.toml under the
+ * canonical workspace path:
+ *   [projects."<realpath>"]
+ *   trust_level = "trusted"
+ *
+ * Same shape as Codex, so the existing TOML upsert handles the write; the file
+ * and its `projects` table belong to Codewhale, which creates them on first run.
+ */
+export function markCodewhaleProjectTrusted(workspacePath: string, home: string): Promise<void> {
+  const configFile = join(home, '.codewhale', 'config.toml')
+  upsertProjectTrustLevel(configFile, canonicalize(workspacePath), 'trusted')
+  return Promise.resolve()
+}
+
 function canonicalize(p: string): string {
   // Why: macOS reports `/tmp/x` and `/private/tmp/x` as the same inode, but
   // both Cursor and Copilot's trust comparators run realpath() before the
