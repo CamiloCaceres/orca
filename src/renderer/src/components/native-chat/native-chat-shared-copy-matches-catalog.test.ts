@@ -30,7 +30,6 @@ const catalog = en as unknown as {
 
 const rowVerbCatalog: Record<string, string> = en.components['native-chat'].tool.row
 const taskListCatalog: Record<string, string> = en.components['native-chat'].taskList
-const composerCatalog: Record<string, string> = en.components['native-chat'].composer
 
 describe('native-chat shared copy matches the English catalog', () => {
   it.each(Object.entries(NATIVE_CHAT_TURN_STATUS_COPY))(
@@ -41,7 +40,7 @@ describe('native-chat shared copy matches the English catalog', () => {
   )
 
   it('composer.placeholder matches the shared composer placeholder', () => {
-    expect(composerCatalog.placeholder).toBe(NATIVE_CHAT_COMPOSER_PLACEHOLDER)
+    expect(en.components['native-chat'].composer.placeholder).toBe(NATIVE_CHAT_COMPOSER_PLACEHOLDER)
   })
 
   it.each(Object.entries(NATIVE_CHAT_TOOL_ACTIVITY_COPY))(
