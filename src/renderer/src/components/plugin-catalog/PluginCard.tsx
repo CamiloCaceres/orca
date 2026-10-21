@@ -3,6 +3,7 @@ import { translate } from '@/i18n/i18n'
 import { PluginCardArt, type PluginArtPalette } from './PluginCardArt'
 import { pluginCategoryLabel } from './plugin-category-label'
 import type { PluginListEntry } from './plugin-list-entries'
+import { pluginArtTypes } from './PluginRowArt'
 
 type PluginCardProps = {
   entry: PluginListEntry
@@ -57,7 +58,7 @@ export function PluginCard({
         ) : (
           <PluginCardArt
             name={entry.name}
-            types={entry.types}
+            types={pluginArtTypes(entry)}
             fileType={entry.listing?.release?.fileTypes?.[0] ?? null}
             palettes={palettes}
             tintKey={entry.pluginKey}

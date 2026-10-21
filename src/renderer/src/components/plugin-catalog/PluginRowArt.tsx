@@ -35,7 +35,8 @@ const TYPE_ORDER: readonly PluginCatalogType[] = [
   'interface-language'
 ]
 
-function rowType(entry: PluginListEntry): PluginCatalogType | null {
+/** What a plugin is, from its catalog types plus what an installed copy shows it carries. */
+export function pluginArtTypes(entry: PluginListEntry): PluginCatalogType[] {
   const installed = entry.installed
   const types: PluginCatalogType[] = [...entry.types]
   if (installed?.hasWorker) {
@@ -47,6 +48,11 @@ function rowType(entry: PluginListEntry): PluginCatalogType | null {
   if (installed && installed.commands.length > 0) {
     types.push('instructions')
   }
+  return types
+}
+
+function rowType(entry: PluginListEntry): PluginCatalogType | null {
+  const types = pluginArtTypes(entry)
   return TYPE_ORDER.find((type) => types.includes(type)) ?? null
 }
 

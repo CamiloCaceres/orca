@@ -213,7 +213,7 @@ export function PluginDetailPage({
               .join(' · ')}
           </p>
           {/* Why always there: installing fills this line instead of pushing the page down. */}
-          <div className="mt-2 min-h-5">
+          <div className="mt-2 flex h-5 items-center">
             {controls && controls.kind !== 'review' ? controls.status : null}
           </div>
         </div>

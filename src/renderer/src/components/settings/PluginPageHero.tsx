@@ -3,6 +3,7 @@ import type { PluginHostImages } from '../../../../shared/plugins/plugin-image-u
 import { translate } from '@/i18n/i18n'
 import { PluginCardArt, type PluginArtPalette } from '../plugin-catalog/PluginCardArt'
 import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
+import { pluginArtTypes } from '../plugin-catalog/PluginRowArt'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '../ui/dialog'
 
 /** The page's 16:10 picture: the author's cover, else the card's drawn art. Space is reserved. */
@@ -30,7 +31,7 @@ export function PluginPageHero({
       ) : (
         <PluginCardArt
           name={entry.name}
-          types={entry.types}
+          types={pluginArtTypes(entry)}
           fileType={entry.listing?.release?.fileTypes?.[0] ?? null}
           palettes={palettes}
           tintKey={entry.pluginKey}

@@ -355,7 +355,11 @@ export function PluginsSettingsSection({
         onConsent={decideConsent}
         handlers={{
           onOpen: () => undefined,
-          onReview: review.show,
+          // Why open directly: the queue's key may already be this plugin after going Back.
+          onReview: (pluginKey) => {
+            review.show(pluginKey)
+            page.open(pluginKey)
+          },
           onToggleEnabled: (pluginKey) => {
             const plugin = plugins.find((entry) => entry.pluginKey === pluginKey)
             if (plugin) {

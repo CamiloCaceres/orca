@@ -332,6 +332,23 @@ describe('PluginsSettingsSection lifecycle', () => {
     ).toBe(true)
   })
 
+  it('reopens a review after going back from it', async () => {
+    installApi({ list: vi.fn().mockResolvedValue([{ ...plugin, status: 'pending' }]) })
+    const { container } = await renderSection()
+    const review = (): HTMLButtonElement | undefined =>
+      Array.from(container.querySelectorAll('button')).find(
+        (button) => button.textContent === 'Review'
+      )
+    await act(async () => click(review()!))
+    expect(container.textContent).toContain('Approve')
+    await act(async () =>
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', altKey: true }))
+    )
+    expect(container.textContent).not.toContain('Approve')
+    await act(async () => click(review()!))
+    expect(container.textContent).toContain('Approve')
+  })
+
   it('shows what is true after a Restart fails halfway', async () => {
     const crashed = { ...plugin, status: 'errored' as const }
     const stopped = { ...plugin, status: 'disabled' as const }
