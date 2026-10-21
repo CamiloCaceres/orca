@@ -23,8 +23,6 @@ type PluginInstallConsentProps = {
   capabilities: readonly { kind: string; description: string }[] | null
   /** Shortcuts it binds; any that replace one of yours are named before consent. */
   shortcuts: readonly PluginPageShortcut[] | null
-  /** Off while what it shows may not be what installs (not yet read, or the catalog moved). */
-  armed: boolean
   /** Its files are still being read; says so beside the disabled button. */
   reading?: boolean
   /** Its files couldn't be read, so nothing is known about what it can do. */
@@ -35,18 +33,11 @@ type PluginInstallConsentProps = {
   official: boolean
   publisher: string
   source?: PluginConsentSource
-  busy: boolean
   /** The plugin changed since it was last approved, or since this page was opened. */
   changed: boolean
   error: string | null
-  onConfirm: () => void
-  onKeepOff?: () => void
 }
 
-/**
- * What a plugin that runs code or instructions may do, directly above the one button that grants
- * it. On the host's security surface so a plugin theme cannot restyle the decision.
- */
 function shortcutPlatform(): NodeJS.Platform {
   if (navigator.userAgent.includes('Mac')) {
     return 'darwin'
@@ -54,13 +45,16 @@ function shortcutPlatform(): NodeJS.Platform {
   return navigator.userAgent.includes('Windows') ? 'win32' : 'linux'
 }
 
+/**
+ * What a plugin that runs code or instructions may do, right under the name and the one button
+ * that grants it. On the host's security surface so a plugin theme cannot restyle the decision.
+ */
 export function PluginInstallConsent({
   name,
   mode,
   trust,
   capabilities,
   shortcuts,
-  armed,
   reading = false,
   failed = false,
   onRetry,
@@ -68,11 +62,8 @@ export function PluginInstallConsent({
   official,
   publisher,
   source,
-  busy,
   changed,
-  error,
-  onConfirm,
-  onKeepOff
+  error
 }: PluginInstallConsentProps): React.JSX.Element {
   const headingId = useId()
   const ready = capabilities !== null
@@ -82,10 +73,6 @@ export function PluginInstallConsent({
     const replaced = shadowedKeybindingTitles(shortcut.key, platform, overrides)
     return replaced.length > 0 ? [{ ...shortcut, replaced }] : []
   })
-  const confirmLabel =
-    mode === 'install'
-      ? translate('auto.components.settings.PluginInstallConsent.install', 'Install & enable')
-      : translate('auto.components.settings.PluginConsentDialog.enable', 'Enable plugin')
   return (
     <SecuritySurface>
       <section
@@ -200,17 +187,8 @@ export function PluginInstallConsent({
           {installed ? <PluginVmRecipeConsentPreview recipes={installed.vmRecipes ?? []} /> : null}
         </div>
         {error ? <p className="px-4 pb-2 text-xs text-destructive">{error}</p> : null}
+        {/* Why no button here: the page's one decision sits top-right, beside the name. */}
         <div className="flex flex-wrap items-center gap-2 border-t border-border px-4 py-2.5">
-          <Button
-            size="sm"
-            className="w-36"
-            disabled={!ready || !armed || busy}
-            aria-label={`${confirmLabel}: ${name}`}
-            onClick={onConfirm}
-          >
-            {busy ? <Loader2 className="animate-spin" /> : null}
-            {confirmLabel}
-          </Button>
           {reading && !failed ? (
             <span className="text-xs text-muted-foreground" aria-live="polite">
               {translate(
@@ -218,11 +196,6 @@ export function PluginInstallConsent({
                 'Reading what it can access…'
               )}
             </span>
-          ) : null}
-          {onKeepOff ? (
-            <Button variant="ghost" size="sm" disabled={busy} onClick={onKeepOff}>
-              {translate('auto.components.settings.PluginInstallConsent.keepOff', 'Keep off')}
-            </Button>
           ) : null}
           <div className="ml-auto">
             <PluginConsentProvenance official={official} publisher={publisher} source={source} />

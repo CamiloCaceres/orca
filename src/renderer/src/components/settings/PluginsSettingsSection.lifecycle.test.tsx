@@ -251,25 +251,29 @@ describe('PluginsSettingsSection lifecycle', () => {
     expect(unsubscribe).toHaveBeenCalledOnce()
   })
 
-  it('persists the feature switch before refreshing discovery', async () => {
-    const updateSettings = vi.fn().mockResolvedValue(undefined)
-    const { container } = await renderSection(
-      { ...getDefaultSettings('/tmp'), pluginSystemEnabled: false },
-      updateSettings
-    )
-    const turnOn = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Turn on plugins'
-    )
-    if (!turnOn) {
-      throw new Error('missing turn-on action')
-    }
-    // Why: with plugins off the pane still lists what is installed, dimmed.
-    expect(container.textContent).toContain('Notes')
+  it('offers no switch to turn the plugin system off or back on', async () => {
+    const { container: on } = await renderSection()
+    expect(on.textContent).not.toContain('Turn off plugins')
+    document.body.innerHTML = ''
+    // Why still listed: off only comes from policy, so the page explains it without a switch.
+    const { container: off } = await renderSection({
+      ...getDefaultSettings('/tmp'),
+      pluginSystemEnabled: false
+    })
+    expect(off.textContent).toContain('Plugins are off')
+    expect(off.textContent).toContain('Notes')
+    expect(off.textContent).not.toContain('Turn on plugins')
+  })
 
-    await act(async () => click(turnOn))
-
-    expect(updateSettings).toHaveBeenCalledWith({ pluginSystemEnabled: true })
-    expect(window.api.plugins.refresh).toHaveBeenCalledOnce()
+  it('reports a failed save of the file-suggestion setting', async () => {
+    const updateSettings = vi.fn().mockRejectedValue(new Error('disk write failed'))
+    const { container } = await renderSection(undefined, updateSettings)
+    const toggle = Array.from(container.querySelectorAll('button')).find((button) =>
+      button.textContent?.includes('Suggest plugins for unknown files')
+    )
+    await act(async () => click(toggle!))
+    expect(updateSettings).toHaveBeenCalledWith({ pluginFileTypeSuggestions: false })
+    expect(container.textContent).toContain('Could not save plugin settings.')
   })
 
   it('routes enablement and confirmed removal through plugin IPC', async () => {
@@ -552,26 +556,6 @@ describe('PluginsSettingsSection lifecycle', () => {
 
     expect(container.textContent).toContain('fresh installation')
     expect(container.textContent).not.toContain('stale installation')
-  })
-
-  it('clears feature busy state and skips refresh when the setting write fails', async () => {
-    const updateSettings = vi.fn().mockRejectedValue(new Error('disk write failed'))
-    const { container } = await renderSection(
-      { ...getDefaultSettings('/tmp'), pluginSystemEnabled: false },
-      updateSettings
-    )
-    const turnOn = Array.from(container.querySelectorAll('button')).find(
-      (button) => button.textContent === 'Turn on plugins'
-    )
-    if (!turnOn) {
-      throw new Error('missing turn-on action')
-    }
-
-    await act(async () => click(turnOn))
-
-    expect(turnOn.disabled).toBe(false)
-    expect(window.api.plugins.refresh).not.toHaveBeenCalled()
-    expect(container.textContent).toContain('Could not save plugin settings.')
   })
 
   it('persists verbatim development paths and refreshes discovery', async () => {

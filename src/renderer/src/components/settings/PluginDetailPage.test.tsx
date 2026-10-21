@@ -354,6 +354,22 @@ describe('PluginDetailPage', () => {
       button.textContent?.includes('Install & enable')
     )
 
+  it('puts the one decision beside the name and keeps the consent free of buttons', async () => {
+    const container = await render(pluginListEntryFromListing(codeRelease), () =>
+      Promise.resolve({ ok: true, preview: codePreview })
+    )
+    const consent = container.querySelector('[data-plugin-consent]')
+    expect(consent?.querySelectorAll('button')).toHaveLength(0)
+    const decisions = Array.from(container.querySelectorAll('button')).filter((button) =>
+      button.textContent?.includes('Install & enable')
+    )
+    expect(decisions).toHaveLength(1)
+    // Why before the consent: the button sits top-right in the header, the consent under it.
+    expect(
+      decisions[0]!.compareDocumentPosition(consent!) & Node.DOCUMENT_POSITION_FOLLOWING
+    ).toBeTruthy()
+  })
+
   it('arms Install & enable only for the exact release it shows', async () => {
     const container = await render(pluginListEntryFromListing(codeRelease), () =>
       Promise.resolve({ ok: true, preview: codePreview })

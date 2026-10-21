@@ -117,7 +117,10 @@ test('runs hello-orca panel, command, and event behind visible consent', async (
     await expect(orcaPage.getByRole('article')).toContainText('Local folder')
     await expect(consent).toContainText('full access to your files, network, and other processes')
     await expect(orcaPage.getByRole('dialog')).toHaveCount(0)
-    await consent.getByRole('button', { name: /^Enable plugin/ }).click()
+    await orcaPage
+      .getByRole('article')
+      .getByRole('button', { name: /^Enable plugin/ })
+      .click()
     await expect(consent).toBeHidden()
     await orcaPage
       .getByRole('article')

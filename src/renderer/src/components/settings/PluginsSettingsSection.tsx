@@ -126,19 +126,16 @@ export function PluginsSettingsSection({
   }
 
   const {
-    featureBusy,
     devPathsBusy,
     settingsError,
     reset: resetSettingsWrites,
-    toggleFeature,
     toggleSuggestions,
     updateDevPaths
   } = usePluginSettingsWrites({
     settings,
     updateSettings,
     mountedRef,
-    rediscover: () => loadPluginList(window.api.plugins.refresh()),
-    onStart: () => setError(null)
+    rediscover: () => loadPluginList(window.api.plugins.refresh())
   })
 
   useEffect(() => {
@@ -338,19 +335,16 @@ export function PluginsSettingsSection({
       headerAction={
         <PluginsHeaderActions
           featureEnabled={featureEnabled}
-          featureBusy={featureBusy}
           suggestionsEnabled={settings.pluginFileTypeSuggestions !== false}
           onToggleSuggestions={() => void toggleSuggestions()}
           onAdd={setInstallKind}
           onSources={() => setSourcesOpen(true)}
           onDevelopment={() => setDevelopmentOpen(true)}
-          onTurnOff={() => void toggleFeature()}
         />
       }
     >
       <PluginSettingsOverview
         featureEnabled={featureEnabled}
-        featureBusy={featureBusy}
         settingsError={settingsError}
         loading={loading}
         error={error}
@@ -375,7 +369,6 @@ export function PluginsSettingsSection({
           onRollbackRequest: marketplaceLifecycle.requestRollback,
           onRemoveRequest: setRemovePluginId
         }}
-        onToggleFeature={() => void toggleFeature()}
         onRefresh={refresh}
         onMarketplaceInstalled={marketplaceLifecycle.reloadAfterMutation}
         onUndoInstall={undoInstall}

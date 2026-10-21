@@ -1476,10 +1476,15 @@
           "noDescription": "No description provided.",
           "official": "Official"
         },
+        "PluginSettingsMenu": {
+          "turnOff": "Turn off plugins",
+          "turnOffDetail": "Nothing from any plugin runs until you turn them back on."
+        },
         "PluginSettingsOverview": {
           "offBody": "Nothing from your plugins runs. Turn them on to browse the catalog and use what you installed.",
           "pausedUnknown": "Your installed plugins are paused and will be back when you turn plugins on.",
-          "systemDescription": "Turns every plugin off at once. Nothing runs until you review and enable it."
+          "systemDescription": "Turns every plugin off at once. Nothing runs until you review and enable it.",
+          "turnOn": "Turn on plugins"
         },
         "PluginSettingsRow": {
           "hideLogs": "Hide logs",

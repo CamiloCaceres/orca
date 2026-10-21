@@ -1,4 +1,4 @@
-import { Ellipsis, FolderCog, Globe, Power } from 'lucide-react'
+import { Ellipsis, FolderCog, Globe } from 'lucide-react'
 import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
 import {
@@ -15,20 +15,16 @@ import { PluginAddMenu } from './PluginAddMenu'
 /** Set-once plugin preferences, kept out of the catalog's way. */
 export function PluginSettingsMenu({
   featureEnabled,
-  featureBusy,
   suggestionsEnabled,
   onToggleSuggestions,
   onSources,
-  onDevelopment,
-  onTurnOff
+  onDevelopment
 }: {
   featureEnabled: boolean
-  featureBusy: boolean
   suggestionsEnabled: boolean
   onToggleSuggestions: () => void
   onSources: () => void
   onDevelopment: () => void
-  onTurnOff: () => void
 }): React.JSX.Element {
   const label = translate('auto.components.settings.PluginSettingsMenu.label', 'Plugin settings')
   return (
@@ -79,28 +75,6 @@ export function PluginSettingsMenu({
             'Development folders…'
           )}
         </DropdownMenuItem>
-        {featureEnabled ? (
-          <>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem disabled={featureBusy} onSelect={onTurnOff} className="items-start">
-              <Power className="mt-px" />
-              <span className="min-w-0">
-                <span className="block">
-                  {translate(
-                    'auto.components.settings.PluginSettingsMenu.turnOff',
-                    'Turn off plugins'
-                  )}
-                </span>
-                <span className="block text-muted-foreground">
-                  {translate(
-                    'auto.components.settings.PluginSettingsMenu.turnOffDetail',
-                    'Nothing from any plugin runs until you turn them back on.'
-                  )}
-                </span>
-              </span>
-            </DropdownMenuItem>
-          </>
-        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -115,7 +89,7 @@ export function PluginsHeaderActions({
 }): React.JSX.Element {
   return (
     <div className="flex items-center gap-1.5">
-      <PluginAddMenu disabled={!menu.featureEnabled || menu.featureBusy} onChoose={onAdd} />
+      <PluginAddMenu disabled={!menu.featureEnabled} onChoose={onAdd} />
       <PluginSettingsMenu {...menu} />
     </div>
   )

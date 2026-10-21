@@ -135,13 +135,20 @@ async function installMarketplacePluginThroughUi(
       name: new RegExp(`^If you install .*${pluginName}, it can:$`)
     })
     await expect(consent).toContainText('Official · stablyai')
-    await consent.getByRole('button', { name: /^Install & enable/ }).click()
+    // Why the page: the one decision sits beside the name, above the consent it grants.
+    await page
+      .getByRole('article')
+      .getByRole('button', { name: /^Install & enable/ })
+      .click()
     // Why a second step: recipe command lines are read from the installed files, so they are
     // reviewed on the page after install instead of approved unseen.
     const review = page.getByRole('region', {
       name: new RegExp(`^If you enable .*${pluginName}, it can:$`)
     })
-    await review.getByRole('button', { name: /^Enable plugin/ }).click()
+    await page
+      .getByRole('article')
+      .getByRole('button', { name: /^Enable plugin/ })
+      .click()
     await expect(review).toBeHidden()
   } else {
     await page.getByRole('button', { name: new RegExp(`^Install .*${pluginName}$`) }).click()
@@ -164,7 +171,10 @@ async function enableInstalledPluginThroughUi(
   await plugin.getByRole('button', { name: 'Review', exact: true }).click()
   const consent = page.getByRole('region', { name: `If you enable ${pluginName}, it can:` })
   await expect(consent).toBeVisible()
-  await consent.getByRole('button', { name: /^Enable plugin/ }).click()
+  await page
+    .getByRole('article')
+    .getByRole('button', { name: /^Enable plugin/ })
+    .click()
   await expect(consent).toBeHidden()
 }
 
@@ -194,9 +204,13 @@ async function applyInstalledLanguage(page: Page): Promise<void> {
 async function runMarketplaceJourney(page: Page): Promise<void> {
   const startedAt = Date.now()
   await openPluginSettings(page)
-  // Why a button: with plugins off the page offers one action, and the switch appears once on.
-  await page.getByRole('button', { name: 'Turn on plugins' }).click()
-  await expect(page.getByRole('button', { name: 'Turn on plugins' })).toBeHidden()
+  // Why the setting: the page has no plugin on/off switch; a fresh profile is turned on directly.
+  await page.evaluate(async () => {
+    const settings = await window.api.settings.set({ pluginSystemEnabled: true })
+    window.__store?.setState({ settings })
+    await window.api.plugins.refresh()
+  })
+  await expect(page.getByText('Plugins are off')).toBeHidden()
   await expect
     .poll(
       () =>

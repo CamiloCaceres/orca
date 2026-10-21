@@ -5,7 +5,7 @@ import { translate } from '@/i18n/i18n'
 import { Button } from '../ui/button'
 import type { PluginListEntry } from '../plugin-catalog/plugin-list-entries'
 import { PluginDetailAlert as Alert } from './PluginDetailAlert'
-import { PluginPageAction } from './PluginPageAction'
+import { usePluginPageAction } from './PluginPageAction'
 import { PluginPageHero, PluginScreenshots } from './PluginPageHero'
 import { usePluginArtPalettes } from './use-plugin-art-palettes'
 import { usePluginPageModel } from './use-plugin-page-model'
@@ -68,6 +68,21 @@ export function PluginDetailPage({
   const model = usePluginPageModel({ entry, fetchPreview, refreshing })
   const { plugin, listing, preview, stale } = model
   const palettes = usePluginArtPalettes(entry.pluginKey, listing?.release?.themePreview)
+  const action = usePluginPageAction({
+    entry,
+    name: plugin?.name ?? model.preview?.manifest.name ?? entry.name,
+    model,
+    unavailable:
+      Boolean(listing?.blockedByKillList) ||
+      Boolean(
+        entry.minimumOrca &&
+        orcaVersion &&
+        !satisfiesOrcaEngineRange(orcaVersion, `>=${entry.minimumOrca}`)
+      ),
+    busy,
+    install,
+    onConsent
+  })
   const headingRef = useRef<HTMLHeadingElement>(null)
 
   useEffect(() => {
@@ -216,31 +231,26 @@ export function PluginDetailPage({
               .join(' · ')}
           </p>
           {/* Why always there: installing fills this line instead of pushing the page down. */}
-          <div className="mt-2 flex h-5 items-center">
+          <div className="mt-2 flex h-5 items-center gap-3">
             {controls && controls.kind !== 'review' ? controls.status : null}
+            {action.status}
           </div>
         </div>
-        {controls?.kind === 'review' ? (
-          // Why: a plugin waiting for review can still be removed; the consent below decides the rest.
-          <div className="flex items-center gap-2">{controls.more}</div>
-        ) : controls ? (
-          <div className="flex items-center gap-2">
-            {controls.action}
-            {controls.toggle}
-            {controls.more}
-          </div>
-        ) : null}
+        {/* Why one slot: Install, Install & enable, Enable and the installed switch all sit here,
+            so a state change never moves the page. */}
+        <div className="flex min-h-9 items-center gap-2">
+          {action.header}
+          {controls && controls.kind !== 'review' ? (
+            <>
+              {action.headerExtra ?? controls.action}
+              {controls.toggle}
+            </>
+          ) : null}
+          {controls ? controls.more : null}
+        </div>
       </div>
+      {action.body}
       {description ? <p className="mt-4 max-w-prose text-sm leading-6">{description}</p> : null}
-      <PluginPageAction
-        entry={entry}
-        name={name}
-        model={model}
-        unavailable={tooNew || Boolean(listing?.blockedByKillList)}
-        busy={busy}
-        install={install}
-        onConsent={onConsent}
-      />
       {alert}
       {/* Why after the decision: the picture must never push Install or Enable below the fold. */}
       <div className="mt-6">
