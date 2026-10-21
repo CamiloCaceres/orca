@@ -13,13 +13,16 @@ const READ_TIMEOUT_MS = 5_000
 const MAX_WORKTREES = 50
 
 const worktreesSchema = z.object({
-  worktrees: z.array(z.object({ worktreeId: z.string(), isArchived: z.boolean().optional() }))
+  worktrees: z.array(z.object({ worktreeId: z.string(), isArchived: z.boolean().optional() })),
+  // Required: a listing that can't say it is complete can't back "nothing to lose".
+  truncated: z.boolean()
 })
 const statusSchema = z.object({
   entries: z.array(z.unknown()),
   didHitLimit: z.boolean().optional(),
   statusLength: z.number().optional(),
-  upstreamStatus: z.object({ ahead: z.number() }).optional()
+  // Required: without it (an older host, a detached HEAD) unpushed work is unknown, not zero.
+  upstreamStatus: z.object({ hasUpstream: z.boolean(), ahead: z.number() })
 })
 
 function resultOf<T>(response: RuntimeRpcResponse<unknown>, schema: z.ZodType<T>): T | null {
@@ -32,10 +35,10 @@ function resultOf<T>(response: RuntimeRpcResponse<unknown>, schema: z.ZodType<T>
 
 /**
  * Reads every worktree on the machine's Orca server (where a machine's worktrees live) and sums
- * their uncommitted entries and commits ahead of upstream. Any read that fails makes the whole
+ * their uncommitted entries, commits ahead of upstream, and branches never pushed. Any read that
+ * fails or is incomplete (a truncated listing, a status without upstream data) makes the whole
  * answer null, so a warning never claims "nothing to lose" from partial evidence.
  */
-/** Uncommitted changes and unpushed commits on a machine; null when they could not be read. */
 export async function readMachineWorkAtRisk(call: RuntimeCall): Promise<MachineWorkAtRisk | null> {
   try {
     const listed = resultOf(
@@ -46,7 +49,7 @@ export async function readMachineWorkAtRisk(call: RuntimeCall): Promise<MachineW
       ),
       worktreesSchema
     )
-    if (!listed) {
+    if (!listed || listed.truncated) {
       return null
     }
     const statuses = await Promise.all(
@@ -77,9 +80,12 @@ export async function readMachineWorkAtRisk(call: RuntimeCall): Promise<MachineW
           (status?.didHitLimit && status.statusLength
             ? status.statusLength
             : (status?.entries.length ?? 0)),
-        unpushed: total.unpushed + (status?.upstreamStatus?.ahead ?? 0)
+        unpushed: total.unpushed + (status?.upstreamStatus.ahead ?? 0),
+        // A branch with no upstream was never pushed: all of it is at risk, however many commits.
+        neverPushed:
+          (total.neverPushed ?? 0) + (status?.upstreamStatus.hasUpstream === false ? 1 : 0)
       }),
-      { uncommitted: 0, unpushed: 0 }
+      { uncommitted: 0, unpushed: 0, neverPushed: 0 }
     )
   } catch {
     return null

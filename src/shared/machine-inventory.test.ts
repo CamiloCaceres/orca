@@ -15,6 +15,12 @@ describe('formatMachineWorkAtRisk', () => {
     )
     expect(formatMachineWorkAtRisk({ uncommitted: 0, unpushed: 3 }, t)).toBe('3 unpushed commits')
     expect(formatMachineWorkAtRisk({ uncommitted: 0, unpushed: 0 }, t)).toBeNull()
+    expect(formatMachineWorkAtRisk({ uncommitted: 0, unpushed: 0, neverPushed: 1 }, t)).toBe(
+      '1 branch never pushed'
+    )
+    expect(formatMachineWorkAtRisk({ uncommitted: 0, unpushed: 0, neverPushed: 2 }, t)).toBe(
+      '2 branches never pushed'
+    )
   })
 })
 

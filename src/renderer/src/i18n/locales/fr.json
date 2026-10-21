@@ -20625,7 +20625,9 @@
       "uncommitted_one": "{{count}} modification non validée",
       "uncommitted_other": "{{count}} modifications non validées",
       "unpushed_one": "{{count}} commit non poussé",
-      "unpushed_other": "{{count}} commits non poussés"
+      "unpushed_other": "{{count}} commits non poussés",
+      "neverPushed_one": "{{count}} branche jamais poussée",
+      "neverPushed_other": "{{count}} branches jamais poussées"
     }
   }
 }

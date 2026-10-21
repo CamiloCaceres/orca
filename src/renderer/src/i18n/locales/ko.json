@@ -20625,7 +20625,9 @@
       "uncommitted_one": "커밋하지 않은 변경 {{count}}개",
       "uncommitted_other": "커밋하지 않은 변경 {{count}}개",
       "unpushed_one": "푸시하지 않은 커밋 {{count}}개",
-      "unpushed_other": "푸시하지 않은 커밋 {{count}}개"
+      "unpushed_other": "푸시하지 않은 커밋 {{count}}개",
+      "neverPushed_one": "푸시하지 않은 브랜치 {{count}}개",
+      "neverPushed_other": "푸시하지 않은 브랜치 {{count}}개"
     }
   }
 }

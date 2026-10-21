@@ -20613,7 +20613,9 @@
       "uncommitted_one": "{{count}} cambio sin confirmar",
       "uncommitted_other": "{{count}} cambios sin confirmar",
       "unpushed_one": "{{count}} commit sin enviar",
-      "unpushed_other": "{{count}} commits sin enviar"
+      "unpushed_other": "{{count}} commits sin enviar",
+      "neverPushed_one": "{{count}} rama sin publicar",
+      "neverPushed_other": "{{count}} ramas sin publicar"
     }
   }
 }

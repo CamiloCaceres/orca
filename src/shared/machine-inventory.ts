@@ -71,8 +71,13 @@ export function machineExpiryWarningKey(
 /** How long before a temporary machine's expiry Orca warns about it. */
 export const MACHINE_EXPIRY_WARNING_MS = 15 * 60_000
 
-/** Uncommitted changes and unpushed commits on a machine's worktrees. */
-export type MachineWorkAtRisk = { uncommitted: number; unpushed: number }
+/** Uncommitted changes, unpushed commits and never-pushed branches on a machine's worktrees. */
+export type MachineWorkAtRisk = {
+  uncommitted: number
+  unpushed: number
+  /** Branches with no upstream; optional so older payloads still read. */
+  neverPushed?: number
+}
 
 /** What main tells the renderer when a temporary machine enters its last 15 minutes. */
 export type MachineExpiryWarning = {
@@ -148,7 +153,7 @@ export type MachineCopyTranslate = (
   values: { count: number }
 ) => string
 
-/** "2 uncommitted changes, 1 unpushed commit"; null when there is nothing to lose. */
+/** "2 uncommitted changes, 1 unpushed commit, 1 branch never pushed"; null when nothing to lose. */
 export function formatMachineWorkAtRisk(
   work: MachineWorkAtRisk,
   t: MachineCopyTranslate
@@ -168,6 +173,18 @@ export function formatMachineWorkAtRisk(
       count === 1
         ? t('machines.workAtRisk.unpushed_one', '{{count}} unpushed commit', { count })
         : t('machines.workAtRisk.unpushed_other', '{{count}} unpushed commits', { count })
+    )
+  }
+  const neverPushed = work.neverPushed ?? 0
+  if (neverPushed > 0) {
+    parts.push(
+      neverPushed === 1
+        ? t('machines.workAtRisk.neverPushed_one', '{{count}} branch never pushed', {
+            count: neverPushed
+          })
+        : t('machines.workAtRisk.neverPushed_other', '{{count}} branches never pushed', {
+            count: neverPushed
+          })
     )
   }
   return parts.length > 0 ? parts.join(', ') : null

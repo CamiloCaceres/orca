@@ -20834,7 +20834,9 @@
       "uncommitted_one": "{{count}} uncommitted change",
       "uncommitted_other": "{{count}} uncommitted changes",
       "unpushed_one": "{{count}} unpushed commit",
-      "unpushed_other": "{{count}} unpushed commits"
+      "unpushed_other": "{{count}} unpushed commits",
+      "neverPushed_one": "{{count}} branch never pushed",
+      "neverPushed_other": "{{count}} branches never pushed"
     }
   }
 }

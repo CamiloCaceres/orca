@@ -21,7 +21,8 @@ describe('readMachineWorkAtRisk', () => {
             { worktreeId: 'w1' },
             { worktreeId: 'w2' },
             { worktreeId: 'w3', isArchived: true }
-          ]
+          ],
+          truncated: false
         })
       }
       const worktree =
@@ -30,11 +31,16 @@ describe('readMachineWorkAtRisk', () => {
           : null
       return ok(
         worktree === 'id:w1'
-          ? { entries: [{}, {}], upstreamStatus: { ahead: 3 } }
-          : { entries: [], didHitLimit: true, statusLength: 400, upstreamStatus: { ahead: 0 } }
+          ? { entries: [{}, {}], upstreamStatus: { hasUpstream: true, ahead: 3 } }
+          : {
+              entries: [],
+              didHitLimit: true,
+              statusLength: 400,
+              upstreamStatus: { hasUpstream: true, ahead: 0 }
+            }
       )
     })
-    expect(work).toEqual({ uncommitted: 402, unpushed: 3 })
+    expect(work).toEqual({ uncommitted: 402, unpushed: 3, neverPushed: 0 })
     expect(calls).toEqual(['worktree.ps', 'git.status', 'git.status'])
   })
 
@@ -42,7 +48,9 @@ describe('readMachineWorkAtRisk', () => {
     expect(await readMachineWorkAtRisk(async () => failed)).toBeNull()
     expect(
       await readMachineWorkAtRisk(async (method) =>
-        method === 'worktree.ps' ? ok({ worktrees: [{ worktreeId: 'w1' }] }) : failed
+        method === 'worktree.ps'
+          ? ok({ worktrees: [{ worktreeId: 'w1' }], truncated: false })
+          : failed
       )
     ).toBeNull()
     expect(
@@ -50,5 +58,41 @@ describe('readMachineWorkAtRisk', () => {
         throw new Error('tunnel closed')
       })
     ).toBeNull()
+  })
+
+  it('never reassures from an incomplete listing or a status without upstream data', async () => {
+    const status = { entries: [], upstreamStatus: { hasUpstream: true, ahead: 0 } }
+    // Past the listing cap: the rest of the machine's worktrees were never read.
+    expect(
+      await readMachineWorkAtRisk(async (method) =>
+        method === 'worktree.ps'
+          ? ok({ worktrees: [{ worktreeId: 'w1' }], truncated: true })
+          : ok(status)
+      )
+    ).toBeNull()
+    // An older host that does not say whether the listing is complete.
+    expect(
+      await readMachineWorkAtRisk(async (method) =>
+        method === 'worktree.ps' ? ok({ worktrees: [{ worktreeId: 'w1' }] }) : ok(status)
+      )
+    ).toBeNull()
+    // No upstream data (an older host, a detached HEAD): unpushed work is unknown, not zero.
+    expect(
+      await readMachineWorkAtRisk(async (method) =>
+        method === 'worktree.ps'
+          ? ok({ worktrees: [{ worktreeId: 'w1' }], truncated: false })
+          : ok({ entries: [] })
+      )
+    ).toBeNull()
+  })
+
+  it('counts a branch with no upstream as never pushed', async () => {
+    expect(
+      await readMachineWorkAtRisk(async (method) =>
+        method === 'worktree.ps'
+          ? ok({ worktrees: [{ worktreeId: 'w1' }], truncated: false })
+          : ok({ entries: [], upstreamStatus: { hasUpstream: false, ahead: 0 } })
+      )
+    ).toEqual({ uncommitted: 0, unpushed: 0, neverPushed: 1 })
   })
 })
