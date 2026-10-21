@@ -119,4 +119,38 @@ describe('useDocumentAppearance', () => {
     unmount()
     usePluginThemeStore.setState({ entries: [], loaded: false })
   })
+
+  it('leaves the theme alone when a plugin theme is installed but not chosen', () => {
+    const updateSettings = vi.fn().mockResolvedValue(undefined)
+    useAppStore.setState({ updateSettings })
+    usePluginThemeStore.setState({ entries: [], loaded: true })
+    const { unmount } = renderHook(() => useDocumentAppearance())
+    mocks.applyDocumentTheme.mockClear()
+    mocks.applyPluginAppTheme.mockClear()
+
+    // Why: only "Use now" or Appearance picks a plugin theme; installing just registers it.
+    act(() =>
+      usePluginThemeStore.setState({
+        entries: [
+          {
+            id: 'plugin:samples.dusk/dusk',
+            revision: 'r1',
+            pluginKey: 'samples.dusk',
+            pluginName: 'Dusk',
+            label: 'Dusk',
+            base: 'dark',
+            tokens: { '--background': '#1a1025' }
+          }
+        ]
+      })
+    )
+
+    expect(updateSettings).not.toHaveBeenCalled()
+    expect(mocks.applyDocumentTheme).not.toHaveBeenCalled()
+    expect(mocks.applyPluginAppTheme).not.toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'plugin:samples.dusk/dusk' })
+    )
+    unmount()
+    usePluginThemeStore.setState({ entries: [], loaded: false })
+  })
 })
