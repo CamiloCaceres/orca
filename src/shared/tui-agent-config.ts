@@ -356,8 +356,7 @@ export function getTuiAgentLaunchCommand(
   opts?: { isRemote?: boolean }
 ): string {
   // The GNOME-conflict orca-ide rename is local-only; Linux remote shims are always orca.
-  if (opts?.isRemote && platform === 'linux') {
-    return config.launchCmd
-  }
-  return config.launchCmdByPlatform?.[platform] ?? config.launchCmd
+  return opts?.isRemote && platform === 'linux'
+    ? config.launchCmd
+    : (config.launchCmdByPlatform?.[platform] ?? config.launchCmd)
 }
