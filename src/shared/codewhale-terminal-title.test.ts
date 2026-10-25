@@ -15,6 +15,8 @@ describe('Codewhale terminal titles', () => {
 
   it('leaves a DSH session title with the shared animated whale to DSH', () => {
     expect(isDshTerminalTitle('🐋 reasoning…')).toBe(false)
-    expect(isDshTerminalTitle('✦ 🐋 Review integration')).toBe(true)
+    expect(isDshTerminalTitle('✦ 🐋 Review codewhale integration')).toBe(true)
+    expect(getAgentLabel('✦ 🐋 Review codewhale integration')).not.toBe('Codewhale')
+    expect(resolveExplicitTerminalTitleAgentType('✦ 🐋 Review codewhale integration')).toBe('dsh')
   })
 })

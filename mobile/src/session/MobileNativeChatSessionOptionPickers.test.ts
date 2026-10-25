@@ -1,17 +1,26 @@
-import { createElement, useState } from 'react'
+import { createElement, useState, type ReactNode } from 'react'
 import { act, create, type ReactTestRenderer } from 'react-test-renderer'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { AccessibilityInfo, Platform } from 'react-native'
 import { colors } from '../theme/mobile-theme'
-import type { SessionOptionDescriptor } from '../../../src/shared/native-chat-session-options'
+import { structuredAgentSessionPermissionDescriptor } from '../../../src/shared/structured-agent-session-permission-option'
+import { createStructuredAgentSessionOptionState } from '../../../src/shared/structured-agent-session-options'
+import type {
+  SessionOptionDescriptor,
+  SessionOptionSelectChoice
+} from '../../../src/shared/native-chat-session-options'
 import {
   MobileNativeChatSessionOptionPickers,
   type MobileNativeChatPickerPresentation
 } from './MobileNativeChatSessionOptionPickers'
 import type { MobileNativeChatSessionOptionsController } from './use-mobile-native-chat-session-options'
+import { findAllByHostType, findByHostType } from '../test-support/react-test-renderer-host-nodes'
 
 vi.mock('react-native', () => ({
+  AccessibilityInfo: { announceForAccessibilityWithOptions: vi.fn() },
   ActivityIndicator: 'ActivityIndicator',
   Keyboard: { dismiss: vi.fn() },
+  Platform: { OS: 'ios' },
   Pressable: 'Pressable',
   StyleSheet: { create: (styles: unknown) => styles, hairlineWidth: 1 },
   Switch: 'Switch',
@@ -25,6 +34,7 @@ vi.mock('lucide-react-native', () => ({
   ChevronRight: 'ChevronRight',
   FilePenLine: 'FilePenLine',
   Hand: 'Hand',
+  LockKeyhole: 'LockKeyhole',
   ShieldAlert: 'ShieldAlert',
   ShieldCheck: 'ShieldCheck',
   X: 'X'
@@ -32,7 +42,7 @@ vi.mock('lucide-react-native', () => ({
 vi.mock('../components/BottomDrawer', async () => {
   const React = await import('react')
   return {
-    BottomDrawer: ({ visible, children }: { visible: boolean; children?: unknown }) =>
+    BottomDrawer: ({ visible, children }: { visible: boolean; children?: ReactNode }) =>
       visible ? React.createElement('BottomDrawer', { visible }, children) : null
   }
 })
@@ -86,7 +96,7 @@ describe('MobileNativeChatSessionOptionPickers', () => {
   const setOption = vi.fn<MobileNativeChatSessionOptionsController['setOption']>()
   const invokeAction = vi.fn<MobileNativeChatSessionOptionsController['invokeAction']>()
 
-  const mount = (snapshot: SessionOptionDescriptor[], isWorking = false): void => {
+  const mount = (snapshot: SessionOptionDescriptor[], isWorking = false) => {
     const controller: MobileNativeChatSessionOptionsController = {
       snapshot,
       pendingId: null,
@@ -94,85 +104,55 @@ describe('MobileNativeChatSessionOptionPickers', () => {
       invokeAction,
       recordCommand: vi.fn()
     }
-    function Pickers() {
+    function Pickers({ working }: { working: boolean }) {
       const [presentation, setPresentation] = useState<MobileNativeChatPickerPresentation | null>(
         null
       )
       return createElement(MobileNativeChatSessionOptionPickers, {
         controller,
-        isWorking,
+        isWorking: working,
         presentation,
         onDrawerOpen: (page) => setPresentation({ page, refocus: false }),
         onNavigate: (page) => setPresentation((current) => current && { ...current, page })
       })
     }
     act(() => {
-      renderer = create(createElement(Pickers))
+      renderer = create(createElement(Pickers, { working: isWorking }))
     })
+    return (working: boolean, nextSnapshot = snapshot): void => {
+      controller.snapshot = nextSnapshot
+      act(() => renderer!.update(createElement(Pickers, { working })))
+    }
   }
 
-  const pill = (
-    name: string
-  ): {
-    props: {
-      onPress: () => void
-      accessibilityLabel?: string
-      disabled?: boolean
-      accessibilityRole?: string
-      accessibilityState?: { disabled?: boolean }
-    }
-  } =>
+  const pill = (name: string) =>
     renderer!.root.find(
       (node) =>
-        node.type === 'Pressable' &&
+        String(node.type) === 'Pressable' &&
         typeof node.props.accessibilityLabel === 'string' &&
         node.props.accessibilityLabel.startsWith(name)
-    ) as {
-      props: {
-        onPress: () => void
-        accessibilityLabel?: string
-        disabled?: boolean
-        accessibilityRole?: string
-        accessibilityState?: { disabled?: boolean }
-      }
-    }
+    )
 
-  const rowByText = (
-    text: string
-  ): {
-    props: {
-      onPress: () => void
-      accessibilityRole?: string
-      accessibilityLabel?: string
-      accessibilityState?: { checked?: boolean; disabled?: boolean }
-    }
-  } => {
-    // The sheet's rows only: the pill names the model too.
-    const label = renderer!.root
-      .findByType('BottomDrawer')
-      .findAll((node) => node.type === 'Text')
-      .find((node) => (node.props as { children?: unknown }).children === text)
+  const rowByText = (text: string) => {
+    const label = findAllByHostType(findByHostType(renderer!.root, 'BottomDrawer'), 'Text').find(
+      (node) => node.props.children === text
+    )
     if (!label) {
       throw new Error(`No row labeled ${text}`)
     }
     let parent = label.parent
-    while (parent && parent.type !== 'Pressable') {
+    while (parent && String(parent.type) !== 'Pressable') {
       parent = parent.parent
     }
     if (!parent) {
       throw new Error(`No pressable row for ${text}`)
     }
-    return parent as unknown as {
-      props: {
-        onPress: () => void
-        accessibilityRole?: string
-        accessibilityLabel?: string
-        accessibilityState?: { checked?: boolean; disabled?: boolean }
-      }
-    }
+    return parent
   }
 
   beforeEach(() => {
+    Platform.OS = 'ios'
+    vi.mocked(AccessibilityInfo.announceForAccessibilityWithOptions).mockClear()
     setOption.mockReset()
     setOption.mockResolvedValue(true)
     invokeAction.mockReset()
@@ -200,14 +180,15 @@ describe('MobileNativeChatSessionOptionPickers', () => {
 
   it('lets the pill shrink so a long label never pushes the composer buttons off the row', () => {
     mount([MODEL_DESCRIPTOR, EFFORT_DESCRIPTOR])
-    // Style-level only: the test renderer runs no layout.
-    expect(renderer!.root.findAllByType('View')[0]!.props.style).toMatchObject({ flexShrink: 1 })
+    expect(findAllByHostType(renderer!.root, 'View')[0]!.props.style).toMatchObject({
+      flexShrink: 1
+    })
   })
 
   it('opens the model sheet and applies a picked model', async () => {
     mount([MODEL_DESCRIPTOR, EFFORT_DESCRIPTOR])
     await act(async () => pill('Model').props.onPress())
-    expect(renderer!.root.findByType('BottomDrawer').props.visible).toBe(true)
+    expect(findByHostType(renderer!.root, 'BottomDrawer').props.visible).toBe(true)
     await act(async () => rowByText('Opus 4.8').props.onPress())
     expect(setOption).toHaveBeenCalledWith('model', 'opus')
   })
@@ -249,7 +230,7 @@ describe('MobileNativeChatSessionOptionPickers', () => {
     expect(rowByText('Opus 4.8').props.accessibilityState?.checked).toBe(false)
   })
 
-  it('closes without dispatch when re-picking the tracked value', async () => {
+  it('does not dispatch when re-picking the tracked value', async () => {
     mount([MODEL_DESCRIPTOR, EFFORT_DESCRIPTOR])
     await act(async () => pill('Model').props.onPress())
     await act(async () => rowByText('Sonnet 5').props.onPress())
@@ -272,9 +253,7 @@ describe('MobileNativeChatSessionOptionPickers', () => {
     expect(invokeAction).toHaveBeenCalledWith('model')
   })
 
-  // The terminal transport can only learn the outcome by parsing the screen back,
-  // so the sheet admits the value is unconfirmed; the structured transport reports
-  // it every turn, which makes the same caption noise there.
+  // Terminal settings are inferred from screen parsing; structured settings are confirmed each turn and need no uncertainty caption.
   it.each([
     { transport: 'catalog' as const, caption: true },
     { transport: 'agent-session' as const, caption: false }
@@ -284,12 +263,9 @@ describe('MobileNativeChatSessionOptionPickers', () => {
       { ...EFFORT_DESCRIPTOR, valueSource: 'dispatched', transport: scenario.transport }
     ])
     await act(async () => pill('Model').props.onPress())
-    const captions = renderer!.root
-      .findAll((node) => node.type === 'Text')
-      .filter(
-        (node) =>
-          (node.props as { children?: unknown }).children === 'Sent to the agent — not confirmed'
-      )
+    const captions = findAllByHostType(renderer!.root, 'Text').filter(
+      (node) => node.props.children === 'Sent to the agent — not confirmed'
+    )
     expect(captions.length > 0).toBe(scenario.caption)
   })
 
@@ -299,13 +275,9 @@ describe('MobileNativeChatSessionOptionPickers', () => {
       mount([MODEL_DESCRIPTOR, { ...EFFORT_DESCRIPTOR, valueSource: 'reported', transport }])
       await act(async () => pill('Model').props.onPress())
       expect(
-        renderer!.root
-          .findAll((node) => node.type === 'Text')
-          .some(
-            (node) =>
-              (node.props as { children?: unknown }).children ===
-              'Sent to the agent — not confirmed'
-          )
+        findAllByHostType(renderer!.root, 'Text').some(
+          (node) => node.props.children === 'Sent to the agent — not confirmed'
+        )
       ).toBe(false)
     }
   )
@@ -317,24 +289,112 @@ describe('MobileNativeChatSessionOptionPickers', () => {
     expect(rowByText('Opus 4.8').props.accessibilityState?.disabled).toBe(true)
     expect(pill('Low').props.accessibilityState?.disabled).toBe(true)
     expect(rowByText('Permissions').props.accessibilityState?.disabled).toBe(false)
+    expect(renderer!.root.findByProps({ children: 'Agent is working' })).toBeDefined()
+    await act(async () => rowByText('Permissions').props.onPress())
+    expect(renderer!.root.findAllByProps({ children: 'Agent is working' })).toHaveLength(0)
   })
+
+  it.each(['ios', 'android'] as const)(
+    'announces the working notice without queuing only when it appears on %s',
+    async (platform) => {
+      Platform.OS = platform
+      const updateWorking = mount([MODEL_DESCRIPTOR, PERMISSION_DESCRIPTOR])
+      const announce = vi.mocked(AccessibilityInfo.announceForAccessibilityWithOptions)
+      await act(async () => pill('Model').props.onPress())
+      expect(announce).not.toHaveBeenCalled()
+
+      updateWorking(true)
+      const notice = renderer!.root.findByProps({ accessibilityLiveRegion: 'polite' })
+      expect(notice.findByProps({ children: 'Agent is working' })).toBeDefined()
+      if (platform === 'ios') {
+        expect(announce).toHaveBeenCalledExactlyOnceWith(
+          'Agent is working. Model settings unlock when this turn finishes.',
+          { queue: false }
+        )
+      } else {
+        expect(announce).not.toHaveBeenCalled()
+      }
+
+      updateWorking(true)
+      updateWorking(false)
+      await act(async () => rowByText('Permissions').props.onPress())
+      updateWorking(true)
+      expect(renderer!.root.findAllByProps({ children: 'Agent is working' })).toHaveLength(0)
+      expect(announce).toHaveBeenCalledTimes(platform === 'ios' ? 1 : 0)
+
+      await act(async () => pill('Back to models').props.onPress())
+      expect(announce).toHaveBeenCalledTimes(platform === 'ios' ? 2 : 0)
+      await act(async () => pill('Close picker').props.onPress())
+      updateWorking(false)
+      updateWorking(true)
+      expect(announce).toHaveBeenCalledTimes(platform === 'ios' ? 2 : 0)
+      await act(async () => pill('Model').props.onPress())
+      expect(announce).toHaveBeenCalledTimes(platform === 'ios' ? 3 : 0)
+    }
+  )
 
   it('keeps the permission mode in the model sheet and warns on the pill at full access', async () => {
     mount([
       MODEL_DESCRIPTOR,
       {
         ...PERMISSION_DESCRIPTOR,
-        kind: { ...PERMISSION_DESCRIPTOR.kind, currentValue: 'full-access' }
+        kind: { type: 'select', currentValue: 'full-access', choices: PERMISSION_CHOICES }
       }
     ])
     expect(pill('Model').props.accessibilityLabel).toBe('Model, Sonnet 5, full access')
-    // A write that waits behind a starting agent never holds the page open.
     setOption.mockImplementation(() => new Promise(() => {}))
     await act(async () => pill('Model').props.onPress())
     await act(async () => rowByText('Permissions').props.onPress())
     await act(async () => rowByText('Ask for approval').props.onPress())
     expect(setOption).toHaveBeenCalledWith('permissionMode', 'ask')
     expect(rowByText('Sonnet 5').props.accessibilityRole).toBe('radio')
+  })
+
+  it.each([
+    ['claude', 'accept-edits', 'Accept edits'],
+    ['codex', 'full-access', 'Full access'],
+    ['claude', 'plan', 'Plan mode'],
+    ['codex', 'read-only', 'Read only']
+  ])('uses the nullable %s/%s report without an Own row', async (agent, mode, label) => {
+    const state = createStructuredAgentSessionOptionState(agent, null)
+    const snapshot = (reportedPermissionMode?: string | null) => {
+      const row = structuredAgentSessionPermissionDescriptor({
+        ...state,
+        permissionMode: 'own',
+        permissionOwnSupported: true,
+        reportedPermissionMode
+      })
+      return row ? [row] : []
+    }
+    const update = mount(snapshot())
+    expect(pill('Permissions').props).toMatchObject({
+      disabled: true,
+      accessibilityLabel: 'Permissions, Permissions'
+    })
+    for (const report of [mode, null, mode, undefined]) {
+      update(false, snapshot(report))
+      expect(pill('Permissions').props).toMatchObject({
+        disabled: !report,
+        accessibilityLabel: `Permissions, ${report ? label : 'Permissions'}`
+      })
+    }
+    update(false, snapshot(mode))
+    await act(async () => pill('Permissions').props.onPress())
+    const rows = findByHostType(renderer!.root, 'BottomDrawer').findAll(
+      (node) => node.props.accessibilityRole === 'radio'
+    )
+    expect(
+      rows
+        .filter((row) => row.props.accessibilityState.checked)
+        .map((row) => findAllByHostType(row, 'Text')[0]?.props.children)
+    ).toEqual(['accept-edits', 'full-access'].includes(mode) ? [label] : [])
+    expect(
+      findAllByHostType(renderer!.root, 'Text').some((node) =>
+        String(node.props.children).includes('own settings')
+      )
+    ).toBe(false)
+    await act(async () => rowByText('Full access').props.onPress())
+    expect(setOption).toHaveBeenCalledExactlyOnceWith('permissionMode', 'full-access')
   })
 
   it.each([
@@ -354,13 +414,13 @@ describe('MobileNativeChatSessionOptionPickers', () => {
         accessibilityLabel: `Permissions, ${label}`,
         disabled: false
       })
-      expect(renderer!.root.findAllByType('Text')).toHaveLength(icon ? 0 : 2)
-      expect(renderer!.root.findAllByType('ShieldAlert')).toHaveLength(
+      expect(findAllByHostType(renderer!.root, 'Text')).toHaveLength(icon ? 0 : 2)
+      expect(findAllByHostType(renderer!.root, 'ShieldAlert')).toHaveLength(
         value === 'full-access' ? 1 : 0
       )
       if (icon) {
-        expect(renderer!.root.findAllByType(icon)).toHaveLength(1)
-        expect(renderer!.root.findByType(icon).props.color).toBe(
+        expect(findAllByHostType(renderer!.root, icon)).toHaveLength(1)
+        expect(findByHostType(renderer!.root, icon).props.color).toBe(
           value === 'full-access' ? colors.statusAmber : colors.textSecondary
         )
       }
@@ -369,23 +429,21 @@ describe('MobileNativeChatSessionOptionPickers', () => {
       expect(rowByText(nextLabel).props.accessibilityRole).toBe('radio')
       await act(async () => rowByText(nextLabel).props.onPress())
       expect(setOption).toHaveBeenCalledWith('permissionMode', nextValue)
-      expect(renderer!.root.findAllByType('BottomDrawer')).toEqual([])
+      expect(findAllByHostType(renderer!.root, 'BottomDrawer')).toEqual([])
     }
   )
 })
+
+const PERMISSION_CHOICES: SessionOptionSelectChoice[] = [
+  { value: 'ask', label: 'Ask for approval' },
+  { value: 'full-access', label: 'Full access' }
+]
 
 const PERMISSION_DESCRIPTOR: SessionOptionDescriptor = {
   id: 'permissionMode',
   label: 'Permissions',
   category: 'mode',
-  kind: {
-    type: 'select',
-    currentValue: 'ask',
-    choices: [
-      { value: 'ask', label: 'Ask for approval' },
-      { value: 'full-access', label: 'Full access' }
-    ]
-  },
+  kind: { type: 'select', currentValue: 'ask', choices: PERMISSION_CHOICES },
   valueSource: 'applied',
   transport: 'agent-session',
   settable: true

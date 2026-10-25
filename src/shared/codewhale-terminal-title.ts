@@ -1,4 +1,3 @@
-import { titleHasAgentName } from './agent-name-token-match'
 import { getWrapperTitleSegments } from './terminal-title-wrapper-segments'
 
 /** Codewhale's static OSC-0 whale (focused, or motion disabled). */
@@ -33,6 +32,8 @@ const WHALE_ACTIVITY_TITLE_RE = new RegExp(
 /** Why segments: a multiplexer prefixes the pane's own title (`zsh | 🐳 working…`). */
 export function isCodewhaleTerminalTitle(title: string): boolean {
   return getWrapperTitleSegments(title.trim()).some(
-    (segment) => titleHasAgentName(segment, 'codewhale') || WHALE_ACTIVITY_TITLE_RE.test(segment)
+    (segment) =>
+      /^codewhale(?:\.(?:exe|cmd|bat|ps1))?$/i.test(segment.trim()) ||
+      WHALE_ACTIVITY_TITLE_RE.test(segment)
   )
 }

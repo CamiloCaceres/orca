@@ -1,12 +1,43 @@
-import { startupCwdFallbackOutcome } from '../spawn-startup-target'
+import type { StartupCwdFallback } from '../../../../shared/startup-cwd-fallback'
 import type { RuntimePtySpawnState } from './spawn-state'
-import { resolvePaneSpawnReservation } from '../pane/spawn-reservation'
+import { ORCA_LAYOUT_OWNER_IS_MAIN } from '../../../../shared/layout-owner-switch'
+import type { PaneResumeOutcome } from '../../../../shared/workspace-layout/workspace-layout-published'
 
-export function completeRuntimeSpawnResponse(ctx: RuntimePtySpawnState) {
+type RuntimeResumeOutcomeState = Pick<
+  RuntimePtySpawnState,
+  'args' | 'result' | 'codexResumeArgvDropped'
+> & { codexResumeUnavailable?: boolean }
+
+/** Whether a fresh start resumed the agent it was asked to; a reattach ran no launch command. */
+export function resumeOutcomeOf(ctx: RuntimeResumeOutcomeState): PaneResumeOutcome | null {
+  if (ctx.result.isReattach) {
+    return null
+  }
+  // Refused saved admission removes the request; the spawned shell still carries its outcome.
+  if (ctx.result.agentResumeUnavailable || ctx.codexResumeUnavailable) {
+    return 'resume-unavailable'
+  }
+  // A resume dropped silently named another agent's session: nothing came back, and nothing is owed.
+  return ctx.args.resumeProviderSession && !ctx.codexResumeArgvDropped ? 'restored' : null
+}
+
+/** Publish resume outcome before binding so the first frame with the new terminal includes it. */
+export function reportRuntimeResumeOutcome(ctx: RuntimeResumeOutcomeState): void {
+  const outcome =
+    ORCA_LAYOUT_OWNER_IS_MAIN && ctx.args.onResumeOutcome ? resumeOutcomeOf(ctx) : null
+  if (outcome) {
+    ctx.args.onResumeOutcome?.(ctx.result.id, outcome)
+  }
+}
+
+/** Joiners receive attach payload at its proven kitty boundary; the caller also receives saved folder/host fields. */
+export function runtimeSpawnJoinPayload(
+  ctx: RuntimePtySpawnState,
+  startupCwdFallback: StartupCwdFallback | undefined,
+  correctStartupCwd: string | undefined
+) {
   const args = ctx.args
-  const startupCwdFallback = startupCwdFallbackOutcome(ctx.startupCwdFallback, ctx.result)
-  const savedStartupCwd =
-    (startupCwdFallback ? ctx.correctStartupCwd : undefined) ?? ctx.requestedCwd
+  const savedStartupCwd = correctStartupCwd ?? ctx.requestedCwd
   const response = {
     savedStartupCwd,
     id: ctx.result.id,
@@ -23,14 +54,16 @@ export function completeRuntimeSpawnResponse(ctx: RuntimePtySpawnState) {
     ...(ctx.result.agentSessionEnsure ? { agentSessionEnsure: ctx.result.agentSessionEnsure } : {}),
     ...(startupCwdFallback ? { startupCwdFallback } : {})
   }
-  resolvePaneSpawnReservation(ctx.paneSpawnReservationKey, ctx.paneSpawnReservation, {
-    ...ctx.result,
-    ...(typeof ctx.result.snapshotKittyKeyboardFlags === 'number' &&
-    ctx.reconciledSnapshotSeq !== null &&
-    ctx.snapshotKittyFlagsCoverReconciledSeq
-      ? { snapshotSeq: ctx.reconciledSnapshotSeq }
-      : { snapshotKittyKeyboardFlags: undefined }),
-    isReattach: true
-  })
-  return { ...ctx.result, ...response, wslDistro: ctx.result.wslDistro ?? undefined }
+  return {
+    reservation: {
+      ...ctx.result,
+      ...(typeof ctx.result.snapshotKittyKeyboardFlags === 'number' &&
+      ctx.reconciledSnapshotSeq !== null &&
+      ctx.snapshotKittyFlagsCoverReconciledSeq
+        ? { snapshotSeq: ctx.reconciledSnapshotSeq }
+        : { snapshotKittyKeyboardFlags: undefined }),
+      isReattach: true
+    },
+    reply: { ...ctx.result, ...response, wslDistro: ctx.result.wslDistro ?? undefined }
+  }
 }
