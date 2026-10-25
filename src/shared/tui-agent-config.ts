@@ -332,7 +332,7 @@ const TUI_AGENT_CONFIG_SOURCE: Record<TuiAgent, TuiAgentConfigSource> = {
   // prettier-ignore
   jcode: { detectCmd: 'jcode', launchCmd: 'jcode', expectedProcess: 'jcode', promptInjectionMode: 'stdin-after-start' },
   // prettier-ignore
-  codewhale: { detectCmd: 'codewhale', detectCmdAliases: ['codew'], promptInjectionMode: 'argv', preflightTrust: 'codewhale' }
+  codewhale: { detectCmd: 'codewhale', detectCmdAliases: ['codew'], promptInjectionMode: 'argv', argvPromptSeparator: '--', preflightTrust: 'codewhale' }
 }
 
 export const TUI_AGENT_CONFIG: Record<TuiAgent, TuiAgentConfig> = Object.fromEntries(
