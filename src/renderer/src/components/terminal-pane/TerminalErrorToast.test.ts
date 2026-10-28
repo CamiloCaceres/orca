@@ -123,7 +123,8 @@ describe('humanizeTerminalError', () => {
           if (kind === 'startup') {
             expect(tokenChecks).toBe(2 * rowCount)
           }
-          expect(startupTranslations).toBe(2 * matchingRows)
+          // Upper bound only: option-free translations are cached after their first lookup.
+          expect(startupTranslations).toBeLessThanOrEqual(2 * matchingRows)
           expect(
             view.container.textContent?.match(/Codex exited while starting\./g) ?? []
           ).toHaveLength(matchingRows)
@@ -659,4 +660,29 @@ it('uses existing Korean recovery copy and preserves the path', async () => {
   } finally {
     await i18n.changeLanguage('en')
   }
+})
+
+// #21342: dismissing hid the toast but left the dead pane with no way out.
+it('offers Close Pane only for a pane whose remote terminal was closed', () => {
+  const onClosePane = vi.fn()
+  const view = render(
+    React.createElement(TerminalErrorToast, {
+      error: 'Remote terminal was closed.',
+      paneOnClient: false,
+      onDismiss: vi.fn(),
+      onClosePane
+    })
+  )
+  fireEvent.click(view.getByText('Close Pane'))
+  expect(onClosePane).toHaveBeenCalledTimes(1)
+
+  view.rerender(
+    React.createElement(TerminalErrorToast, {
+      error: 'Paste failed.',
+      paneOnClient: false,
+      onDismiss: vi.fn(),
+      onClosePane
+    })
+  )
+  expect(view.queryByText('Close Pane')).toBeNull()
 })

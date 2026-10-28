@@ -15,6 +15,7 @@ import {
 } from '../../../daemon/pty-session-id'
 import { resolvePathEnvKey } from '../../../pty/windows-environment-path'
 import type { RuntimePtySpawnState } from './spawn-state'
+import { localPtySpawnCwd } from '../host-env/spawn-cwd'
 import { resolvePtySpawnStartupTarget } from '../spawn-startup-target'
 import { resolvePtySpawnHostEnv } from '../spawn-host-env'
 import { ptySpawnPaneFromIds, stampPtySpawnPaneEnv } from '../spawn-pane-env'
@@ -29,7 +30,11 @@ export async function prepareRuntimePtySpawn(
 ): Promise<PtySpawnResult | null> {
   const args = ctx.args
   if (!ctx.preAdoptedStablePane) {
-    const admission = ctx.deps.assertWorkspaceAcceptsNewPty(args.worktreeId, args.sessionId)
+    const admission = ctx.deps.assertWorkspaceAcceptsNewPty(
+      args.worktreeId,
+      args.sessionId,
+      localPtySpawnCwd(args)
+    )
     if (admission) {
       await admission
     }
@@ -45,7 +50,7 @@ export async function prepareRuntimePtySpawn(
   ctx.isClaudeLaunch = !ctx.preAdoptedStablePane && isClaudeLaunchCommand(args.command)
   ctx.isDaemonHostSpawn =
     !(ctx.provider instanceof LocalPtyProvider) && !routesFreshSpawnsToLocalProvider(ctx.provider)
-  ctx.callerRequestedSessionId = args.sessionId?.trim()
+  ctx.callerRequestedSessionId = args.sessionId
   ctx.requestedSessionId =
     ctx.callerRequestedSessionId ??
     (ctx.isDaemonHostSpawn && args.agentSessionCreateOperationId
@@ -55,7 +60,7 @@ export async function prepareRuntimePtySpawn(
     ctx.requestedSessionId ??
     (ctx.isDaemonHostSpawn ? mintPtySessionId(args.worktreeId) : undefined)
   ctx.effectiveSessionAppId = ctx.sessionId
-  ctx.isNewDaemonSession =
+  ctx.ownsNewIncarnation =
     !ctx.preAdoptedStablePane &&
     ctx.isDaemonHostSpawn &&
     (ctx.callerRequestedSessionId === undefined || args.isNewSession === true)

@@ -6,8 +6,8 @@ const { spawnMock } = vi.hoisted(() => ({
   spawnMock: vi.fn()
 }))
 
-vi.mock('child_process', () => ({
-  spawn: spawnMock
+vi.mock('@orca/process-host', () => ({
+  spawnProcess: spawnMock
 }))
 
 import { createWslWatcher } from './filesystem-watcher-wsl'
@@ -90,16 +90,13 @@ describe('createWslWatcher', () => {
 
     await promise
 
-    expect(spawnMock).toHaveBeenCalledWith(
-      'wsl.exe',
-      ['-d', 'Ubuntu', '--exec', 'sh', '-s', '--', '/home/me/repo'],
-      expect.objectContaining({
-        stdio: ['pipe', 'pipe', 'pipe'],
-        windowsHide: true,
-        // Explicit cwd survives deletion of Orca's inherited worktree (#16463).
-        cwd: expect.any(String)
-      })
-    )
+    expect(spawnMock).toHaveBeenCalledWith({
+      program: 'wsl.exe',
+      args: ['-d', 'Ubuntu', '--exec', 'sh', '-s', '--', '/home/me/repo'],
+      stdio: 'pipe',
+      // Explicit cwd survives deletion of Orca's inherited worktree (#16463).
+      cwd: expect.any(String)
+    })
   })
 
   it('counts WSL watcher processes against the global physical child cap', async () => {
@@ -189,6 +186,22 @@ describe('createWslWatcher', () => {
     expect(root.batch.events).toEqual([])
     expect(root.batch.overflowed).toBe(true)
     expect(deps.watchedRoots.has(ROOT_KEY)).toBe(false)
+  })
+
+  it('reports an exit with its distro before scheduling the overflow refresh that reads the root', async () => {
+    const onUnexpectedStop = vi.fn()
+    const deps = { ...makeDeps(), onUnexpectedStop }
+    deps.scheduleBatchFlush.mockImplementation(() => {
+      // The refresh must follow the stop signal, or its read could boot the stopped distro.
+      expect(onUnexpectedStop).toHaveBeenCalled()
+    })
+    const { child, promise } = startWatcher(deps)
+    const root = await resolveInitialSnapshot(child, promise)
+
+    child.emit('close', null, 'SIGTERM')
+
+    expect(deps.scheduleBatchFlush).toHaveBeenCalledOnce()
+    expect(onUnexpectedStop).toHaveBeenCalledExactlyOnceWith(root, 'Ubuntu')
   })
 
   it('kills the WSL child on unsubscribe without emitting a shutdown refresh', async () => {

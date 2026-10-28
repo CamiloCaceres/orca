@@ -6,14 +6,17 @@ import {
   type AgentSessionRefusalError
 } from '../../../shared/agent-session-wire-refusals'
 import type { RpcEnvelopeMeta, RpcFailure, RpcSuccess } from './core'
+import { CONNECTOR_REPLY_ERROR_CODES } from '../../../shared/rpc-contract/connector-params'
 import { ORCHESTRATION_SESSION_CALLER_ERROR_CODES } from '../../../shared/orchestration-session-caller-codes'
 import { computerUseErrorRecoveryData } from '../../../shared/computer-use-error-recovery'
 import { COMPUTER_ERROR_CODES } from '../../../shared/runtime-types'
 import { TerminalSplitOutcomeError } from '../../../shared/terminal-split-outcome'
+import { WslHostWindowsDriveRefusalError } from '../../../shared/wsl-host-windows-drive-refusal'
 import { LINEAR_ERROR_CODES } from '../../../shared/linear/agent-access'
 import { AGENT_SESSION_RPC_ERROR_CODES } from '../../../shared/agent-session-host-authority'
 import { ARTIFACT_SHARING_DISABLED_CODE } from '../../../shared/artifact-sharing-gate'
 import { AGENT_SKILL_SHARING_DISABLED_CODE } from '../../../shared/agent-skill-sharing-gate'
+import { SHARING_UNAVAILABLE_ON_HOST_CODE } from '../../../shared/sharing-unavailable-on-host'
 import {
   AGENT_SKILL_NOT_SHAREABLE_CODE,
   AGENT_SKILL_SELECTOR_AMBIGUOUS_CODE,
@@ -98,6 +101,7 @@ const RUNTIME_PASSTHROUGH_CODES: ReadonlySet<string> = new Set([
   'remote_update_not_downloaded',
   'connectors_disabled',
   'external_conversation_not_found',
+  ...CONNECTOR_REPLY_ERROR_CODES,
   ...AGENT_SESSION_RPC_ERROR_CODES
 ])
 
@@ -143,6 +147,8 @@ const STRUCTURED_RUNTIME_PASSTHROUGH_CODES: ReadonlySet<string> = new Set([
   'worker_prompt_too_large',
   'terminal_worktree_mismatch',
   'terminal_is_coordinator',
+  'worker_cannot_coordinate_own_run',
+  'worker_cannot_take_over_run',
   'request_mismatch',
   'mutation_ledger_full',
   'legacy_read_only',
@@ -162,6 +168,7 @@ const STRUCTURED_RUNTIME_PASSTHROUGH_CODES: ReadonlySet<string> = new Set([
   GIT_DIFF_TOO_LARGE_CODE,
   ARTIFACT_SHARING_DISABLED_CODE,
   AGENT_SKILL_SHARING_DISABLED_CODE,
+  SHARING_UNAVAILABLE_ON_HOST_CODE,
   AGENT_SKILL_NOT_SHAREABLE_CODE,
   AGENT_SKILL_SELECTOR_AMBIGUOUS_CODE,
   AGENT_SKILL_SELECTOR_NOT_FOUND_CODE,
@@ -179,8 +186,11 @@ export function mapRuntimeError(id: string, meta: RpcEnvelopeMeta, error: unknow
   if (isAgentSessionRefusalError(error)) {
     return agentSessionRefusalErrorResponse(id, meta, error)
   }
-  if (error instanceof TerminalSplitOutcomeError) {
-    // Keeps the code callers already match; the split's id rides in `data` for scripts.
+  if (
+    error instanceof TerminalSplitOutcomeError ||
+    error instanceof WslHostWindowsDriveRefusalError
+  ) {
+    // Keeps the code callers already match; the split's id or the refusal kind rides in `data`.
     return errorResponse(id, meta, 'runtime_error', message, error.data)
   }
   if (

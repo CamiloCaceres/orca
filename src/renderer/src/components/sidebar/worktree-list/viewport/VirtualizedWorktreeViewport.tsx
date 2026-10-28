@@ -1,11 +1,10 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react'
 import { useAppStore } from '@/store'
-import { getProjectHeaderHostContexts } from '../rows/project-header-host-context'
+import { useProjectHeaderHostContexts } from './use-project-header-host-contexts'
 import { translate } from '@/i18n/i18n'
 import { WorktreeListScrollToTopButton } from '../../WorktreeListScrollToTopButton'
 import { renderWorktreeSidebarDropIndicators } from './drop-indicators'
 import { useWorktreeListScrollToTop } from './use-scroll-to-top'
-import { useRepoSshGateResolver } from '@/hooks/use-repo-ssh-gate-resolver'
 import { getActiveDescendantOptionId } from '../navigation/active-descendant-option'
 import { buildRenderableRows } from '../listing/renderable-rows'
 import { useFolderWorkspacePathStatusRows } from '../listing/use-folder-path-statuses'
@@ -29,7 +28,11 @@ import { useWorktreeSidebarScrollSuppression } from './use-scroll-suppression'
 import { EMPTY_PROJECT_GROUPS, type VirtualizedWorktreeViewportProps } from './viewport-props'
 import { useWorktreeDropCommitContext } from '../drag/use-drop-commit-context'
 import { buildWorktreeVirtualRowContext } from './virtual-row-context'
+import type { RepoHeaderProjectActions } from '../rows/repo-header-project-actions'
+import { getRepoOwnerWorktreeVisibilityDefaults } from '../../../../store/worktree-visibility-defaults-by-host'
 import { renderWorktreeVirtualRow } from '../rows/virtual-row-dispatch'
+
+const EMPTY_HOST_OPTIONS: NonNullable<VirtualizedWorktreeViewportProps['hostOptions']> = []
 
 const WORKTREE_SIDEBAR_SCROLL_STYLE: React.CSSProperties = {
   // Why: TanStack Virtual owns scroll correction; native overflow anchoring fights it and causes jumps.
@@ -59,31 +62,48 @@ export const VirtualizedWorktreeViewport = React.memo(function VirtualizedWorktr
   const [scrollElement, setScrollElement] = useState<HTMLDivElement | null>(null)
   const settings = useAppStore((s) => s.settings)
   const worktreeVisibilityDefaultsByHost = useAppStore((s) => s.worktreeVisibilityDefaultsByHost)
-  const sshConnectionStates = useAppStore((s) => s.sshConnectionStates)
-  const getRepoSshGate = useRepoSshGateResolver()
-  const runtimeEnvironments = useAppStore((s) => s.runtimeEnvironments)
-  const projectHeaderHostContexts = useMemo(
-    () =>
-      getProjectHeaderHostContexts({
-        rows,
-        visibleProjectRepoIdsBySection: props.visibleProjectRepoIdsBySection,
-        hosts: props.hostOptions ?? [],
-        runtimeEnvironments,
-        sshConnectionStates,
-        repoMap,
-        projectGrouping: props.projectGrouping
-      }),
+  const projectHeaderHostContexts = useProjectHeaderHostContexts({
+    rows,
+    visibleProjectRepoIdsBySection: props.visibleProjectRepoIdsBySection,
+    hosts: props.hostOptions ?? EMPTY_HOST_OPTIONS,
+    repoMap,
+    projectGrouping: props.projectGrouping
+  })
+  const newCardStyle = settings?.experimentalNewWorktreeCardStyle === true
+  const {
+    handleOpenRepoSettings,
+    handleOpenWorktreeVisibility,
+    handleCreateGroupFromRepo,
+    handleMoveProjectToGroup,
+    handleRemoveProjectFromGroup,
+    handleRemoveProject,
+    handleCreateForRepo
+  } = props
+  // Why stable: a new object re-renders every project header's menu tree on each workspace switch.
+  const projectActions = useMemo<RepoHeaderProjectActions>(
+    () => ({
+      getWorktreeVisibilityDefaults: (repo) =>
+        getRepoOwnerWorktreeVisibilityDefaults(repo, settings, worktreeVisibilityDefaultsByHost),
+      onOpenRepoSettings: handleOpenRepoSettings,
+      onOpenWorktreeVisibility: handleOpenWorktreeVisibility,
+      onCreateGroupFromRepo: handleCreateGroupFromRepo,
+      onMoveProjectToGroup: handleMoveProjectToGroup,
+      onRemoveProjectFromGroup: handleRemoveProjectFromGroup,
+      onRemoveProject: handleRemoveProject,
+      onCreateForRepo: handleCreateForRepo
+    }),
     [
-      rows,
-      props.visibleProjectRepoIdsBySection,
-      props.hostOptions,
-      repoMap,
-      props.projectGrouping,
-      runtimeEnvironments,
-      sshConnectionStates
+      settings,
+      worktreeVisibilityDefaultsByHost,
+      handleOpenRepoSettings,
+      handleOpenWorktreeVisibility,
+      handleCreateGroupFromRepo,
+      handleMoveProjectToGroup,
+      handleRemoveProjectFromGroup,
+      handleRemoveProject,
+      handleCreateForRepo
     ]
   )
-  const newCardStyle = settings?.experimentalNewWorktreeCardStyle === true
 
   const reveal = useSidebarRevealHighlight()
   const scrollSuppression = useWorktreeSidebarScrollSuppression(scrollRef)
@@ -145,8 +165,7 @@ export const VirtualizedWorktreeViewport = React.memo(function VirtualizedWorktr
     allRepoIds: props.allRepoIds,
     repoMap,
     projectGroups,
-    folderWorkspaces: props.folderWorkspaces,
-    sshConnectionStates
+    folderWorkspaces: props.folderWorkspaces
   })
 
   const { showScrollToTop, scrollToTop } = useWorktreeListScrollToTop({
@@ -325,8 +344,7 @@ export const VirtualizedWorktreeViewport = React.memo(function VirtualizedWorktr
     virtualization,
     measureVirtualRowElement,
     settings,
-    worktreeVisibilityDefaultsByHost,
-    getRepoSshGate,
+    projectActions,
     newCardStyle,
     folderBackedProjectGroupIds,
     projectGroups,

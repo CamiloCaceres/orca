@@ -180,8 +180,9 @@ export function ShortcutsPane(): React.JSX.Element {
     }
     const defaults = getEffectiveKeybindingsForDefinition(definition, platform, {})
     const next =
-      sameBindings(normalizedResult, defaults) ||
-      (normalizedResult.length === 0 && defaults.length === 0)
+      (sameBindings(normalizedResult, defaults) ||
+        (normalizedResult.length === 0 && defaults.length === 0)) &&
+      !hasCommonBindingOverride(keybindingSnapshot, actionId)
         ? removeBindingOverride(keybindings, actionId)
         : { ...keybindings, [actionId]: normalizedResult }
     const blockingConflict = findKeybindingConflictsForDefinitions(definitions, platform, next, {
@@ -194,7 +195,11 @@ export function ShortcutsPane(): React.JSX.Element {
         .join(', ')
       setErrors((prev) => ({
         ...prev,
-        [actionId]: `${formatKeybindingList([blockingConflict.binding], platform)} conflicts with ${labels}.`
+        [actionId]: translate(
+          'auto.components.settings.shortcutDefinitionCatalog.bindingConflict',
+          '{{binding}} conflicts with {{actions}}.',
+          { binding: formatKeybindingList([blockingConflict.binding], platform), actions: labels }
+        )
       }))
       return false
     }

@@ -93,6 +93,8 @@ export abstract class OrcaRuntimeWithStateFields extends OrcaRuntimeWithLinearCo
   ): ProjectExecutionRuntimeResolution | undefined
   protected abstract ensureNativeWindowsConptyDa1Override(ptyId: string): void
 
+  readonly getSetupTerminalTitle: () => string
+
   protected readonly prepareClaudeAuth?: PrepareClaudeAuth
 
   readonly workspaceSleepPlatform: WorkspaceSleepPlatform | null
@@ -113,8 +115,11 @@ export abstract class OrcaRuntimeWithStateFields extends OrcaRuntimeWithLinearCo
     super()
     this.store = store
     this.machineName.start()
+    this.getSetupTerminalTitle = deps?.getSetupTerminalTitle ?? (() => 'Setup')
     this.prepareClaudeAuth = deps?.prepareClaudeAuth
     installRuntimeFileCommandSurface(this, this.fileCommands)
+    // Host start: drop what a crashed run's staged saves left in the staging folder.
+    this.fileCommands.stagedFileSaves.sweepOrphans()
     installRuntimeGitCommandSurface(this, this.gitCommands)
     installRuntimeRepositoryCommandSurface(this, {
       projectHostSetups: this.projectHostSetups,
@@ -181,8 +186,13 @@ export abstract class OrcaRuntimeWithStateFields extends OrcaRuntimeWithLinearCo
     })
     installRuntimeSkillCommandSurface(this, this.skillCommands)
     Object.assign(this, this.edgeCommands.surface)
-    this.clientSettings = new RuntimeClientSettingsController(store, () =>
-      this.notifyReposChanged()
+    this.clientSettings = new RuntimeClientSettingsController(
+      store,
+      () => this.notifyReposChanged(),
+      {
+        artifacts: () => this.artifacts.hasService(),
+        skills: () => this.skillCommands.hasSkillCloudService()
+      }
     )
     this.automation = new RuntimeAutomationController(store, {
       showRepo: (selector) => this.showRepo(selector),

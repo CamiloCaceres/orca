@@ -522,8 +522,8 @@ describe('LocalPtyProvider', () => {
     it('uses shell wrapper when MiMo home must survive shell startup', async () => {
       provider.configure({
         buildSpawnEnv: (_id, env) => {
-          env.MIMOCODE_HOME = '/tmp/orca-mimocode-overlay'
-          env.ORCA_MIMOCODE_HOME = '/tmp/orca-mimocode-overlay'
+          env.MIMOCODE_CONFIG_DIR = '/tmp/orca-mimocode-overlay'
+          env.ORCA_MIMOCODE_CONFIG_DIR = '/tmp/orca-mimocode-overlay'
           return env
         }
       })
@@ -566,9 +566,11 @@ describe('LocalPtyProvider', () => {
         ORCA_PANE_KEY: process.env.ORCA_PANE_KEY,
         ORCA_TAB_ID: process.env.ORCA_TAB_ID,
         ORCA_WORKTREE_ID: process.env.ORCA_WORKTREE_ID,
-        ORCA_ORCAD_MANAGED_ACTIVATION_ROOT: process.env.ORCA_ORCAD_MANAGED_ACTIVATION_ROOT
+        ORCA_ORCAD_MANAGED_ACTIVATION_ROOT: process.env.ORCA_ORCAD_MANAGED_ACTIVATION_ROOT,
+        ORCA_REMOTE_VIEWER_CLIPBOARD: process.env.ORCA_REMOTE_VIEWER_CLIPBOARD
       }
       process.env.ORCA_ORCAD_MANAGED_ACTIVATION_ROOT = '/home/u/.orca-remote/.activation'
+      process.env.ORCA_REMOTE_VIEWER_CLIPBOARD = '1'
       process.env.ORCA_PANE_KEY = 'parent-tab:parent-leaf'
       process.env.ORCA_TAB_ID = 'parent-tab'
       process.env.ORCA_WORKTREE_ID = 'parent-worktree'
@@ -590,6 +592,7 @@ describe('LocalPtyProvider', () => {
       expect(spawnCall[2].env.ORCA_TAB_ID).toBeUndefined()
       expect(spawnCall[2].env.ORCA_WORKTREE_ID).toBeUndefined()
       expect(spawnCall[2].env.ORCA_ORCAD_MANAGED_ACTIVATION_ROOT).toBeUndefined()
+      expect(spawnCall[2].env.ORCA_REMOTE_VIEWER_CLIPBOARD).toBeUndefined()
     })
 
     it('preserves explicit child Orca pane identity over parent env', async () => {

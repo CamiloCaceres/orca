@@ -24,6 +24,7 @@ import {
   previewableBinaryByteLimit
 } from './file-preview-budget'
 import { readLocalFileRange } from '../../ipc/filesystem/local-file-range-read'
+import { windowsFsPath } from '../../wsl/wsl-unc-drive-fs-path'
 import { resolveRuntimeAuthorizedPath } from './chat-scratch-file-root'
 import {
   NodeFileReadTooLargeError,
@@ -177,6 +178,10 @@ async function readLocalMobileFile(filePath: string, store: RuntimeStore): Promi
     store,
     MOBILE_FILE_READ_MAX_BYTES + 1
   )
+  // An extension the list does not know can still be binary; as text, a save would corrupt it.
+  if (isBinaryBuffer(bytes)) {
+    throw new Error('binary_file')
+  }
   return bytes.toString('utf8')
 }
 
@@ -185,7 +190,7 @@ export async function readLocalRuntimeFilePrefix(
   store: RuntimeStore,
   maxBytes: number
 ): Promise<{ bytes: Buffer; size: number }> {
-  const authorizedPath = await resolveRuntimeAuthorizedPath(filePath, store)
+  const authorizedPath = windowsFsPath(await resolveRuntimeAuthorizedPath(filePath, store))
   const fileStat = await stat(authorizedPath)
   const readLimit = Math.min(fileStat.size, maxBytes)
   const handle = await open(authorizedPath, 'r')

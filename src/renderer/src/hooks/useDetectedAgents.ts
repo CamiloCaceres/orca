@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef } from 'react'
 import { useAppStore } from '@/store'
+import { runtimeHostContactForEntry } from '../../../shared/runtime-host-contact'
 import type { TuiAgent } from '../../../shared/tui-agent'
 import { getRuntimeAgentInventoryKey } from '@/store/slices/runtime-agent-inventory-key'
 
@@ -73,6 +74,29 @@ export function useDetectedAgents(
     }
     const environment = s.runtimeEnvironments.find((entry) => entry.id === targetId)
     return environment ? (environment.pairingRevision ?? environment.createdAt) : undefined
+  })
+
+  // Why: a probe that failed while the host was down must re-run once contact returns, and only then.
+  // 'down' only when the host's status says so; a never-asked host is still probed as before.
+  const runtimeContactEpoch = useAppStore((s) => {
+    if (targetKind !== 'runtime' || !targetId) {
+      return null
+    }
+    const entry = s.runtimeStatusByEnvironmentId.get(targetId)
+    if (!entry) {
+      return null
+    }
+    return runtimeHostContactForEntry(entry).verdict === 'live'
+      ? `${entry.connectionGeneration ?? 0}:${entry.hostContactEpoch ?? 0}`
+      : 'down'
+  })
+
+  // The SSH counterpart: its disconnect clears the list, so only the return to connected re-lists it.
+  // Null when the connection has no state yet: probe as before.
+  const sshConnected = useAppStore((s) => {
+    const status =
+      targetKind === 'ssh' && targetId ? s.sshConnectionStates.get(targetId)?.status : undefined
+    return status === undefined ? null : status === 'connected'
   })
 
   const detectedIds = useAppStore((s) => {
@@ -157,8 +181,12 @@ export function useDetectedAgents(
     }
     const state = useAppStore.getState()
     if (targetKind === 'ssh' && targetId) {
+      const failedWhileOffline =
+        sshConnected === false && state.remoteAgentInventoryOutcome(targetId) === 'failed'
       if (detectedIds === null) {
-        void state.ensureRemoteDetectedAgents(targetId)
+        if (!failedWhileOffline) {
+          void state.ensureRemoteDetectedAgents(targetId)
+        }
       } else if (isNewRemoteTarget && detectedIds.length > 0) {
         // Refresh once when a new launch surface observes a host; cached inventory may predate installs.
         void state.refreshRemoteDetectedAgents(targetId)
@@ -167,8 +195,14 @@ export function useDetectedAgents(
         void state.ensureRemoteDetectedAgents(targetId)
       }
     } else if (targetKind === 'runtime' && targetId) {
+      const failedWhileOffline =
+        runtimeContactEpoch === 'down' &&
+        recordKey !== null &&
+        state.runtimeAgentInventoryOutcome(recordKey) === 'failed'
       if (detectedIds === null) {
-        void state.ensureRuntimeDetectedAgents(targetId, runtimeWorktreeId)
+        if (!failedWhileOffline) {
+          void state.ensureRuntimeDetectedAgents(targetId, runtimeWorktreeId)
+        }
       } else if (isNewRemoteTarget && detectedIds.length > 0) {
         // Refresh once when a new launch surface observes a host; cached inventory may predate installs.
         void state.refreshRuntimeDetectedAgents(targetId, runtimeWorktreeId)
@@ -186,7 +220,10 @@ export function useDetectedAgents(
     targetKind,
     targetId,
     remoteTargetKey,
+    recordKey,
     pairingRevision,
+    runtimeContactEpoch,
+    sshConnected,
     detectedIds,
     localProbePending,
     localWorktreeId,

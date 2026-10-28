@@ -17,7 +17,10 @@ import {
   type AgentSessionWireRefusal
 } from '../../../shared/agent-session-wire-refusals'
 import { AgentSessionAcquisitionRefusal } from './structured-agent-session-adapter'
-import { providerExecutableMissing } from '../../provider-process/provider-executable-missing'
+import {
+  providerExecutableMissing,
+  providerLaunchFolderMissing
+} from '../../provider-process/provider-executable-missing'
 import { providerRequestTimeoutOf } from '../../provider-process/provider-request-timeout'
 import { findInErrorChain } from '../../provider-process/provider-error-chain'
 import { argumentProblemOf } from '../structured-agent-arguments-error'
@@ -37,6 +40,7 @@ const TYPED_START_REFUSALS = [
   'claudeAccountSetupFailed',
   'agentCommandNotRunnable',
   'runtimeNotInstalled',
+  'fullAccessAsRoot',
   'conversationOpenInTerminal',
   'conversationOpenElsewhere'
 ] as const satisfies readonly (AgentSessionFailureKind &
@@ -80,7 +84,7 @@ export function startupAcquisitionRefusal(
   )
 }
 
-/** A failed start keeps its typed refusal or observed exit and private provider diagnostic. */
+/** A failed start keeps its typed refusal or observed exit, and the provider diagnostic its Details show. */
 export function providerStartupFailureFact(cause?: unknown): SubmissionRejectionFact {
   cause = startupAcquisitionRefusal(cause) ?? cause
   const installation = agentCliInstallationProblemOf(cause)
@@ -103,6 +107,9 @@ export function providerStartupFailureFact(cause?: unknown): SubmissionRejection
   }
   if (providerExecutableMissing(cause)) {
     return agentSessionFailureFact('cliMissing')
+  }
+  if (providerLaunchFolderMissing(cause)) {
+    return agentSessionFailureFact('launchFolderMissing')
   }
   const exited = providerExitObserved(cause)
   return agentSessionFailureFact(exited ? 'providerStartFailed' : 'startFailed', {
@@ -148,7 +155,7 @@ function refusedStartFailureFact(
 }
 
 export type StructuredAgentSessionStartFailureCause =
-  /** Provider words stay host-side; newSession distinguishes first launch from restart. */
+  /** Provider words reach Details, never the sentence; newSession distinguishes first launch from restart. */
   | {
       refusal: AgentSessionWireRefusal
       diagnostic?: ProviderDiagnostic

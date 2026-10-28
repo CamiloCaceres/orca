@@ -23,7 +23,10 @@ import { recordCrashBreadcrumb } from '../../crash-reporting/crash-breadcrumb-st
 import { buildReadDirErrorBreadcrumb, type ReadDirThrowSite } from '../readdir-error-diagnostics'
 import type { FilesystemHandlerContext } from './filesystem-handler-context'
 import { registerFilesystemChunkReadHandler } from './filesystem-chunk-read-handler'
-import { readMediaPreview } from '../../media/media-preview-protocol'
+import { grantRemoteFilePreview, readMediaPreview } from '../../media/media-preview-protocol'
+import { windowsFsPath } from '../../wsl/wsl-unc-drive-fs-path'
+import { assertWslUncPathRunning, guardWslUncPathAccess } from '../../wsl/wsl-unc-access-gate'
+import { parseRemoteFilePreviewAddress } from '../../../shared/remote-file-preview-address'
 import {
   readLocalFileContent,
   readLocalLogSnapshot,
@@ -38,7 +41,13 @@ export function registerFilesystemReadHandlers(context: FilesystemHandlerContext
     'fs:readDir',
     async (
       _event,
-      args: { dirPath: string; connectionId?: string; followSymlinks?: boolean }
+      args: {
+        dirPath: string
+        connectionId?: string
+        followSymlinks?: boolean
+        /** A user act (open or Retry); may start a stopped WSL distro. */
+        wakeWslDistro?: boolean
+      }
     ): Promise<DirEntry[]> => {
       // Record throw site and redacted path shape because fs:readDir IPC errors otherwise lack context.
       let throwSite: ReadDirThrowSite = 'authorize'
@@ -47,16 +56,22 @@ export function registerFilesystemReadHandlers(context: FilesystemHandlerContext
           throwSite = 'ssh-provider'
           throw new SshHostNotServedError(args.connectionId)
         }
-        const dirPath = await resolveDesktopAuthorizedPath(args.dirPath, store)
-        throwSite = 'readdir'
-        const entries = await readdir(dirPath, { withFileTypes: true })
-        const mapped = await classifyFilesystemDirectoryEntries(
+        return await guardWslUncPathAccess(
           args.dirPath,
-          entries,
-          args.followSymlinks ?? store.getSettings().followSymlinkedDirectories ?? false,
-          (path) => resolveDesktopAuthorizedPath(path, store)
+          async () => {
+            const dirPath = await resolveDesktopAuthorizedPath(args.dirPath, store)
+            throwSite = 'readdir'
+            const entries = await readdir(windowsFsPath(dirPath), { withFileTypes: true })
+            const mapped = await classifyFilesystemDirectoryEntries(
+              args.dirPath,
+              entries,
+              args.followSymlinks ?? store.getSettings().followSymlinkedDirectories ?? false,
+              (path) => resolveDesktopAuthorizedPath(path, store)
+            )
+            return sortDirEntries(mapped)
+          },
+          { wake: args.wakeWslDistro === true }
         )
-        return sortDirEntries(mapped)
       } catch (error: unknown) {
         recordCrashBreadcrumb(
           'fs_readdir_error',
@@ -81,21 +96,37 @@ export function registerFilesystemReadHandlers(context: FilesystemHandlerContext
         connectionId?: string
         includeLocalLogMetadata?: boolean
         access?: LocalFileAccess
+        /** A user act (open, expand, Retry); may start a stopped WSL distro. */
+        wakeWslDistro?: boolean
       }
     ): Promise<LocalFileContent> => {
       if (args.connectionId) {
         throw new SshHostNotServedError(args.connectionId)
       }
-      const filePath = await resolveLocalFileRequestPath(args.filePath, args.access, store)
-      const media = readMediaPreview(event, args, store)
-      if (media) {
-        return media
-      }
-      return args.includeLocalLogMetadata === true
-        ? readLocalLogSnapshot(filePath)
-        : readLocalFileContent(filePath)
+      return guardWslUncPathAccess(
+        args.filePath,
+        async () => {
+          const filePath = await resolveLocalFileRequestPath(args.filePath, args.access, store)
+          const media = readMediaPreview(event, args, store)
+          if (media) {
+            return media
+          }
+          return args.includeLocalLogMetadata === true
+            ? readLocalLogSnapshot(filePath)
+            : readLocalFileContent(filePath)
+        },
+        { wake: args.wakeWslDistro === true }
+      )
     }
   )
+
+  ipcMain.handle('fs:grantRuntimeFilePreview', (event, args: unknown) => {
+    const remote = parseRemoteFilePreviewAddress(args)
+    if (!remote) {
+      throw new Error('Invalid preview path')
+    }
+    return grantRemoteFilePreview(event, remote, store)
+  })
 
   ipcMain.handle(
     'fs:listMarkdownDocuments',
@@ -106,6 +137,7 @@ export function registerFilesystemReadHandlers(context: FilesystemHandlerContext
       if (args.connectionId) {
         throw new SshHostNotServedError(args.connectionId)
       }
+      await assertWslUncPathRunning(args.rootPath)
       const isFolderRoot = store
         .getFolderWorkspaces?.()
         .some((workspace) => workspace.folderPath === args.rootPath)
@@ -129,14 +161,25 @@ export function registerFilesystemReadHandlers(context: FilesystemHandlerContext
     'fs:stat',
     async (
       _event,
-      args: { filePath: string; connectionId?: string; access?: LocalFileAccess }
+      args: {
+        filePath: string
+        connectionId?: string
+        access?: LocalFileAccess
+        wakeWslDistro?: boolean
+      }
     ): Promise<{ size: number; isDirectory: boolean; mtime: number }> => {
       if (args.connectionId) {
         throw new SshHostNotServedError(args.connectionId)
       }
-      const filePath = await resolveLocalFileRequestPath(args.filePath, args.access, store)
-      const stats = await stat(filePath)
-      return { size: stats.size, isDirectory: stats.isDirectory(), mtime: stats.mtimeMs }
+      return guardWslUncPathAccess(
+        args.filePath,
+        async () => {
+          const filePath = await resolveLocalFileRequestPath(args.filePath, args.access, store)
+          const stats = await stat(windowsFsPath(filePath))
+          return { size: stats.size, isDirectory: stats.isDirectory(), mtime: stats.mtimeMs }
+        },
+        { wake: args.wakeWslDistro === true }
+      )
     }
   )
 
@@ -154,7 +197,9 @@ export function registerFilesystemReadHandlers(context: FilesystemHandlerContext
         args.filePaths.map((filePath) =>
           capturePathExistence(async () => {
             try {
-              await stat(await resolveDesktopAuthorizedPath(filePath, store))
+              await guardWslUncPathAccess(filePath, async () =>
+                stat(windowsFsPath(await resolveDesktopAuthorizedPath(filePath, store)))
+              )
               return true
             } catch (error) {
               if (isPathAbsentError(error)) {
@@ -178,8 +223,9 @@ export function registerFilesystemReadHandlers(context: FilesystemHandlerContext
         if (args.connectionId) {
           throw new SshHostNotServedError(args.connectionId)
         }
-        const filePath = await resolveLocalFileRequestPath(args.filePath, args.access, store)
-        await stat(filePath)
+        await guardWslUncPathAccess(args.filePath, async () =>
+          stat(windowsFsPath(await resolveLocalFileRequestPath(args.filePath, args.access, store)))
+        )
         return true
       } catch (error) {
         if (isPathAbsentError(error)) {

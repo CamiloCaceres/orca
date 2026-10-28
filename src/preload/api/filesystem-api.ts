@@ -19,6 +19,7 @@ import type {
 } from '../../shared/local-log-tail-types'
 import type { SshMutationExpectation } from '../../shared/ssh-types'
 import type { LocalFileAccess } from '../../shared/local-file-access'
+import type { RemoteFilePreviewAddress } from '../../shared/remote-file-preview-address'
 import type {
   FileWriteDiskPrecondition,
   FileWriteResult
@@ -59,17 +60,22 @@ export type FilesystemApi = {
       access?: LocalFileAccess
       offset: number
       length: number
+      wakeWslDistro?: boolean
     }) => Promise<RuntimeFileReadChunkResult>
     readDir: (args: {
       dirPath: string
       connectionId?: string
       followSymlinks?: boolean
+      /** A user act (open or Retry); may start a stopped WSL distro. */
+      wakeWslDistro?: boolean
     }) => Promise<DirEntry[]>
     readFile: (args: {
       filePath: string
       connectionId?: string
       includeLocalLogMetadata?: boolean
       access?: LocalFileAccess
+      /** A user act (open, expand, Retry); may start a stopped WSL distro. */
+      wakeWslDistro?: boolean
     }) => Promise<{
       content: string
       isBinary: boolean
@@ -78,6 +84,9 @@ export type FilesystemApi = {
       mimeType?: string
       fileIdentity?: string
     }>
+    grantRuntimeFilePreview: (
+      args: RemoteFilePreviewAddress
+    ) => Promise<{ content: string; isBinary: true; mimeType: string; mediaUrl: string } | null>
     readLocalLogTail: (args: LocalLogTailReadArgs) => Promise<LocalLogTailReadResult>
     startLocalLogTail: (args: LocalLogTailWatchArgs) => Promise<void>
     stopLocalLogTail: (args: { subscriptionId: string }) => Promise<void>
@@ -154,12 +163,14 @@ export type FilesystemApi = {
         targetPath: string
         connectionId?: string
         recursive?: boolean
+        permanent?: boolean
       } & SshMutationExpectation
     ) => Promise<void>
     stat: (args: {
       filePath: string
       connectionId?: string
       access?: LocalFileAccess
+      wakeWslDistro?: boolean
     }) => Promise<{ size: number; isDirectory: boolean; mtime: number }>
     pathsExist?: (args: {
       filePaths: string[]

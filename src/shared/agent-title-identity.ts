@@ -15,7 +15,10 @@ import {
 import { isDeepSeekBuildTerminalTitle } from './dsb-terminal-title'
 import { isCodewhaleTerminalTitle } from './codewhale-terminal-title'
 import { isOpenCodeNativeTitle } from './opencode-terminal-title'
-import { getPiCompatibleSyntheticAgentLabel } from './pi-compatible-synthetic-title'
+import {
+  getPiCompatibleSyntheticAgentLabel,
+  getPiCompatibleTitleBrand
+} from './pi-compatible-synthetic-title'
 import { memoizeTitleClassification } from './terminal-title-classification-memo'
 
 /** Scope prompt-cache timers to Claude title conventions. */
@@ -69,9 +72,9 @@ function computeAgentLabel(title: string): string | null {
   ) {
     return 'Claude Code'
   }
-  const piStateBrand = getPiStateTitleBrand(title)
-  if (piStateBrand) {
-    return piStateBrand
+  const piBrand = getPiStateTitleBrand(title) ?? getPiCompatibleTitleBrand(title)
+  if (piBrand) {
+    return piBrand
   }
   if (isCodewhaleTerminalTitle(title)) {
     return 'Codewhale'

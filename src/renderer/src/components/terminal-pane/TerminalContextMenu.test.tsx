@@ -66,6 +66,7 @@ function renderMenu(overrides: Record<string, unknown> = {}): string {
     menuPoint: { x: 0, y: 0 },
     menuOpenedAtRef: { current: 0 },
     canClosePane: true,
+    closePaneLabel: 'Close Pane',
     canExpandPane: true,
     menuPaneIsExpanded: false,
     onCopy: vi.fn(),
@@ -203,6 +204,23 @@ describe('TerminalContextMenu', () => {
     expect(
       items.list.some((candidate) => childrenText(candidate.children) === 'Copy Session ID')
     ).toBe(false)
+  })
+
+  it('uses nominal primary toggle labels, including default and unbound', () => {
+    for (const [bindings, label] of [
+      [undefined, 'Ctrl+Shift+J'],
+      [['Mod+Alt+Y', 'Mod+Alt+K'], 'Ctrl+Alt+Y'],
+      [[], null]
+    ] as const) {
+      shortcuts.list = []
+      renderMenu({
+        canToggleNativeChat: true,
+        keybindings: bindings === undefined ? {} : { 'terminal.toggleNativeChat': [...bindings] }
+      })
+      expect(shortcuts.list.filter((value) => value.endsWith('J') || value.endsWith('Y'))).toEqual(
+        label ? [label] : []
+      )
+    }
   })
 
   it('shows one shortcut per terminal menu action on Windows', () => {

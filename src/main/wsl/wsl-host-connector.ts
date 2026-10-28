@@ -1,3 +1,5 @@
+import { WslOrcadBridgeActivity } from './wsl-orcad-bridge-activity'
+import { listenWslOrcadStdioBridge } from './wsl-orcad-stdio-bridge'
 import { createWslOrcadPairingRecovery } from './wsl-orcad-pairing-repair'
 import { readConfirmedRunningWslDistros } from '../wsl-background-distro-gate'
 import { parsePairingCode } from '../../shared/pairing'
@@ -7,7 +9,8 @@ import { resolveEnvironmentPairingOffer } from '../../shared/runtime-environment
 import { findWslHostDeployment } from '../../shared/runtime-environment-wsl-host-store'
 import { createWslDistroHolder, type WslDistroHolder } from './wsl-distro-holder'
 import { listWslHostDistros } from './wsl-host-distro-list'
-import type { WslHostConnector } from './wsl-host-service'
+import { resolveWslDistroName } from './wsl-distro-registry-id'
+import type { WslHostConnector, WslHostReachability } from './wsl-host-service'
 import { readWslDistroOrcadPublicKey } from './wsl-host-ssh-orcad-conflict'
 import {
   WslOrcadConnectionManager,
@@ -36,7 +39,7 @@ function transportFor(distro: string) {
   return createWslOrcadHostTransport({ target: targetFor(distro) })
 }
 
-type Reachability = 'available' | 'unreachable' | 'stopped' | 'unavailable'
+type Reachability = WslHostReachability
 
 export function createWslHostConnector(options: {
   userDataPath: string
@@ -63,13 +66,22 @@ export function createWslHostConnector(options: {
         : Promise.reject(refuseUnknown(distro))
   }
   const pairingRecovery = createWslOrcadPairingRecovery(options.userDataPath)
+  // The desktop's own bridged sockets double as the liveness watch; no bridge is held for it.
+  const bridgeActivity = new WslOrcadBridgeActivity()
   const manager = new WslOrcadConnectionManager({
     holder,
+    listen: (transport, listenOptions) =>
+      listenWslOrcadStdioBridge(transport, {
+        ...listenOptions,
+        events: bridgeActivity.events(listenOptions.environmentId)
+      }),
     pairingRecovery,
     getPairingOffer: (environmentId) =>
       findWslHostDeployment(options.userDataPath, environmentId)
         ? resolveEnvironmentPairingOffer(options.userDataPath, environmentId)
         : null,
+    recordedLocalPort: (environmentId) =>
+      findWslHostDeployment(options.userDataPath, environmentId)?.localPort ?? null,
     onChange: options.onChange,
     deployAndLaunch: (distro, deployOptions) =>
       options.isKnownDistro(distro)
@@ -78,10 +90,19 @@ export function createWslHostConnector(options: {
   })
   const liveness = createWslOrcadLivenessSupervisor({
     manager,
+    bridgeActivity,
     holder,
     hasUserVisibleWork: options.hasUserVisibleWork
   })
   supervisor = liveness
+  // Liveness connects in flight, per distro; a plain connect meanwhile joins rather than re-arms.
+  const livenessConnects = new Map<
+    string,
+    { promise: Promise<WslOrcadConnection>; noBoot: boolean; intent: boolean }
+  >()
+  // Read right before a no-boot reconnect spawns anything in the distro (E9).
+  const requireRunning = async (distro: string): Promise<boolean> =>
+    confirmsRunning(await readConfirmedRunningWslDistros(), wslDistroHolderKey(distro))
   const coldProbes = new Map<
     string,
     {
@@ -142,19 +163,50 @@ export function createWslHostConnector(options: {
   return {
     listDistros: () => listWslHostDistros(),
     readOrcadPublicKey: (distro) => readWslDistroOrcadPublicKey(transportFor(distro)),
-    connect: (distro, connectOptions) => liveness.connect(distro, connectOptions),
+    connect: (distro, { noBoot, ...connectOptions } = {}) => {
+      const options = noBoot ? { ...connectOptions, requireRunning } : connectOptions
+      const key = wslDistroHolderKey(distro)
+      const pending = livenessConnects.get(key)
+      // Why join: a second plain connect re-armed the liveness watch (an identity read and a watch
+      // channel) and waited for it, which held a pane's first call about 1 s after ready. Never
+      // join an Update/Force (its incumbent is on its way out) or, when booting, a no-boot one
+      // (it may refuse, and nothing would arm).
+      if (pending && !pending.intent && !options.intent && (noBoot || !pending.noBoot)) {
+        // While the bridge connect runs, `get` names the server it replaces: wait for the new one.
+        return manager.isConnecting(distro)
+          ? manager.ensure(distro, options)
+          : Promise.resolve(manager.get(distro) ?? manager.ensure(distro, options))
+      }
+      const connected = liveness.connect(distro, options).finally(() => {
+        if (livenessConnects.get(key)?.promise === connected) {
+          livenessConnects.delete(key)
+        }
+      })
+      livenessConnects.set(key, {
+        promise: connected,
+        noBoot: Boolean(noBoot),
+        intent: Boolean(options.intent)
+      })
+      return connected
+    },
     forgetPairingFailures: (environmentId) => pairingRecovery.repairs.forgetFailures(environmentId),
     get: (distro) => manager.get(distro),
     isReachable: async (distro, environmentId) =>
       options.runtime.isReady?.(environmentId) ||
       (await coldReachability(distro, environmentId)) === 'available',
+    isSettling: (distro) => liveness.isSettling(distro),
+    reachability: async (distro, environmentId) =>
+      options.runtime.isReady?.(environmentId)
+        ? 'available'
+        : coldReachability(distro, environmentId),
     disconnect: (distro) => liveness.stop(distro),
     stopServer: async (distro, environmentId) => {
       const reachability = await coldReachability(distro, environmentId)
       if (reachability === 'unavailable') {
         return {
           stopped: false,
-          reason: 'The WSL service did not confirm whether the distro runs.'
+          reason: 'The WSL service did not confirm whether the distro runs.',
+          verdict: 'unverifiable'
         }
       }
       if (reachability === 'stopped') {
@@ -170,11 +222,17 @@ export function createWslHostConnector(options: {
         decommission: decommissionWslHostOrcad(target, createWslOrcadHostTransport({ target }))
       })
     },
+    resolveDistroName: (distro, distroId) => resolveWslDistroName(distro, distroId),
     releaseHolder: async (distro) => {
       await holder.release(distro)
     },
-    adoptHolders: async () => {
-      await holder.adoptHolders()
+    adoptHolders: async (isWanted) => {
+      for (const { distro } of await holder.adoptHolders()) {
+        if (!isWanted(distro)) {
+          // Verified by pid, start time and command line; an unverifiable holder is kept.
+          await holder.release(distro)
+        }
+      }
     },
     dispose: () => liveness.dispose()
   }
