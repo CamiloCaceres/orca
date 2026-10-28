@@ -355,8 +355,7 @@ export function getTuiAgentLaunchCommand(
   platform: NodeJS.Platform,
   opts?: { isRemote?: boolean }
 ): string {
-  if (platform === 'linux' && skipsLinuxOrcaCliRename(opts?.isRemote)) {
-    return config.launchCmd
-  }
-  return config.launchCmdByPlatform?.[platform] ?? config.launchCmd
+  return platform === 'linux' && skipsLinuxOrcaCliRename(opts?.isRemote)
+    ? config.launchCmd
+    : (config.launchCmdByPlatform?.[platform] ?? config.launchCmd)
 }
