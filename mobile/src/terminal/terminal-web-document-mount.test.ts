@@ -39,6 +39,10 @@ vi.mock('react-native', () => ({
   StyleSheet: { create: (value: unknown) => value, hairlineWidth: 1 },
   AppState: { addEventListener: () => ({ remove() {} }) }
 }))
+vi.mock('expo-router', async () => {
+  const { useEffect } = await import('react')
+  return { useFocusEffect: (effect: () => () => void) => useEffect(effect, [effect]) }
+})
 vi.mock('lucide-react-native', () => ({ RefreshCw: 'Icon' }))
 vi.mock('./TerminalWebView', () => import('./TerminalWebView.web'))
 
@@ -203,6 +207,7 @@ describe('terminal panes start when first selected', () => {
           onHaptic: noop,
           onTerminalInput: noop,
           onTerminalQueryReply: noop,
+          onTerminalInteraction: noop,
           onTerminalTap: noop,
           onFileTap: noop,
           onOpenUrl: noop

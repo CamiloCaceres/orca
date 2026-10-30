@@ -73,6 +73,8 @@ export class RuntimeClientSettingsController {
       agentDefaultArgs: launchProfile.agentDefaultArgs,
       agentDefaultEnv: launchProfile.agentDefaultEnv,
       agentStatusHooksEnabled: settings.agentStatusHooksEnabled !== false,
+      // Always present, so a client can tell this host accepts the setting (older hosts omit it).
+      codexShareHistoryAcrossAccounts: settings.codexShareHistoryAcrossAccounts !== false,
       claudeSubagentNavigationEnabled: settings.claudeSubagentNavigationEnabled !== false,
       // Mobile honors this Copy option; absence from older hosts means on (#19770).
       terminalCopyTrimsGutter: settings.terminalCopyTrimsGutter !== false,
@@ -129,18 +131,16 @@ export class RuntimeClientSettingsController {
     }
     const beforeSettings = this.store.getSettings()
     const before = beforeSettings.agentStatusHooksEnabled !== false
+    const { agentDefaultArgs, agentDefaultEnv, ...otherUpdates } = updates
     // Legacy clients can select an agent or a shell, but cannot select None.
     this.store.updateSettings(
       {
-        ...updates,
+        ...otherUpdates,
         // An older client writes Arguments as it reads them, flag included.
-        ...(updates.agentDefaultArgs !== undefined || updates.agentDefaultEnv !== undefined
+        ...(agentDefaultArgs !== undefined || agentDefaultEnv !== undefined
           ? legacyLaunchTextUpdates(
               beforeSettings,
-              {
-                agentDefaultArgs: updates.agentDefaultArgs,
-                agentDefaultEnv: updates.agentDefaultEnv
-              },
+              { agentDefaultArgs, agentDefaultEnv },
               process.platform
             )
           : {}),

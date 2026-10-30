@@ -1,5 +1,6 @@
 import { Plus, QrCode } from 'lucide-react-native'
 import { Pressable, Text, View } from 'react-native'
+import { useMobileTranslation } from '../i18n/use-mobile-translation'
 import type { HostProfile } from '../transport/types'
 import { colors, radii, spacing } from '../theme/mobile-theme'
 import { themedStyleSheet } from '../theme/themed-styles'
@@ -12,12 +13,15 @@ type Props = {
 }
 
 export function MobileHomeQuickActions(props: Props) {
+  const t = useMobileTranslation()
   useMobileColorScheme()
   const canCreateWorkspace = props.connectedHosts.length > 0
 
   return (
     <>
-      <Text style={styles.sectionHeading}>Quick Actions</Text>
+      <Text style={styles.sectionHeading}>
+        {t('components.homeQuickActions.title', 'Quick Actions')}
+      </Text>
       <View style={styles.quickActions}>
         <Pressable
           accessibilityRole="button"
@@ -27,7 +31,9 @@ export function MobileHomeQuickActions(props: Props) {
           <View style={styles.quickActionIcon}>
             <QrCode size={16} color={colors.textSecondary} />
           </View>
-          <Text style={styles.quickActionLabel}>Pair Desktop</Text>
+          <Text style={styles.quickActionLabel}>
+            {t('components.homeQuickActions.pairDesktop', 'Pair Desktop')}
+          </Text>
         </Pressable>
         <Pressable
           accessibilityRole="button"
@@ -43,7 +49,9 @@ export function MobileHomeQuickActions(props: Props) {
           <View style={styles.quickActionIcon}>
             <Plus size={16} color={colors.textSecondary} />
           </View>
-          <Text style={styles.quickActionLabel}>New Workspace</Text>
+          <Text style={styles.quickActionLabel}>
+            {t('components.homeQuickActions.newWorkspace', 'New Workspace')}
+          </Text>
         </Pressable>
       </View>
     </>
@@ -74,7 +82,7 @@ const styles = themedStyleSheet(() => ({
     paddingVertical: spacing.sm + 2,
     borderWidth: 1,
     borderColor: colors.borderSubtle,
-    borderRadius: radii.card,
+    borderRadius: radii.surface,
     backgroundColor: colors.bgPanel
   },
   quickActionPressed: {
@@ -86,7 +94,7 @@ const styles = themedStyleSheet(() => ({
   quickActionIcon: {
     width: 28,
     height: 28,
-    borderRadius: 9,
+    borderRadius: radii.tile,
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: colors.bgRaised

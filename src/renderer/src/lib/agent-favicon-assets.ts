@@ -31,6 +31,7 @@ import openclawUrl from '../../../shared/agent-icons/openclaw.png?url'
 import dshUrl from '../../../shared/agent-icons/dsh.png?url'
 import jcodeUrl from '../../../shared/agent-icons/jcode.png?url'
 import codewhaleUrl from '../../../shared/agent-icons/codewhale.png?url'
+import codebuddyUrl from '../../../shared/agent-icons/codebuddy.png?url'
 
 // Bundle favicons for offline/Google-blocked regions (#8451); shared/agent-icons also supplies mobile-agent-icon-assets.ts.
 export const AGENT_FAVICON_ASSETS: Partial<Record<TuiAgent, string>> = {
@@ -66,5 +67,6 @@ export const AGENT_FAVICON_ASSETS: Partial<Record<TuiAgent, string>> = {
   zcode: zcodeUrl,
   openclaw: openclawUrl,
   jcode: jcodeUrl,
-  codewhale: codewhaleUrl
+  codewhale: codewhaleUrl,
+  codebuddy: codebuddyUrl
 }

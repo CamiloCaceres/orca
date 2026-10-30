@@ -1,9 +1,10 @@
 import { Image, Modal, Pressable, ScrollView, View } from 'react-native'
 import { X } from 'lucide-react-native'
 import { useWindowSafeAreaInsets } from '../../../layout/side-safe-area'
-import { colors, spacing } from '../../../theme/mobile-theme'
+import { colors, radii, spacing } from '../../../theme/mobile-theme'
 import { themedStyleSheet } from '../../../theme/themed-styles'
 import { useMobileColorScheme } from '../../../theme/use-mobile-color-scheme'
+import { useMobileTranslation } from '../../../i18n/use-mobile-translation'
 
 export function MobileNativeChatImageViewer({
   uri,
@@ -15,6 +16,7 @@ export function MobileNativeChatImageViewer({
   onClose: () => void
 }): React.JSX.Element {
   useMobileColorScheme()
+  const t = useMobileTranslation()
   const insets = useWindowSafeAreaInsets()
   return (
     <Modal visible animationType="fade" onRequestClose={onClose}>
@@ -37,7 +39,7 @@ export function MobileNativeChatImageViewer({
           onPress={onClose}
           hitSlop={12}
           accessibilityRole="button"
-          accessibilityLabel="Close image"
+          accessibilityLabel={t('chat.nativeChatImageViewer.closeImage', 'Close image')}
         >
           <X size={22} color={colors.textPrimary} strokeWidth={2} />
         </Pressable>
@@ -62,7 +64,7 @@ const styles = themedStyleSheet(() => ({
     position: 'absolute',
     right: spacing.lg,
     padding: spacing.sm,
-    borderRadius: 999,
+    borderRadius: radii.pill,
     backgroundColor: colors.bgRaised
   }
 }))

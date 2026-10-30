@@ -113,10 +113,9 @@ export type RuntimeStore = {
     activeCodexManagedAccountIdsByRuntime?: GlobalSettings['activeCodexManagedAccountIdsByRuntime']
     agentWorkspaceTrustEnabled?: GlobalSettings['agentWorkspaceTrustEnabled']
     codexManagedAccounts?: GlobalSettings['codexManagedAccounts']
+    codexShareHistoryAcrossAccounts?: GlobalSettings['codexShareHistoryAcrossAccounts']
     nestedWorkerMaxDepth?: GlobalSettings['nestedWorkerMaxDepth']
-    orchestrationChatErrorEscalationEnabled?: GlobalSettings['orchestrationChatErrorEscalationEnabled']
-    orchestrationHeartbeatsEnabled?: GlobalSettings['orchestrationHeartbeatsEnabled']
-    orchestrationHeartbeatIntervalMinutes?: GlobalSettings['orchestrationHeartbeatIntervalMinutes']
+    orchestrationWorkerAutoReleaseEnabled?: GlobalSettings['orchestrationWorkerAutoReleaseEnabled']
     workspaceDir: string
     nestWorkspaces: boolean
     workspaceDirHistory?: GlobalSettings['workspaceDirHistory']
@@ -131,6 +130,7 @@ export type RuntimeStore = {
     newWorkspaceSetupOnly?: GlobalSettings['newWorkspaceSetupOnly']
     disabledTuiAgents?: GlobalSettings['disabledTuiAgents']
     agentCmdOverrides?: GlobalSettings['agentCmdOverrides']
+    agentLaunchChoices?: GlobalSettings['agentLaunchChoices']
     agentDefaultArgs?: GlobalSettings['agentDefaultArgs']
     agentDefaultEnv?: GlobalSettings['agentDefaultEnv']
     agentPermissionDefault?: GlobalSettings['agentPermissionDefault']
