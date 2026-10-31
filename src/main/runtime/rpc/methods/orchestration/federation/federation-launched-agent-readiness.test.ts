@@ -1,3 +1,4 @@
+import { terminalExitError } from '../../../../../../shared/terminal-start-failure'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { resolveWorkerStartReadinessTimeoutMs } from '../../../../../../shared/orchestration-timing-budgets'
 import { OrcaRuntimeService } from '../../../../orca-runtime'
@@ -163,4 +164,47 @@ describe('federated worker first dispatch readiness', () => {
     })
     expect(runtime.sendTerminalAgentPrompt).not.toHaveBeenCalled()
   })
+  it.each(['fresh', 'reattach', 'adopted'] as const)(
+    'uses actual %s creation for the failed readiness receipt',
+    async (context) => {
+      const runtime = createWorkerHost()
+      const creation = {
+        handle: HANDLE,
+        ptyId: 'pty-created',
+        incarnationId: 'inc-created',
+        worktreeId: WORKTREE,
+        title: null,
+        ...(context === 'reattach' ? { isReattach: true as const } : {}),
+        ...(context === 'adopted' ? { agentSessionDisposition: 'adopted' as const } : {})
+      }
+      const original = vi.mocked(runtime.createManagedWorktree).getMockImplementation()!
+      vi.mocked(runtime.createManagedWorktree).mockImplementation(async (request) => {
+        request.onStartupTerminalCreated?.(creation)
+        return original(request)
+      })
+      vi.spyOn(runtime, 'getPtyLivenessVerdict').mockReturnValue({
+        status: 'exited',
+        incarnationId: 'inc-created',
+        cause: {
+          kind: 'exited',
+          exitCode: 256,
+          initialOutputDiagnostic: 'git-bash-console-capacity'
+        }
+      })
+      vi.mocked(runtime.waitForFreshWorkerComposer).mockRejectedValue(
+        terminalExitError('timeout', {
+          kind: 'exited',
+          exitCode: 256,
+          initialOutputDiagnostic: 'git-bash-console-capacity'
+        })
+      )
+      await expect(attach(runtime, { agent: 'opencode' })).resolves.toMatchObject({
+        state: 'failed',
+        failedStage: 'agent_readiness',
+        lastError:
+          context === 'fresh' ? expect.stringContaining('Close some Git Bash terminals') : 'timeout'
+      })
+      expect(runtime.sendTerminalAgentPrompt).not.toHaveBeenCalled()
+    }
+  )
 })
