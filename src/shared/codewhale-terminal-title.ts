@@ -27,17 +27,17 @@ const ACTIVITY_VERBS = [
   'in the current…'
 ]
 
+// Why: `/title` puts `[prefix] ` in front of every window title Codewhale paints.
+const TITLE_PREFIX = '(?:\\[[^\\]]*\\]\\s*)?'
+const NAME_TITLE_RE = new RegExp(`^${TITLE_PREFIX}codewhale(?:\\.(?:exe|cmd|bat|ps1))?$`, 'i')
 const WHALE_ACTIVITY_TITLE_RE = new RegExp(
-  `^(?:\\[[^\\]]*\\]\\s*)?(?:${CODEWHALE_STATIC_WHALE}|${CODEWHALE_ANIMATED_WHALE})\\s+(?:${ACTIVITY_VERBS.map(
+  `^${TITLE_PREFIX}(?:${CODEWHALE_STATIC_WHALE}|${CODEWHALE_ANIMATED_WHALE})\\s+(?:${ACTIVITY_VERBS.map(
     (verb) => verb.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
   ).join('|')})$`
 )
 
 function isCodewhaleFrame(segment: string): boolean {
-  return (
-    /^codewhale(?:\.(?:exe|cmd|bat|ps1))?$/i.test(segment.trim()) ||
-    WHALE_ACTIVITY_TITLE_RE.test(segment)
-  )
+  return NAME_TITLE_RE.test(segment.trim()) || WHALE_ACTIVITY_TITLE_RE.test(segment)
 }
 
 /** Why neutral: a shell prefix may wrap the frame, but after a DSH session or task header the pipe is payload. */

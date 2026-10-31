@@ -29,6 +29,13 @@ describe('Codewhale terminal titles', () => {
     expect(resolvePublishedPaneAgentIdentity({ title: '🐋 reasoning…' })).toBe('codewhale')
   })
 
+  it('keeps the configured title prefix on its resting name', () => {
+    expect(getAgentLabel('[project] codewhale')).toBe('Codewhale')
+    expect(resolveExplicitTerminalTitleAgentType('[project] codewhale')).toBe('codewhale')
+    expect(resolvePublishedPaneAgentIdentity({ title: '[project] codewhale' })).toBe('codewhale')
+    expect(collectAgentTitleEvidence('[project] Review codewhale').agent).toBeNull()
+  })
+
   it('does not claim a name that is payload after a DSH or task header', () => {
     expect(isDshTerminalTitle('✦ 🐋 Review | codewhale')).toBe(true)
     expect(getAgentLabel('✦ 🐋 Review | codewhale')).not.toBe('Codewhale')
