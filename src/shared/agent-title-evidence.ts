@@ -148,6 +148,11 @@ function collectAnchoredNames(
   const nativeOpenCode = segments.some(isOpenCodeNativeTitle)
   const allowDsbTitle = vendorMarkers.length === 0 && !nativeOpenCode
 
+  // Why the whole title: its matcher judges wrapper headers, which a lone suffix segment has lost.
+  if (segments[0] && isCodewhaleTerminalTitle(segments[0])) {
+    anchored.add('codewhale')
+  }
+
   for (const segment of segments) {
     // Native wrapped titles own their envelope even when session text names other agents.
     if (isOpenCodeNativeTitle(segment)) {

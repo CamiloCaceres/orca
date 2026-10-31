@@ -1,4 +1,8 @@
-import { getWrapperTitleSegments } from './terminal-title-wrapper-segments'
+import {
+  getWrapperTitleSegments,
+  isNeutralAgentTitleWrapper,
+  WRAPPER_SEPARATOR
+} from './terminal-title-wrapper-segments'
 
 /** Codewhale's static OSC-0 whale (focused, or motion disabled). */
 export const CODEWHALE_STATIC_WHALE = '\u{1F433}' // 🐳
@@ -29,11 +33,31 @@ const WHALE_ACTIVITY_TITLE_RE = new RegExp(
   ).join('|')})$`
 )
 
+function isCodewhaleFrame(segment: string): boolean {
+  return (
+    /^codewhale(?:\.(?:exe|cmd|bat|ps1))?$/i.test(segment.trim()) ||
+    WHALE_ACTIVITY_TITLE_RE.test(segment)
+  )
+}
+
+/** Why neutral: a shell prefix may wrap the frame, but after a DSH session or task header the pipe is payload. */
+function hasOnlyWrapperHeaders(prefix: string): boolean {
+  return prefix
+    .split(WRAPPER_SEPARATOR)
+    .every(
+      (header) =>
+        isNeutralAgentTitleWrapper(header) &&
+        !header.includes(CODEWHALE_STATIC_WHALE) &&
+        !header.includes(CODEWHALE_ANIMATED_WHALE)
+    )
+}
+
 /** Why segments: a multiplexer prefixes the pane's own title (`zsh | 🐳 working…`). */
 export function isCodewhaleTerminalTitle(title: string): boolean {
-  return getWrapperTitleSegments(title.trim()).some(
+  const trimmed = title.trim()
+  return getWrapperTitleSegments(trimmed).some(
     (segment) =>
-      /^codewhale(?:\.(?:exe|cmd|bat|ps1))?$/i.test(segment.trim()) ||
-      WHALE_ACTIVITY_TITLE_RE.test(segment)
+      isCodewhaleFrame(segment) &&
+      hasOnlyWrapperHeaders(trimmed.slice(0, trimmed.length - segment.length))
   )
 }

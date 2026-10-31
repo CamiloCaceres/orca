@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { getAgentLabel } from './agent-title-identity'
+import { collectAgentTitleEvidence } from './agent-title-evidence'
 import { isDshTerminalTitle } from './dsh-terminal-title'
+import { resolvePublishedPaneAgentIdentity } from './published-pane-agent-identity'
 import { resolveExplicitTerminalTitleAgentType } from './terminal-title-agent-type'
 
 describe('Codewhale terminal titles', () => {
@@ -18,5 +20,20 @@ describe('Codewhale terminal titles', () => {
     expect(isDshTerminalTitle('✦ 🐋 Review codewhale integration')).toBe(true)
     expect(getAgentLabel('✦ 🐋 Review codewhale integration')).not.toBe('Codewhale')
     expect(resolveExplicitTerminalTitleAgentType('✦ 🐋 Review codewhale integration')).toBe('dsh')
+  })
+
+  it('publishes a hand-started pane from its title alone', () => {
+    expect(collectAgentTitleEvidence('codewhale').agent).toBe('codewhale')
+    expect(collectAgentTitleEvidence('zsh | 🐳 working…').agent).toBe('codewhale')
+    expect(resolvePublishedPaneAgentIdentity({ title: 'codewhale' })).toBe('codewhale')
+    expect(resolvePublishedPaneAgentIdentity({ title: '🐋 reasoning…' })).toBe('codewhale')
+  })
+
+  it('does not claim a name that is payload after a DSH or task header', () => {
+    expect(isDshTerminalTitle('✦ 🐋 Review | codewhale')).toBe(true)
+    expect(getAgentLabel('✦ 🐋 Review | codewhale')).not.toBe('Codewhale')
+    expect(resolveExplicitTerminalTitleAgentType('✦ 🐋 Review | codewhale')).toBe('dsh')
+    expect(collectAgentTitleEvidence('✦ 🐋 Review | codewhale').agent).not.toBe('codewhale')
+    expect(collectAgentTitleEvidence('fix: login | codewhale').agent).toBeNull()
   })
 })
